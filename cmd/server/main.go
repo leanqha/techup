@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"techup/config"
 	"techup/internal/account"
 
@@ -8,10 +9,20 @@ import (
 )
 
 func main() {
-	db, _ := config.NewPostgresPool()
+	// Загружаем переменные окружения
+	config.LoadEnv()
+
+	// Подключаемся к базе
+	db, err := config.NewPostgresPool()
+	if err != nil {
+		log.Fatalf("DB connection error: %v", err)
+	}
+	defer db.Close()
+
+	// Инициализация репозитория, сервиса и хендлера
 	repo := account.NewRepository(db)
-	service := account.NewService(repo)
-	handler := account.NewHandler(service)
+	svc := account.NewService(repo)
+	handler := account.NewHandler(svc)
 
 	r := gin.Default()
 
@@ -21,10 +32,12 @@ func main() {
 
 	// Защищённые маршруты
 	auth := r.Group("/")
-	auth.Use(account.AuthMiddleware())
+	auth.Use(account.AuthMiddleware()) // middleware проверяет JWT
 	{
 		auth.GET("/profile", handler.Profile)
 	}
 
-	r.Run(":8080")
+	port := config.GetPort()
+	log.Printf("Server running on port %s", port)
+	r.Run(":" + port)
 }

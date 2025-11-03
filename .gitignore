@@ -1,0 +1,27 @@
+# Бинарные файлы
+/bin/
+/build/
+/*.exe
+/*.out
+
+# Зависимости
+/vendor/
+
+# IDE файлы
+/.idea/
+/*.iml
+*.swp
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Файлы конфигурации с секретами
+.env
+
+# Кэш go build
+*.test
+*.log
+
+# PostgreSQL или другие локальные файлы
+*.sqlite

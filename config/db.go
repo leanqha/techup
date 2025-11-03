@@ -6,13 +6,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// NewPostgresPool создаёт пул соединений к базе
 func NewPostgresPool() (*pgxpool.Pool, error) {
-	dsn := "postgres://leanq@localhost:5432/techup_db?sslmode=disable"
-
+	dsn := GetDBDSN()
 	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to db: %w", err)
 	}
-
 	return pool, nil
 }
