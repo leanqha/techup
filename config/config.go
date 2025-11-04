@@ -2,16 +2,15 @@ package config
 
 import (
 	"fmt"
-	"log"
-	"os"
-
 	"github.com/joho/godotenv"
+	"os"
 )
 
-func LoadEnv() {
+func LoadEnv() error {
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system environment variables")
+		return fmt.Errorf("failed to load .env: %w", err)
 	}
+	return nil
 }
 
 func GetDBDSN() string {
@@ -33,7 +32,7 @@ func GetJWTSecret() string {
 func GetPort() string {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // дефолтный порт
+		port = "8080"
 	}
 	return port
 }

@@ -1,0 +1,16 @@
+basePath: /
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend API for the TechUp university application.
+  title: TechUp API
+  version: "1.0"
+paths: {}
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

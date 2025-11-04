@@ -54,3 +54,31 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	}
 	return acc, nil
 }
+
+func (r *Repository) Update(ctx context.Context, acc *Account) error {
+	query := `
+		UPDATE accounts
+		SET email = $1,
+		    first_name = $2,
+		    last_name = $3,
+		    password_hash = $4,
+		    role = $5,
+		    updated_at = NOW()
+		WHERE id = $6
+	`
+	commandTag, err := r.db.Exec(ctx, query,
+		acc.Email,
+		acc.FirstName,
+		acc.LastName,
+		acc.PasswordHash,
+		acc.Role,
+		acc.ID,
+	)
+	if err != nil {
+		return err
+	}
+	if commandTag.RowsAffected() != 1 {
+		return fmt.Errorf("account not found or not updated")
+	}
+	return nil
+}

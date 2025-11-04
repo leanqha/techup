@@ -3,6 +3,7 @@ package account
 import (
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"techup/internal/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,13 +16,19 @@ func NewHandler(s *Service) *Handler {
 	return &Handler{service: s}
 }
 
+// Register godoc
+// @Summary Register a new user
+// @Description Creates a new user account with role "student"
+// @Tags account
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "User registration info"
+// @Success 200 {object} map[string]interface{} "Successfully created"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /register [post]
 func (h *Handler) Register(c *gin.Context) {
-	var req struct {
-		Email     string `json:"email"`
-		Password  string `json:"password"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-	}
+	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
@@ -36,11 +43,19 @@ func (h *Handler) Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"id": acc.ID, "email": acc.Email})
 }
 
+// Login godoc
+// @Summary User login
+// @Description Authenticates user and returns JWT token
+// @Tags account
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "User login info"
+// @Success 200 {object} map[string]string "JWT token"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 401 {object} map[string]string "Invalid credentials"
+// @Router /login [post]
 func (h *Handler) Login(c *gin.Context) {
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
+	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
@@ -55,6 +70,15 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
+// Profile godoc
+// @Summary Get user profile
+// @Description Returns current user info based on JWT token
+// @Tags account
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} ProfileResponse "User profile"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Router /profile [get]
 func (h *Handler) Profile(c *gin.Context) {
 	claims, exists := c.Get("claims")
 	if !exists {
@@ -71,11 +95,134 @@ func (h *Handler) Profile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"id":         acc.ID,
-		"email":      acc.Email,
-		"first_name": acc.FirstName,
-		"last_name":  acc.LastName,
-		"role":       acc.Role,
+	resp := ProfileResponse{
+		ID:        acc.ID,
+		Email:     acc.Email,
+		FirstName: acc.FirstName,
+		LastName:  acc.LastName,
+		Role:      acc.Role,
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// ChangePassword godoc
+// @Summary Change user password
+// @Description Allows a logged-in user to change their password
+// @Tags account
+// @Accept json
+// @Produce json
+// @Param request body ChangePasswordRequest true "Old and new password"
+// @Success 200 {object} map[string]string "Password changed successfully"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Security BearerAuth
+// @Router /account/change-password [post]
+func (h *Handler) ChangePassword(c *gin.Context) {
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
+		return
+	}
+	userClaims := claims.(jwt.MapClaims)
+	userID := int(userClaims["user_id"].(float64))
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Log.Warn().Err(err).Msg("invalid change password input")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	err := h.service.ChangePassword(c, userID, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
+}
+
+// UpdateProfile godoc
+// @Summary Update user profile
+// @Description Allows a logged-in user to update profile information
+// @Tags account
+// @Accept json
+// @Produce json
+// @Param request body UpdateProfileRequest true "Profile update info"
+// @Success 200 {object} ProfileResponse "Updated profile"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 409 {object} map[string]string "Email already exists"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Security BearerAuth
+// @Router /account/update [put]
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
+		return
+	}
+	userClaims := claims.(jwt.MapClaims)
+	userID := int(userClaims["user_id"].(float64))
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Log.Warn().Err(err).Msg("invalid update profile input")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	acc, err := h.service.UpdateProfile(c, userID, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, ProfileResponse{
+		ID:        acc.ID,
+		Email:     acc.Email,
+		FirstName: acc.FirstName,
+		LastName:  acc.LastName,
+		Role:      acc.Role,
 	})
+}
+
+// SetRole godoc
+// @Summary Set user role
+// @Description Allows admin to set the role of another user
+// @Tags account
+// @Accept json
+// @Produce json
+// @Param request body SetRoleRequest true "User ID and new role"
+// @Success 200 {object} map[string]string "Role updated successfully"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Security BearerAuth
+// @Router /account/set-role [post]
+func (h *Handler) SetRole(c *gin.Context) {
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
+		return
+	}
+	userClaims := claims.(jwt.MapClaims)
+	userID := int(userClaims["user_id"].(float64))
+
+	var req SetRoleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Log.Warn().Err(err).Msg("invalid set role input")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	err := h.service.SetRole(c, userID, &req)
+	if err != nil {
+		if err.Error() == "forbidden" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "role updated successfully"})
 }
