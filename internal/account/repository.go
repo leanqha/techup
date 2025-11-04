@@ -82,3 +82,30 @@ func (r *Repository) Update(ctx context.Context, acc *Account) error {
 	}
 	return nil
 }
+
+func (r *Repository) SaveRefreshToken(ctx context.Context, token *RefreshToken) error {
+	_, err := r.db.Exec(ctx, `
+        INSERT INTO refresh_tokens (account_id, token, expires_at)
+        VALUES ($1, $2, $3)
+    `, token.AccountID, token.Token, token.ExpiresAt)
+	return err
+}
+
+func (r *Repository) GetRefreshToken(ctx context.Context, token string) (*RefreshToken, error) {
+	row := r.db.QueryRow(ctx, `
+        SELECT id, account_id, token, expires_at, created_at
+        FROM refresh_tokens
+        WHERE token = $1
+    `, token)
+	var t RefreshToken
+	err := row.Scan(&t.ID, &t.AccountID, &t.Token, &t.ExpiresAt, &t.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (r *Repository) DeleteRefreshToken(ctx context.Context, token string) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM refresh_tokens WHERE token = $1`, token)
+	return err
+}

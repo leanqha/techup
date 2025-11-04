@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
+	"techup/config"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type Service struct {
@@ -19,7 +23,10 @@ func (s *Service) GetByID(ctx context.Context, id int) (*Account, error) {
 }
 
 func (s *Service) Register(ctx context.Context, email, password, firstName, lastName string) (*Account, error) {
-	hash, _ := HashPassword(password)
+	hash, err := HashPassword(password)
+	if err != nil {
+		return nil, err
+	}
 	acc := &Account{
 		Email:        email,
 		PasswordHash: hash,
@@ -27,22 +34,34 @@ func (s *Service) Register(ctx context.Context, email, password, firstName, last
 		LastName:     lastName,
 		Role:         "student",
 	}
-	err := s.repo.CreateAccount(ctx, acc)
+	err = s.repo.CreateAccount(ctx, acc)
 	if err != nil {
 		return nil, err
 	}
 	return acc, nil
 }
 
-func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
+func (s *Service) Login(ctx context.Context, email, password string) (string, string, error) {
 	acc, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
-		return "", err
+		return "", "", errors.New("invalid credentials")
 	}
+
 	if !CheckPasswordHash(password, acc.PasswordHash) {
-		return "", errors.New("invalid credentials")
+		return "", "", errors.New("invalid credentials")
 	}
-	return GenerateJWT(acc.ID, acc.Role)
+
+	accessToken, err := GenerateJWT(acc)
+	if err != nil {
+		return "", "", err
+	}
+
+	refreshToken, err := s.CreateRefreshToken(ctx, acc.ID)
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, *refreshToken, nil
 }
 
 func (s *Service) ChangePassword(ctx context.Context, userID int, req *ChangePasswordRequest) error {
@@ -93,4 +112,54 @@ func (s *Service) SetRole(ctx context.Context, userID int, req *SetRoleRequest) 
 	}
 	acc.Role = req.Role
 	return s.repo.Update(ctx, acc)
+}
+
+func (s *Service) CreateRefreshToken(ctx context.Context, userID int) (*string, error) {
+	token := uuid.NewString()
+	expiresAt := time.Now().Add(config.GetJWTRefreshTTL())
+
+	rt := &RefreshToken{
+		AccountID: userID,
+		Token:     token,
+		ExpiresAt: expiresAt,
+	}
+
+	if err := s.repo.SaveRefreshToken(ctx, rt); err != nil {
+		return nil, err
+	}
+
+	return &token, nil
+}
+
+func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, string, error) {
+	rt, err := s.repo.GetRefreshToken(ctx, oldToken)
+	if err != nil {
+		return "", "", errors.New("invalid refresh token")
+	}
+
+	if time.Now().After(rt.ExpiresAt) {
+		_ = s.repo.DeleteRefreshToken(ctx, oldToken)
+		return "", "", errors.New("refresh token expired")
+	}
+
+	acc, err := s.repo.GetByID(ctx, rt.AccountID)
+	if err != nil {
+		return "", "", err
+	}
+
+	// issue new access token
+	newAccess, err := GenerateJWT(acc)
+	if err != nil {
+		return "", "", err
+	}
+
+	newRefresh, err := s.CreateRefreshToken(ctx, acc.ID)
+	if err != nil {
+		return "", "", err
+	}
+
+	// delete old refresh
+	_ = s.repo.DeleteRefreshToken(ctx, oldToken)
+
+	return newAccess, *newRefresh, nil
 }

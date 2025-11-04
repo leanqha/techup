@@ -14,6 +14,11 @@ type LoginRequest struct {
 	Password string `json:"password" example:"strongpassword"`
 }
 
+type LoginResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 // ProfileResponse - payload returned by /profile
 type ProfileResponse struct {
 	ID        int    `json:"id" example:"1"`
@@ -40,4 +45,8 @@ type UpdateProfileRequest struct {
 type SetRoleRequest struct {
 	UserID int    `json:"user_id" example:"7"`
 	Role   string `json:"role" example:"teacher"`
+}
+
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
 }

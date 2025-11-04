@@ -37,7 +37,7 @@ func main() {
 		logger.Log.Fatal().Err(err).Msg("failed to connect to database")
 	}
 	defer db.Close()
-	logger.Log.Info().Msg("Database connected")
+	logger.Log.Info().Msg("database connected")
 
 	// Initialize repository, service and handler
 	repo := account.NewRepository(db)
@@ -48,8 +48,9 @@ func main() {
 	r := gin.Default()
 
 	// Public routes
-	r.POST("/register", handler.Register) // User registration
-	r.POST("/login", handler.Login)       // User login
+	r.POST("/register", handler.Register)
+	r.POST("/login", handler.Login)
+	r.POST("/refresh", handler.Refresh)
 
 	// Protected routes with JWT authentication
 	auth := r.Group("/")
@@ -66,6 +67,8 @@ func main() {
 
 	// Start server
 	port := config.GetPort()
-	logger.Log.Info().Str("port", port).Msg("Server started")
-	r.Run(":" + port) // listen and serve
+	err = r.Run(":" + port)
+	if err != nil {
+		logger.Log.Fatal().Err(err).Msg("cannot start server")
+	}
 }

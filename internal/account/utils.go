@@ -11,8 +11,11 @@ import (
 var jwtKey = []byte(config.GetJWTSecret())
 
 func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
-	return string(bytes), err
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashed), nil
 }
 
 func CheckPasswordHash(password, hash string) bool {
@@ -20,12 +23,13 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func GenerateJWT(userID int, role string) (string, error) {
+func GenerateJWT(acc *Account) (string, error) {
+	expireTime := time.Now().Add(config.GetJWTAccessTTL())
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"role":    role,
-		"exp":     time.Now().Add(time.Hour * 72).Unix(),
+		"user_id": acc.ID,
+		"role":    acc.Role,
+		"exp":     expireTime.Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtKey)
+	return token.SignedString([]byte(config.GetJWTSecret()))
 }

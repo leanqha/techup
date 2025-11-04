@@ -50,7 +50,7 @@ func (h *Handler) Register(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body LoginRequest true "User login info"
-// @Success 200 {object} map[string]string "JWT token"
+// @Success 200 {object} LoginResponse "JWT tokens"
 // @Failure 400 {object} map[string]string "Invalid input"
 // @Failure 401 {object} map[string]string "Invalid credentials"
 // @Router /login [post]
@@ -61,13 +61,18 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.service.Login(c.Request.Context(), req.Email, req.Password)
+	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	resp := LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 // Profile godoc
@@ -225,4 +230,23 @@ func (h *Handler) SetRole(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "role updated successfully"})
+}
+
+func (h *Handler) Refresh(c *gin.Context) {
+	var req RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "invalid request"})
+		return
+	}
+
+	access, refresh, err := h.service.RefreshTokens(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		c.JSON(401, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"access_token":  access,
+		"refresh_token": refresh,
+	})
 }
