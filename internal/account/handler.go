@@ -63,9 +63,8 @@ func (h *Handler) Profile(c *gin.Context) {
 	}
 
 	userClaims := claims.(jwt.MapClaims)
-	userID := int(userClaims["user_id"].(float64)) // user_id из токена
+	userID := int(userClaims["user_id"].(float64))
 
-	// Получаем данные пользователя из базы
 	acc, err := h.service.GetByID(c, userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})

@@ -8,14 +8,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// LoadEnv загружает переменные из .env
 func LoadEnv() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
 	}
 }
 
-// GetDBDSN формирует строку подключения для PostgreSQL
 func GetDBDSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
@@ -28,12 +26,10 @@ func GetDBDSN() string {
 	)
 }
 
-// GetJWTSecret возвращает секретный ключ для JWT
 func GetJWTSecret() string {
 	return os.Getenv("JWT_SECRET")
 }
 
-// GetPort возвращает порт для сервера
 func GetPort() string {
 	port := os.Getenv("PORT")
 	if port == "" {

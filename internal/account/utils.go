@@ -2,12 +2,13 @@ package account
 
 import (
 	"golang.org/x/crypto/bcrypt"
+	"techup/config"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtKey = []byte("your-secret-key") // меняй для продакшена
+var jwtKey = []byte(config.GetJWTSecret())
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)

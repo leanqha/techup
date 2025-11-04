@@ -6,7 +6,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// NewPostgresPool создаёт пул соединений к базе
 func NewPostgresPool() (*pgxpool.Pool, error) {
 	dsn := GetDBDSN()
 	pool, err := pgxpool.New(context.Background(), dsn)
