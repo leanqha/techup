@@ -1,6 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS accounts (
                                         id SERIAL PRIMARY KEY,
+                                        uid TEXT UNIQUE,
                                         email TEXT UNIQUE NOT NULL,
                                         password_hash TEXT NOT NULL,
                                         first_name TEXT,
@@ -11,4 +12,4 @@ CREATE TABLE IF NOT EXISTS accounts (
     );
 
 -- +goose Down
-DROP TABLE IF EXISTS accounts;
+DROP TABLE IF EXISTS accounts CASCADE;

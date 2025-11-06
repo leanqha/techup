@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE refresh_tokens (
                                 id SERIAL PRIMARY KEY,
                                 account_id INT REFERENCES accounts(id) ON DELETE CASCADE,
@@ -5,3 +6,6 @@ CREATE TABLE refresh_tokens (
                                 expires_at TIMESTAMP NOT NULL,
                                 created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- +goose Down
+DROP TABLE IF EXISTS refresh_tokens;

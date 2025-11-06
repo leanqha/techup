@@ -22,6 +22,7 @@ type LoginResponse struct {
 // ProfileResponse - payload returned by /profile
 type ProfileResponse struct {
 	ID        int    `json:"id" example:"1"`
+	UID       string `json:"uid" example:"123456"`
 	Email     string `json:"email" example:"user@example.com"`
 	FirstName string `json:"first_name" example:"John"`
 	LastName  string `json:"last_name" example:"Doe"`

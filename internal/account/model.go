@@ -4,6 +4,7 @@ import "time"
 
 type Account struct {
 	ID           int
+	UID          string
 	Email        string
 	PasswordHash string
 	FirstName    string

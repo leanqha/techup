@@ -43,10 +43,10 @@ func (r *Repository) GetByEmail(ctx context.Context, email string) (*Account, er
 
 func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	acc := &Account{}
-	query := `SELECT id, email, password_hash, first_name, last_name, role 
+	query := `SELECT id, uid, email, password_hash, first_name, last_name, role 
 	          FROM accounts WHERE id=$1`
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&acc.ID, &acc.Email, &acc.PasswordHash,
+		&acc.ID, &acc.UID, &acc.Email, &acc.PasswordHash,
 		&acc.FirstName, &acc.LastName, &acc.Role,
 	)
 	if err != nil {

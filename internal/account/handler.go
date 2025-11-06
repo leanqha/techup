@@ -102,6 +102,7 @@ func (h *Handler) Profile(c *gin.Context) {
 
 	resp := ProfileResponse{
 		ID:        acc.ID,
+		UID:       acc.UID,
 		Email:     acc.Email,
 		FirstName: acc.FirstName,
 		LastName:  acc.LastName,
