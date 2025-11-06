@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS accounts (
                                         id SERIAL PRIMARY KEY,
-                                        uid TEXT UNIQUE,
+                                        uid TEXT DEFAULT 000000,
                                         email TEXT UNIQUE NOT NULL,
                                         password_hash TEXT NOT NULL,
                                         first_name TEXT,

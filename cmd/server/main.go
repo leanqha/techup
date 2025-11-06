@@ -14,7 +14,9 @@ import (
 	"techup/config"
 	"techup/internal/account"
 	"techup/internal/logger"
+	"techup/internal/schedule"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -39,27 +41,48 @@ func main() {
 	defer db.Close()
 	logger.Log.Info().Msg("database connected")
 
-	// Initialize repository, service and handler
-	repo := account.NewRepository(db)
-	svc := account.NewService(repo)
-	handler := account.NewHandler(svc)
+	// Initialize account repository, service and handler
+	accountRepo := account.NewRepository(db)
+	accountSvc := account.NewService(accountRepo)
+	accountHandler := account.NewHandler(accountSvc)
+
+	// Initialize schedule repository, service and handler
+	scheduleRepo := schedule.NewRepository(db)
+	scheduleSvc := schedule.NewService(scheduleRepo)
+	scheduleHandler := schedule.NewHandler(scheduleSvc)
 
 	// Initialize Gin engine
 	r := gin.Default()
 
-	// Public routes
-	r.POST("/register", handler.Register)
-	r.POST("/login", handler.Login)
-	r.POST("/refresh", handler.Refresh)
+	// CORS middleware
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"}, // фронтенд на Python или Vite
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 
-	// Protected routes with JWT authentication
-	auth := r.Group("/")
-	auth.Use(account.AuthMiddleware())
+	// Public account routes
+	r.POST("/register", accountHandler.Register)
+	r.POST("/login", accountHandler.Login)
+	r.POST("/refresh", accountHandler.Refresh)
+
+	// Protected account routes with JWT authentication
+	accountGroup := r.Group("/account")
+	accountGroup.Use(account.AuthMiddleware())
 	{
-		auth.GET("/profile", handler.Profile) // Get current user profile
-		auth.POST("/account/change-password", handler.ChangePassword)
-		auth.PUT("/account/update", handler.UpdateProfile)
-		auth.POST("/account/set-role", handler.SetRole)
+		accountGroup.GET("/profile", accountHandler.Profile) // Get current user profile
+		accountGroup.POST("/change-password", accountHandler.ChangePassword)
+		accountGroup.PUT("/update", accountHandler.UpdateProfile)
+		accountGroup.POST("/set-role", accountHandler.SetRole)
+	}
+
+	// Protected schedule routes with JWT authentication
+	scheduleGroup := r.Group("/schedule")
+	scheduleGroup.Use(account.AuthMiddleware())
+	{
+		scheduleGroup.POST("/manual", scheduleHandler.ManualSchedule)
 	}
 
 	// Swagger UI route

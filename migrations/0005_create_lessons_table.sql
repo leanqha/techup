@@ -1,17 +1,16 @@
 -- +goose Up
 CREATE TABLE lessons (
                          id SERIAL PRIMARY KEY,
-                         program_id INT REFERENCES programs(id),
-                         day_of_week TEXT,
-                         start_time TEXT,
-                         end_time TEXT,
-                         subject TEXT,
+                         group_id INT REFERENCES groups(id) ON DELETE CASCADE,
+                         day_of_week TEXT NOT NULL,
+                         start_time TIME NOT NULL,
+                         end_time TIME NOT NULL,
+                         subject TEXT NOT NULL,
                          teacher TEXT,
                          classroom TEXT,
                          is_online BOOLEAN DEFAULT false,
-                         group_number TEXT,
-                         created_at TIMESTAMP DEFAULT NOW(),
-                         is_even_week BOOLEAN
+                         is_even_week BOOLEAN DEFAULT true,
+                         created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- +goose Down

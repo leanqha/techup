@@ -3,6 +3,7 @@ package account
 import (
 	"net/http"
 	"strings"
+	"techup/config"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -16,9 +17,16 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		tokenStr := strings.TrimPrefix(header, "Bearer ")
+		parts := strings.Fields(header)
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token format"})
+			return
+		}
+
+		tokenStr := parts[1]
+
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
+			return []byte(config.GetJWTSecret()), nil // <-- используем реальный секрет из .env
 		})
 
 		if err != nil || !token.Valid {

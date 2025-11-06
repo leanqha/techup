@@ -3,6 +3,7 @@ package schedule
 import (
 	"net/http"
 	"path/filepath"
+	"techup/internal/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -62,18 +63,47 @@ func (h *Handler) GetScheduleByGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"lessons": lessons})
 }
 
-func (h *Handler) GetScheduleByProgram(c *gin.Context) {
-	programID := c.Query("program_id")
-	if programID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "program_id query parameter is required"})
+//func (h *Handler) GetScheduleByProgram(c *gin.Context) {
+//	programID := c.Query("program_id")
+//	if programID == "" {
+//		c.JSON(http.StatusBadRequest, gin.H{"error": "program_id query parameter is required"})
+//		return
+//	}
+//
+//	lessons, err := h.service.GetLessonsByProgram(programID)
+//	if err != nil {
+//		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get lessons"})
+//		return
+//	}
+//
+//	c.JSON(http.StatusOK, gin.H{"lessons": lessons})
+//}
+
+func (h *Handler) ManualSchedule(c *gin.Context) {
+	var req ManualScheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
 
-	lessons, err := h.service.GetLessonsByProgram(programID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get lessons"})
-		return
+	for _, l := range req.Lessons {
+		lesson := Lesson{
+			GroupID:    l.GroupID,
+			DayOfWeek:  l.DayOfWeek,
+			StartTime:  l.StartTime,
+			EndTime:    l.EndTime,
+			Subject:    l.Subject,
+			Teacher:    l.Teacher,
+			Classroom:  l.Classroom,
+			IsOnline:   l.IsOnline,
+			IsEvenWeek: l.IsEvenWeek,
+		}
+		if err := h.service.AddLesson(c.Request.Context(), &lesson); err != nil {
+			logger.Log.Warn().Err(err).Msg("failed to add lesson")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"lessons": lessons})
+	c.JSON(http.StatusOK, gin.H{"status": "schedule added"})
 }

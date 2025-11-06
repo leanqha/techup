@@ -13,105 +13,26 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) SaveLesson(ctx context.Context, lesson *Lesson) error {
+// ---------- FACULTIES ----------
+
+func (r *Repository) SaveFaculty(ctx context.Context, faculty *Faculty) error {
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO lessons (id, program_id, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, group_number, is_even_week)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-		lesson.ID,
-		lesson.GroupNumber,
-		lesson.ProgramID,
-		lesson.Subject,
-		lesson.Teacher,
-		lesson.Classroom,
-		lesson.StartTime,
-		lesson.EndTime,
-		lesson.DayOfWeek,
-		lesson.IsOnline,
-		lesson.IsEvenWeek,
-	)
-	return err
-}
-
-func (r *Repository) GetLessonsByGroup(ctx context.Context, group string) ([]Lesson, error) {
-	rows, err := r.db.Query(ctx,
-		`SELECT id, program_id, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, group_number, is_even_week
-		 FROM lessons WHERE group_number = $1`, group)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var lessons []Lesson
-	for rows.Next() {
-		var l Lesson
-		err := rows.Scan(
-			&l.ID,
-			&l.ProgramID,
-			&l.DayOfWeek,
-			&l.StartTime,
-			&l.EndTime,
-			&l.Subject,
-			&l.Teacher,
-			&l.Classroom,
-			&l.IsOnline,
-			&l.GroupNumber,
-			&l.IsEvenWeek,
-		)
-		if err != nil {
-			return nil, err
-		}
-		lessons = append(lessons, l)
-	}
-	return lessons, rows.Err()
-}
-
-func (r *Repository) GetLessonsByProgram(ctx context.Context, programID int) ([]Lesson, error) {
-	rows, err := r.db.Query(ctx,
-		`SELECT id, group_number, program_id, subject, teacher, classroom, start_time, end_time, day_of_week, is_online, is_even_week
-		 FROM lessons WHERE program_id = $1`, programID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var lessons []Lesson
-	for rows.Next() {
-		var l Lesson
-		err := rows.Scan(
-			&l.ID,
-			&l.GroupNumber,
-			&l.ProgramID,
-			&l.Subject,
-			&l.Teacher,
-			&l.Classroom,
-			&l.StartTime,
-			&l.EndTime,
-			&l.DayOfWeek,
-			&l.IsOnline,
-			&l.IsEvenWeek,
-		)
-		if err != nil {
-			return nil, err
-		}
-		lessons = append(lessons, l)
-	}
-	return lessons, rows.Err()
-}
-
-func (r *Repository) DeleteLessonsByProgram(ctx context.Context, programID int) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM lessons WHERE program_id = $1`, programID)
+		`INSERT INTO faculties (name) VALUES ($1)`,
+		faculty.Name)
 	return err
 }
 
 func (r *Repository) GetFaculties(ctx context.Context) ([]Faculty, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, name FROM faculties`)
+	rows, err := r.db.Query(ctx, `SELECT id, name FROM faculties ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	var faculties []Faculty
 	for rows.Next() {
 		var f Faculty
-		err := rows.Scan(&f.ID, &f.Name)
-		if err != nil {
+		if err := rows.Scan(&f.ID, &f.Name); err != nil {
 			return nil, err
 		}
 		faculties = append(faculties, f)
@@ -119,20 +40,67 @@ func (r *Repository) GetFaculties(ctx context.Context) ([]Faculty, error) {
 	return faculties, rows.Err()
 }
 
-func (r *Repository) GetProgramsByFaculty(ctx context.Context, facultyID int) ([]Program, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, faculty_id, name FROM programs WHERE faculty_id = $1`, facultyID)
+// ---------- GROUPS ----------
+
+func (r *Repository) SaveGroup(ctx context.Context, group *Group) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO groups (faculty_id, name, course, degree, year_start, specialization, is_active)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		group.FacultyID, group.Name, group.Course, group.Degree, group.YearStart, group.Specialization, group.IsActive)
+	return err
+}
+
+func (r *Repository) GetGroupsByFaculty(ctx context.Context, facultyID int) ([]Group, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, faculty_id, name, course, degree, year_start, specialization, is_active
+		 FROM groups WHERE faculty_id = $1 ORDER BY name`, facultyID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var programs []Program
+
+	var groups []Group
 	for rows.Next() {
-		var p Program
-		err := rows.Scan(&p.ID, &p.FacultyID, &p.Name)
-		if err != nil {
+		var g Group
+		if err := rows.Scan(&g.ID, &g.FacultyID, &g.Name, &g.Course, &g.Degree, &g.YearStart, &g.Specialization, &g.IsActive); err != nil {
 			return nil, err
 		}
-		programs = append(programs, p)
+		groups = append(groups, g)
 	}
-	return programs, rows.Err()
+	return groups, rows.Err()
+}
+
+// ---------- LESSONS ----------
+
+func (r *Repository) SaveLesson(ctx context.Context, lesson *Lesson) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO lessons (group_id, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		lesson.GroupID, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
+		lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek)
+	return err
+}
+
+func (r *Repository) GetLessonsByGroup(ctx context.Context, groupName string) ([]Lesson, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT l.id, l.group_id, l.day_of_week, l.start_time, l.end_time, l.subject, l.teacher, l.classroom, l.is_online, l.is_even_week
+		 FROM lessons l
+		 JOIN groups g ON g.id = l.group_id
+		 WHERE g.name = $1
+		 ORDER BY l.day_of_week, l.start_time`, groupName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var lessons []Lesson
+	for rows.Next() {
+		var l Lesson
+		if err := rows.Scan(&l.ID, &l.GroupID, &l.DayOfWeek, &l.StartTime, &l.EndTime,
+			&l.Subject, &l.Teacher, &l.Classroom, &l.IsOnline, &l.IsEvenWeek); err != nil {
+			return nil, err
+		}
+		lessons = append(lessons, l)
+	}
+	return lessons, rows.Err()
 }
