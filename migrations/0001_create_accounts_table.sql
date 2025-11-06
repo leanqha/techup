@@ -7,8 +7,9 @@ CREATE TABLE IF NOT EXISTS accounts (
                                         first_name TEXT,
                                         last_name TEXT,
                                         role TEXT DEFAULT 'student',
+                                        group_name TEXT,
                                         created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+                                        updated_at TIMESTAMP DEFAULT NOW()
     );
 
 -- +goose Down

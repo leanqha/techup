@@ -103,6 +103,9 @@ func (h *Handler) ManualSchedule(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		logger.Log.Info().
+			Int("id", lesson.ID).
+			Msg("added lesson")
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "schedule added"})

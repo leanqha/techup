@@ -1,7 +1,6 @@
 package account
 
 import (
-	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"techup/internal/logger"
@@ -31,6 +30,7 @@ func NewHandler(s *Service) *Handler {
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Log.Warn().Err(err).Msg("invalid registration input")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
@@ -40,7 +40,10 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
+	logger.Log.Info().
+		Int("id", acc.ID).
+		Str("email", acc.Email).
+		Msg("register account successfully")
 	c.JSON(http.StatusOK, gin.H{"id": acc.ID, "email": acc.Email})
 }
 
@@ -75,6 +78,10 @@ func (h *Handler) Login(c *gin.Context) {
 		RefreshToken: refreshToken,
 	}
 
+	logger.Log.Info().
+		Str("email", req.Email).
+		Msg("user logged in successfully")
+
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -96,14 +103,21 @@ func (h *Handler) Profile(c *gin.Context) {
 
 	userClaims := claims.(jwt.MapClaims)
 	userID := int(userClaims["user_id"].(float64))
-	fmt.Println(userID)
 
 	acc, err := h.service.GetByID(c, userID)
 	if err != nil {
-		logger.Log.Warn().Err(err).Msg("user not found")
+		logger.Log.Warn().
+			Err(err).
+			Int("user_id", userID).
+			Msg("failed to get user profile: user not found")
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
+
+	logger.Log.Info().
+		Int("user_id", acc.ID).
+		Str("email", acc.Email).
+		Msg("user profile retrieved successfully")
 
 	resp := ProfileResponse{
 		ID:        acc.ID,
@@ -150,6 +164,10 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		return
 	}
 
+	logger.Log.Info().
+		Int("user_id", userID).
+		Msg("password changed successfully")
+
 	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
 }
 
@@ -187,6 +205,11 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	logger.Log.Info().
+		Int("user_id", acc.ID).
+		Str("email", acc.Email).
+		Msg("profile updated successfully")
 
 	c.JSON(http.StatusOK, ProfileResponse{
 		ID:        acc.ID,
@@ -235,6 +258,12 @@ func (h *Handler) SetRole(c *gin.Context) {
 		return
 	}
 
+	logger.Log.Info().
+		Int("user_id", userID).
+		Str("target_role", req.Role).
+		Int("target_id", req.UserID).
+		Msg("user role updated successfully")
+
 	c.JSON(http.StatusOK, gin.H{"message": "role updated successfully"})
 }
 
@@ -250,6 +279,8 @@ func (h *Handler) Refresh(c *gin.Context) {
 		c.JSON(401, gin.H{"error": err.Error()})
 		return
 	}
+
+	logger.Log.Info().Msg("tokens refreshed successfully")
 
 	c.JSON(200, gin.H{
 		"access_token":  access,
