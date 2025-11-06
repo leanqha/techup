@@ -1,7 +1,6 @@
 package schedule
 
 import (
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"techup/internal/logger"
@@ -117,8 +116,15 @@ func (h *Handler) AddFaculty(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(req)
-	h.service.AddFaculty(c.Request.Context(), &req)
+	if err := h.service.AddFaculty(c.Request.Context(), &req); err != nil {
+		logger.Log.Warn().Err(err).Msg("failed to add faculty")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	logger.Log.Info().
+		Int("id", req.ID).
+		Msg("added faculty")
+	c.JSON(http.StatusOK, gin.H{"status": "faculty added"})
+
 }
 
 func (h *Handler) AddGroup(c *gin.Context) {
@@ -128,6 +134,13 @@ func (h *Handler) AddGroup(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(req)
-	h.service.AddGroup(c.Request.Context(), &req)
+	if err := h.service.AddGroup(c.Request.Context(), &req); err != nil {
+		logger.Log.Warn().Err(err).Msg("failed to add group")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	logger.Log.Info().
+		Int("id", req.ID).
+		Msg("added group")
+	c.JSON(http.StatusOK, gin.H{"status": "group added"})
+
 }
