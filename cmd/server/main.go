@@ -63,30 +63,45 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Public account routes
-	r.POST("/register", accountHandler.Register)
-	r.POST("/login", accountHandler.Login)
-	r.POST("/refresh", accountHandler.Refresh)
+	// Базовая группа API
+	api := r.Group("/api/v1")
 
-	// Protected account routes with JWT authentication
-	accountGroup := r.Group("/account")
-	accountGroup.Use(account.AuthMiddleware())
+	// ---------- Account routes ----------
+	accountGroup := api.Group("/account")
+
+	// --- Публичные ---
+	accountGroup.POST("/register", accountHandler.Register)
+	accountGroup.POST("/login", accountHandler.Login)
+	accountGroup.POST("/refresh", accountHandler.Refresh)
+
+	// --- Защищённые ---
+	secureAccount := accountGroup.Group("/secure")
+	secureAccount.Use(account.AuthMiddleware())
 	{
-		accountGroup.GET("/profile", accountHandler.Profile) // Get current user profile
-		accountGroup.POST("/change-password", accountHandler.ChangePassword)
-		accountGroup.PUT("/update", accountHandler.UpdateProfile)
-		accountGroup.POST("/set-role", accountHandler.SetRole)
+		secureAccount.GET("/profile", accountHandler.Profile)
+		secureAccount.POST("/change-password", accountHandler.ChangePassword)
+		secureAccount.PUT("/update", accountHandler.UpdateProfile)
+		secureAccount.POST("/set-role", accountHandler.SetRole)
 	}
 
-	// Protected schedule routes with JWT authentication
-	scheduleGroup := r.Group("/schedule")
+	// ---------- Schedule routes ----------
+	scheduleGroup := api.Group("/schedule")
 	scheduleGroup.Use(account.AuthMiddleware())
 	{
-		scheduleGroup.POST("/manual", scheduleHandler.ManualSchedule)
+		scheduleGroup.GET("/:group_name", scheduleHandler.GetScheduleByGroup)
 	}
 
-	// Swagger UI route
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler)) // Swagger UI
+	// ---------- Admin routes ----------
+	adminGroup := api.Group("/admin")
+	adminGroup.Use(account.AuthMiddleware(), account.RequireRole("admin"))
+	{
+		adminGroup.POST("/faculty", scheduleHandler.AddFaculty)
+		adminGroup.POST("/group", scheduleHandler.AddGroup)
+		adminGroup.POST("/lesson", scheduleHandler.AddLesson)
+	}
+
+	// ---------- Swagger ----------
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Start server
 	port := config.GetPort()

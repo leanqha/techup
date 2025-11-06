@@ -2,6 +2,7 @@
 CREATE TABLE lessons (
                          id SERIAL PRIMARY KEY,
                          group_id INT REFERENCES groups(id) ON DELETE CASCADE,
+                         group_name TEXT NOT NULL,
                          day_of_week TEXT NOT NULL,
                          start_time TIME NOT NULL,
                          end_time TIME NOT NULL,

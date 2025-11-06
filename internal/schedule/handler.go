@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"techup/internal/logger"
@@ -79,34 +80,54 @@ func (h *Handler) GetScheduleByGroup(c *gin.Context) {
 //	c.JSON(http.StatusOK, gin.H{"lessons": lessons})
 //}
 
-func (h *Handler) ManualSchedule(c *gin.Context) {
-	var req ManualScheduleRequest
+func (h *Handler) AddLesson(c *gin.Context) {
+	var req Lesson
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
 
-	for _, l := range req.Lessons {
-		lesson := Lesson{
-			GroupID:    l.GroupID,
-			DayOfWeek:  l.DayOfWeek,
-			StartTime:  l.StartTime,
-			EndTime:    l.EndTime,
-			Subject:    l.Subject,
-			Teacher:    l.Teacher,
-			Classroom:  l.Classroom,
-			IsOnline:   l.IsOnline,
-			IsEvenWeek: l.IsEvenWeek,
-		}
-		if err := h.service.AddLesson(c.Request.Context(), &lesson); err != nil {
-			logger.Log.Warn().Err(err).Msg("failed to add lesson")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		logger.Log.Info().
-			Int("id", lesson.ID).
-			Msg("added lesson")
+	lesson := Lesson{
+		GroupName:  req.GroupName,
+		DayOfWeek:  req.DayOfWeek,
+		StartTime:  req.StartTime,
+		EndTime:    req.EndTime,
+		Subject:    req.Subject,
+		Teacher:    req.Teacher,
+		Classroom:  req.Classroom,
+		IsOnline:   req.IsOnline,
+		IsEvenWeek: req.IsEvenWeek,
 	}
+	if err := h.service.AddLesson(c.Request.Context(), &lesson); err != nil {
+		logger.Log.Warn().Err(err).Msg("failed to add lesson")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	logger.Log.Info().
+		Int("id", lesson.ID).
+		Msg("added lesson")
 
 	c.JSON(http.StatusOK, gin.H{"status": "schedule added"})
+}
+
+func (h *Handler) AddFaculty(c *gin.Context) {
+	var req Faculty
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	fmt.Println(req)
+	h.service.AddFaculty(c.Request.Context(), &req)
+}
+
+func (h *Handler) AddGroup(c *gin.Context) {
+	var req Group
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	fmt.Println(req)
+	h.service.AddGroup(c.Request.Context(), &req)
 }

@@ -26,7 +26,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenStr := parts[1]
 
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-			return []byte(config.GetJWTSecret()), nil // <-- используем реальный секрет из .env
+			return []byte(config.GetJWTSecret()), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -38,6 +38,36 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Set("claims", claims)
 		} else {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// RequireRole позволяет ограничить доступ по роли (например, только админам)
+func RequireRole(role string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claims, exists := c.Get("claims")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing claims"})
+			return
+		}
+
+		userClaims, ok := claims.(jwt.MapClaims)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid claims"})
+			return
+		}
+
+		userRole, ok := userClaims["role"].(string)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid role"})
+			return
+		}
+
+		if userRole != role {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "access denied"})
 			return
 		}
 

@@ -26,3 +26,18 @@ type ScheduleDTO struct {
 	GroupID int         `json:"group_id"`
 	Lessons []LessonDTO `json:"lessons"`
 }
+
+type FacultyDTO struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type AddGroupDTO struct {
+	FacultyID      int    `json:"faculty_id"`
+	Name           string `json:"name"`
+	Course         int    `json:"course"`
+	Degree         string `json:"degree"`
+	YearStart      int    `json:"year_start"`
+	Specialization string `json:"specialization"`
+	IsActive       bool   `json:"is_active"`
+}

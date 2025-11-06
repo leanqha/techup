@@ -73,12 +73,17 @@ func (r *Repository) GetGroupsByFaculty(ctx context.Context, facultyID int) ([]G
 // ---------- LESSONS ----------
 
 func (r *Repository) SaveLesson(ctx context.Context, lesson *Lesson) error {
-	_, err := r.db.Exec(ctx,
-		`INSERT INTO lessons (group_id, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		lesson.GroupID, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
-		lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek)
-	return err
+	query := `INSERT INTO lessons (group_id, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		 returning id
+		 `
+	err := r.db.QueryRow(ctx, query,
+		lesson.GroupName, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
+		lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek).Scan(&lesson.ID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *Repository) GetLessonsByGroup(ctx context.Context, groupName string) ([]Lesson, error) {
@@ -96,7 +101,7 @@ func (r *Repository) GetLessonsByGroup(ctx context.Context, groupName string) ([
 	var lessons []Lesson
 	for rows.Next() {
 		var l Lesson
-		if err := rows.Scan(&l.ID, &l.GroupID, &l.DayOfWeek, &l.StartTime, &l.EndTime,
+		if err := rows.Scan(&l.ID, &l.GroupName, &l.DayOfWeek, &l.StartTime, &l.EndTime,
 			&l.Subject, &l.Teacher, &l.Classroom, &l.IsOnline, &l.IsEvenWeek); err != nil {
 			return nil, err
 		}

@@ -23,7 +23,7 @@ type Group struct {
 // Lesson represents a single class session
 type Lesson struct {
 	ID         int       `db:"id"`
-	GroupID    int       `db:"group_id"`
+	GroupName  string    `db:"group_name"`
 	DayOfWeek  string    `db:"day_of_week"`
 	StartTime  string    `db:"start_time"`
 	EndTime    string    `db:"end_time"`
