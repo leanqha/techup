@@ -73,7 +73,7 @@ func (r *Repository) GetGroupsByFaculty(ctx context.Context, facultyID int) ([]G
 // ---------- LESSONS ----------
 
 func (r *Repository) SaveLesson(ctx context.Context, lesson *Lesson) error {
-	query := `INSERT INTO lessons (group_id, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week)
+	query := `INSERT INTO lessons (group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		 returning id
 		 `
