@@ -30,13 +30,16 @@ func NewHandler(s *Service) *Handler {
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Warn().Err(err).Msg("invalid registration input")
+		logger.Log.Warn().Str("email", req.Email).Err(err).Msg("registration attempt failed: invalid input")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
+	logger.Log.Info().Str("email", req.Email).Msg("registration attempt")
+
 	acc, err := h.service.Register(c.Request.Context(), req.Email, req.Password, req.FirstName, req.LastName)
 	if err != nil {
+		logger.Log.Warn().Str("email", req.Email).Err(err).Msg("registration attempt failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -61,14 +64,16 @@ func (h *Handler) Register(c *gin.Context) {
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Warn().Err(err).Msg("invalid input")
+		logger.Log.Warn().Str("email", req.Email).Err(err).Msg("login attempt failed: invalid input")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
+	logger.Log.Info().Str("email", req.Email).Msg("login attempt")
+
 	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		logger.Log.Warn().Err(err).Msg("invalid credentials")
+		logger.Log.Warn().Str("email", req.Email).Err(err).Msg("login attempt failed: invalid credentials")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
@@ -267,6 +272,17 @@ func (h *Handler) SetRole(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "role updated successfully"})
 }
 
+// Refresh godoc
+// @Summary Refresh JWT tokens
+// @Description Refreshes access and refresh tokens using a valid refresh token
+// @Tags account
+// @Accept json
+// @Produce json
+// @Param request body RefreshRequest true "Refresh token"
+// @Success 200 {object} LoginResponse "New tokens"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Router /refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
