@@ -2,7 +2,6 @@ package schedule
 
 import (
 	"context"
-	"sort"
 )
 
 type Service struct {
@@ -43,31 +42,7 @@ func (s *Service) GetGroupsByFaculty(ctx context.Context, facultyID int) ([]Grou
 	return s.repo.GetGroupsByFaculty(ctx, facultyID)
 }
 
-// GetScheduleByGroup возвращает расписание по названию группы
-func (s *Service) GetScheduleByGroup(ctx context.Context, group string) ([]Lesson, error) {
-	lessons, err := s.repo.GetLessonsByGroup(ctx, group)
-	if err != nil {
-		return nil, err
-	}
-
-	sort.Slice(lessons, func(i, j int) bool {
-		if lessons[i].DayOfWeek == lessons[j].DayOfWeek {
-			return lessons[i].StartTime < lessons[j].StartTime
-		}
-		return lessons[i].DayOfWeek < lessons[j].DayOfWeek
-	})
-
-	return lessons, nil
-}
-
-func (s *Service) GetScheduleByTeacher(ctx context.Context, teacherName string) (*TeacherScheduleResponse, error) {
-	lessons, err := s.repo.GetLessonsByTeacher(ctx, teacherName)
-	if err != nil {
-		return nil, err
-	}
-
-	return &TeacherScheduleResponse{
-		Teacher: teacherName,
-		Lessons: lessons,
-	}, nil
+// SearchSchedule performs search with extended filters: group, teacher, classroom, dayOfWeek, time range, isEvenWeek
+func (s *Service) SearchSchedule(ctx context.Context, group, teacher, classroom, dayOfWeek, from, to string, isEvenWeek *bool) ([]Lesson, error) {
+	return s.repo.SearchLessons(ctx, group, teacher, classroom, dayOfWeek, from, to, isEvenWeek)
 }

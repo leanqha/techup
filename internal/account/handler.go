@@ -1,11 +1,9 @@
 package account
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
-	"techup/internal/logger"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
@@ -30,23 +28,16 @@ func NewHandler(s *Service) *Handler {
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Warn().Str("email", req.Email).Err(err).Msg("registration attempt failed: invalid input")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
-	logger.Log.Info().Str("email", req.Email).Msg("registration attempt")
-
 	acc, err := h.service.Register(c.Request.Context(), req.Email, req.Password, req.FirstName, req.LastName)
 	if err != nil {
-		logger.Log.Warn().Str("email", req.Email).Err(err).Msg("registration attempt failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	logger.Log.Info().
-		Int("id", acc.ID).
-		Str("email", acc.Email).
-		Msg("register account successfully")
+
 	c.JSON(http.StatusOK, gin.H{"id": acc.ID, "email": acc.Email})
 }
 
@@ -64,16 +55,12 @@ func (h *Handler) Register(c *gin.Context) {
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Warn().Str("email", req.Email).Err(err).Msg("login attempt failed: invalid input")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
-	logger.Log.Info().Str("email", req.Email).Msg("login attempt")
-
 	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		logger.Log.Warn().Str("email", req.Email).Err(err).Msg("login attempt failed: invalid credentials")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
@@ -82,10 +69,6 @@ func (h *Handler) Login(c *gin.Context) {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
-
-	logger.Log.Info().
-		Str("email", req.Email).
-		Msg("user logged in successfully")
 
 	c.JSON(http.StatusOK, resp)
 }
@@ -111,18 +94,9 @@ func (h *Handler) Profile(c *gin.Context) {
 
 	acc, err := h.service.GetByID(c, userID)
 	if err != nil {
-		logger.Log.Warn().
-			Err(err).
-			Int("user_id", userID).
-			Msg("failed to get user profile: user not found")
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
-
-	logger.Log.Info().
-		Int("user_id", acc.ID).
-		Str("email", acc.Email).
-		Msg("user profile retrieved successfully")
 
 	resp := ProfileResponse{
 		ID:        acc.ID,
@@ -158,7 +132,6 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Warn().Err(err).Msg("invalid change password input")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
@@ -168,10 +141,6 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	logger.Log.Info().
-		Int("user_id", userID).
-		Msg("password changed successfully")
 
 	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
 }
@@ -200,7 +169,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Warn().Err(err).Msg("invalid update profile input")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
@@ -210,11 +178,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	logger.Log.Info().
-		Int("user_id", acc.ID).
-		Str("email", acc.Email).
-		Msg("profile updated successfully")
 
 	c.JSON(http.StatusOK, ProfileResponse{
 		ID:        acc.ID,
@@ -248,7 +211,6 @@ func (h *Handler) SetRole(c *gin.Context) {
 
 	var req SetRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Warn().Err(err).Msg("invalid set role input")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
@@ -262,12 +224,6 @@ func (h *Handler) SetRole(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	logger.Log.Info().
-		Int("user_id", userID).
-		Str("target_role", req.Role).
-		Int("target_id", req.UserID).
-		Msg("user role updated successfully")
 
 	c.JSON(http.StatusOK, gin.H{"message": "role updated successfully"})
 }
@@ -295,8 +251,6 @@ func (h *Handler) Refresh(c *gin.Context) {
 		c.JSON(401, gin.H{"error": err.Error()})
 		return
 	}
-
-	logger.Log.Info().Msg("tokens refreshed successfully")
 
 	c.JSON(200, gin.H{
 		"access_token":  access,

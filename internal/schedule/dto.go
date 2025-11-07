@@ -46,3 +46,8 @@ type TeacherScheduleResponse struct {
 	Teacher string   `json:"teacher"`
 	Lessons []Lesson `json:"lessons"`
 }
+
+type ClassroomScheduleResponse struct {
+	Classroom string   `json:"classroom"`
+	Lessons   []Lesson `json:"lessons"`
+}

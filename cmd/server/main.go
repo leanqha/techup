@@ -13,6 +13,7 @@ package main
 import (
 	"techup/config"
 	"techup/internal/account"
+	"techup/internal/health"
 	"techup/internal/logger"
 	"techup/internal/schedule"
 
@@ -52,7 +53,9 @@ func main() {
 	scheduleHandler := schedule.NewHandler(scheduleSvc)
 
 	// Initialize Gin engine
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(logger.GinLoggerMiddleware())
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
@@ -62,6 +65,8 @@ func main() {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
+
+	r.GET("/api/v1/health", health.Handler)
 
 	// Базовая группа API
 	api := r.Group("/api/v1")
@@ -88,8 +93,7 @@ func main() {
 	scheduleGroup := api.Group("/schedule")
 	scheduleGroup.Use(account.AuthMiddleware())
 	{
-		scheduleGroup.GET("/:group_name", scheduleHandler.GetScheduleByGroup)
-		scheduleGroup.GET("/teacher/:teacher_name", scheduleHandler.GetScheduleByTeacher)
+		scheduleGroup.GET("/search", scheduleHandler.SearchSchedule)
 	}
 
 	// ---------- Admin routes ----------

@@ -139,6 +139,15 @@ definitions:
       teacher:
         type: string
     type: object
+  schedule.TeacherScheduleResponse:
+    properties:
+      lessons:
+        items:
+          $ref: '#/definitions/schedule.Lesson'
+        type: array
+      teacher:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -264,6 +273,45 @@ paths:
       summary: Update user profile
       tags:
       - account
+  /api/v1/schedule/teacher/{teacher_name}:
+    get:
+      description: Returns all lessons taught by a specific teacher
+      parameters:
+      - description: Teacher's full name
+        in: path
+        name: teacher_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schedule.TeacherScheduleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get schedule by teacher name
+      tags:
+      - Schedule
   /login:
     post:
       consumes:

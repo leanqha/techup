@@ -1,11 +1,10 @@
 package schedule
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"path/filepath"
-	"techup/internal/logger"
-
-	"github.com/gin-gonic/gin"
+	"strconv"
 )
 
 type Handler struct {
@@ -58,33 +57,6 @@ func (h *Handler) UploadSchedule(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "schedule uploaded and imported successfully"})
 }
 
-// GetScheduleByGroup godoc
-// @Summary Get schedule by group
-// @Description Get lessons schedule for a specific group
-// @Tags schedule
-// @Accept json
-// @Produce json
-// @Param group query string true "Group name"
-// @Success 200 {object} map[string]interface{} "lessons"
-// @Failure 400 {object} map[string]string "group query parameter is required"
-// @Failure 500 {object} map[string]string "failed to get lessons"
-// @Router /schedule [get]
-func (h *Handler) GetScheduleByGroup(c *gin.Context) {
-	group := c.Query("group")
-	if group == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "group query parameter is required"})
-		return
-	}
-
-	lessons, err := h.service.GetScheduleByGroup(c.Request.Context(), group)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get lessons"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"lessons": lessons})
-}
-
 // AddLesson godoc
 // @Summary Add a lesson
 // @Description Add a new lesson to the schedule
@@ -115,13 +87,10 @@ func (h *Handler) AddLesson(c *gin.Context) {
 		IsEvenWeek: req.IsEvenWeek,
 	}
 	if err := h.service.AddLesson(c.Request.Context(), &lesson); err != nil {
-		logger.Log.Warn().Err(err).Msg("failed to add lesson")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	logger.Log.Info().
-		Int("id", lesson.ID).
-		Msg("added lesson")
+
 	c.JSON(http.StatusOK, gin.H{"status": "lesson added"})
 }
 
@@ -144,12 +113,9 @@ func (h *Handler) AddFaculty(c *gin.Context) {
 	}
 
 	if err := h.service.AddFaculty(c.Request.Context(), &req); err != nil {
-		logger.Log.Warn().Err(err).Msg("failed to add faculty")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
-	logger.Log.Info().
-		Int("id", req.ID).
-		Msg("added faculty")
+
 	c.JSON(http.StatusOK, gin.H{"status": "faculty added"})
 
 }
@@ -173,12 +139,59 @@ func (h *Handler) AddGroup(c *gin.Context) {
 	}
 
 	if err := h.service.AddGroup(c.Request.Context(), &req); err != nil {
-		logger.Log.Warn().Err(err).Msg("failed to add group")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
-	logger.Log.Info().
-		Int("id", req.ID).
-		Msg("added group")
+
 	c.JSON(http.StatusOK, gin.H{"status": "group added"})
 
+}
+
+// SearchSchedule godoc
+// @Summary Search lessons schedule
+// @Description Search lessons by group, teacher, classroom, day, time range, or even/odd week. At least one query parameter is required.
+// @Tags schedule
+// @Produce json
+// @Param group query string false "Group name"
+// @Param teacher query string false "Teacher name"
+// @Param classroom query string false "Classroom"
+// @Param day query string false "Day of the week"
+// @Param from query string false "Start time in HH:MM format"
+// @Param to query string false "End time in HH:MM format"
+// @Param is_even_week query bool false "Even week (true/false)"
+// @Success 200 {array} schedule.Lesson
+// @Failure 400 {object} map[string]string "At least one query parameter is required"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Security BearerAuth
+// @Router /api/v1/schedule/search [get]
+func (h *Handler) SearchSchedule(c *gin.Context) {
+	group := c.Query("group")
+	teacher := c.Query("teacher")
+	classroom := c.Query("classroom")
+	dayOfWeek := c.Query("day")
+	from := c.Query("from")
+	to := c.Query("to")
+
+	var isEvenWeek *bool
+	isEvenStr := c.Query("is_even_week")
+	if isEvenStr != "" {
+		val, err := strconv.ParseBool(isEvenStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "is_even_week must be a boolean"})
+			return
+		}
+		isEvenWeek = &val
+	}
+
+	if group == "" && teacher == "" && classroom == "" && dayOfWeek == "" && from == "" && to == "" && isEvenWeek == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one query parameter is required"})
+		return
+	}
+
+	lessons, err := h.service.SearchSchedule(c.Request.Context(), group, teacher, classroom, dayOfWeek, from, to, isEvenWeek)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, lessons)
 }

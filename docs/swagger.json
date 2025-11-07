@@ -198,6 +198,67 @@
                 }
             }
         },
+        "/api/v1/schedule/teacher/{teacher_name}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all lessons taught by a specific teacher",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Schedule"
+                ],
+                "summary": "Get schedule by teacher name",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Teacher's full name",
+                        "name": "teacher_name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/schedule.TeacherScheduleResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "description": "Authenticates user and returns JWT token",
@@ -858,6 +919,20 @@
                 },
                 "subject": {
                     "type": "string"
+                },
+                "teacher": {
+                    "type": "string"
+                }
+            }
+        },
+        "schedule.TeacherScheduleResponse": {
+            "type": "object",
+            "properties": {
+                "lessons": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/schedule.Lesson"
+                    }
                 },
                 "teacher": {
                     "type": "string"
