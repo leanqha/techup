@@ -15,6 +15,7 @@ import (
 	"techup/internal/account"
 	"techup/internal/health"
 	"techup/internal/logger"
+	maps "techup/internal/map"
 	"techup/internal/schedule"
 
 	"github.com/gin-contrib/cors"
@@ -51,6 +52,10 @@ func main() {
 	scheduleRepo := schedule.NewRepository(db)
 	scheduleSvc := schedule.NewService(scheduleRepo)
 	scheduleHandler := schedule.NewHandler(scheduleSvc)
+
+	mapsRepo := maps.NewRepository(db)
+	mapsSvc := maps.NewService(mapsRepo)
+	mapsHandler := maps.NewHandler(mapsSvc)
 
 	// Initialize Gin engine
 	r := gin.New()
@@ -94,6 +99,15 @@ func main() {
 	scheduleGroup.Use(account.AuthMiddleware())
 	{
 		scheduleGroup.GET("/search", scheduleHandler.SearchSchedule)
+	}
+
+	// ---------- Map / Building routes ----------
+	mapsGroup := api.Group("/map")
+	mapsGroup.Use()
+	{
+		mapsGroup.GET("/buildings", mapsHandler.GetBuildings)
+		mapsGroup.GET("/buildings/:building_id/rooms", mapsHandler.GetRoomsByBuilding)
+		mapsGroup.GET("/shortest-path/:start/:end", mapsHandler.GetShortestPath)
 	}
 
 	// ---------- Admin routes ----------

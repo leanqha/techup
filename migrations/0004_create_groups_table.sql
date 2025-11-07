@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE groups (
+CREATE TABLE IF NOT EXISTS groups (
                         id SERIAL PRIMARY KEY,
                         faculty_id INT REFERENCES faculties(id) ON DELETE CASCADE,
                         name TEXT default 0000,              -- Название группы, напр. "БИС-31"

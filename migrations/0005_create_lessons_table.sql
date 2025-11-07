@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE lessons (
+CREATE TABLE IF NOT EXISTS lessons (
                          id SERIAL PRIMARY KEY,
                          group_id INT REFERENCES groups(id) ON DELETE CASCADE,
                          group_name TEXT NOT NULL,
