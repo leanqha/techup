@@ -41,3 +41,8 @@ type AddGroupDTO struct {
 	Specialization string `json:"specialization"`
 	IsActive       bool   `json:"is_active"`
 }
+
+type TeacherScheduleResponse struct {
+	Teacher string   `json:"teacher"`
+	Lessons []Lesson `json:"lessons"`
+}

@@ -89,6 +89,7 @@ func main() {
 	scheduleGroup.Use(account.AuthMiddleware())
 	{
 		scheduleGroup.GET("/:group_name", scheduleHandler.GetScheduleByGroup)
+		scheduleGroup.GET("/teacher/:teacher_name", scheduleHandler.GetScheduleByTeacher)
 	}
 
 	// ---------- Admin routes ----------

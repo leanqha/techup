@@ -109,3 +109,31 @@ func (r *Repository) GetLessonsByGroup(ctx context.Context, groupName string) ([
 	}
 	return lessons, rows.Err()
 }
+
+func (r *Repository) GetLessonsByTeacher(ctx context.Context, teacherName string) ([]Lesson, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT id, group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week, created_at
+		FROM lessons
+		WHERE LOWER(teacher) = LOWER($1)
+		ORDER BY day_of_week, start_time
+	`, teacherName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var lessons []Lesson
+	for rows.Next() {
+		var l Lesson
+		if err := rows.Scan(
+			&l.ID, &l.GroupName, &l.DayOfWeek,
+			&l.StartTime, &l.EndTime, &l.Subject,
+			&l.Teacher, &l.Classroom, &l.IsOnline,
+			&l.IsEvenWeek, &l.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		lessons = append(lessons, l)
+	}
+	return lessons, nil
+}

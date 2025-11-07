@@ -59,3 +59,15 @@ func (s *Service) GetScheduleByGroup(ctx context.Context, group string) ([]Lesso
 
 	return lessons, nil
 }
+
+func (s *Service) GetScheduleByTeacher(ctx context.Context, teacherName string) (*TeacherScheduleResponse, error) {
+	lessons, err := s.repo.GetLessonsByTeacher(ctx, teacherName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TeacherScheduleResponse{
+		Teacher: teacherName,
+		Lessons: lessons,
+	}, nil
+}
