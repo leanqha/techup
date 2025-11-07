@@ -15,6 +15,7 @@ logs:
 
 restart:
 	docker compose -f docker-compose.yml restart
+	docker compose -f docker-compose.yml logs -f
 
 migrate:
 	docker compose -f docker-compose.yml exec app goose -dir $${GOOSE_MIGRATION_DIR} $${GOOSE_DRIVER} "$${GOOSE_DBSTRING}"
