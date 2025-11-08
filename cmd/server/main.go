@@ -64,7 +64,10 @@ func main() {
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // фронтенд на Python или Vite
+		AllowOrigins: []string{
+			"http://localhost:3000",
+			"https://leanqha.github.io",
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -91,7 +94,6 @@ func main() {
 		secureAccount.GET("/profile", accountHandler.Profile)
 		secureAccount.POST("/change-password", accountHandler.ChangePassword)
 		secureAccount.PUT("/update", accountHandler.UpdateProfile)
-		secureAccount.POST("/set-role", accountHandler.SetRole)
 	}
 
 	// ---------- Schedule routes ----------
@@ -107,13 +109,14 @@ func main() {
 	{
 		mapsGroup.GET("/buildings", mapsHandler.GetBuildings)
 		mapsGroup.GET("/buildings/:building_id/rooms", mapsHandler.GetRoomsByBuilding)
-		mapsGroup.GET("/shortest-path/:start/:end", mapsHandler.GetShortestPath)
+		mapsGroup.GET("/path/:start/:end", mapsHandler.GetShortestPath)
 	}
 
 	// ---------- Admin routes ----------
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(account.AuthMiddleware(), account.RequireRole("admin"))
 	{
+		adminGroup.POST("/set-role", accountHandler.SetRole)
 		adminGroup.POST("/faculty", scheduleHandler.AddFaculty)
 		adminGroup.POST("/group", scheduleHandler.AddGroup)
 		adminGroup.POST("/lesson", scheduleHandler.AddLesson)
