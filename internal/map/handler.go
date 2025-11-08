@@ -77,21 +77,10 @@ func (h *Handler) GetRoomsByBuilding(c *gin.Context) {
 // @Failure 500 {object} gin.H{"error": string}
 // @Router /shortest-path [get]
 func (h *Handler) GetShortestPath(c *gin.Context) {
-	startIDStr := c.Query("start_room_id")
-	endIDStr := c.Query("end_room_id")
+	startRoom := c.Param("start")
+	endRoom := c.Param("end")
 
-	startID, err := strconv.Atoi(startIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start_room_id"})
-		return
-	}
-	endID, err := strconv.Atoi(endIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end_room_id"})
-		return
-	}
-
-	path, distance, err := h.Service.FindShortestPath(c.Request.Context(), startID, endID)
+	path, distance, err := h.Service.FindShortestPath(c.Request.Context(), startRoom, endRoom)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate shortest path"})
 		return
@@ -101,4 +90,25 @@ func (h *Handler) GetShortestPath(c *gin.Context) {
 		Dist: distance,
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+func (h *Handler) AddRoom(c *gin.Context) {
+	var req AddRoomRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	room := Room{
+		Name:       req.Name,
+		BuildingID: req.BuildingID,
+		Floor:      req.Floor,
+	}
+
+	if err := h.Service.AddRoom(c.Request.Context(), room, req.Connections); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "room added"})
 }

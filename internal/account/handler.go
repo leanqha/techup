@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"techup/config"
 )
 
 type Handler struct {
@@ -65,12 +66,10 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	resp := LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}
+	c.SetCookie("access_token", accessToken, config.GetAccessTokenTTLSeconds(), "/", config.GetDomain(), false, true)
+	c.SetCookie("refresh_token", refreshToken, config.GetRefreshTokenTTLSeconds(), "/", config.GetDomain(), false, true)
 
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, gin.H{"message": "login successful"})
 }
 
 // Profile godoc

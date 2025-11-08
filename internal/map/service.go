@@ -3,6 +3,7 @@ package maps
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 )
 
@@ -24,51 +25,57 @@ func (s *Service) GetRoomsByBuilding(ctx context.Context, buildingID int) ([]Roo
 	return s.repo.GetRoomsByBuilding(ctx, buildingID)
 }
 
-// FindShortestPath finds the shortest path between two rooms using Dijkstra's algorithm
-func (s *Service) FindShortestPath(ctx context.Context, startRoom, endRoom int) ([]int, float64, error) {
+// FindShortestPath finds the shortest path between two rooms by room names
+func (s *Service) FindShortestPath(ctx context.Context, startRoom, endRoom string) ([]string, float64, error) {
 	conns, err := s.repo.GetConnections(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Build graph
-	graph := make(map[int][]struct {
-		to       int
+	// Build graph using room names
+	graph := make(map[string][]struct {
+		to       string
 		distance float64
 	})
 	for _, c := range conns {
 		graph[c.RoomFrom] = append(graph[c.RoomFrom], struct {
-			to       int
+			to       string
 			distance float64
 		}{to: c.RoomTo, distance: c.Distance})
 		graph[c.RoomTo] = append(graph[c.RoomTo], struct {
-			to       int
+			to       string
 			distance float64
 		}{to: c.RoomFrom, distance: c.Distance})
 	}
 
-	dist := make(map[int]float64)
-	prev := make(map[int]int)
-	visited := make(map[int]bool)
+	// Validate start and end rooms exist
+	if _, ok := graph[startRoom]; !ok {
+		return nil, 0, fmt.Errorf("start room %s not found in graph", startRoom)
+	}
+	if _, ok := graph[endRoom]; !ok {
+		return nil, 0, fmt.Errorf("end room %s not found in graph", endRoom)
+	}
+
+	dist := make(map[string]float64)
+	prev := make(map[string]string)
+	visited := make(map[string]bool)
 
 	for node := range graph {
 		dist[node] = math.Inf(1)
+		prev[node] = ""
 	}
 	dist[startRoom] = 0
 
-	for {
-		// find node with smallest distance
-		minNode := -1
+	// Dijkstra's algorithm
+	for len(visited) < len(graph) {
+		minNode := ""
 		minDist := math.Inf(1)
 		for node, d := range dist {
 			if !visited[node] && d < minDist {
 				minNode, minDist = node, d
 			}
 		}
-		if minNode == -1 {
-			break
-		}
-		if minNode == endRoom {
+		if minNode == "" {
 			break
 		}
 
@@ -83,18 +90,36 @@ func (s *Service) FindShortestPath(ctx context.Context, startRoom, endRoom int) 
 		}
 	}
 
-	if _, ok := dist[endRoom]; !ok || dist[endRoom] == math.Inf(1) {
+	if dist[endRoom] == math.Inf(1) {
 		return nil, 0, errors.New("no path found")
 	}
 
-	// reconstruct path
-	path := []int{}
-	for u := endRoom; u != 0; u = prev[u] {
-		path = append([]int{u}, path...)
+	// Reconstruct path
+	path := []string{}
+	for u := endRoom; u != ""; u = prev[u] {
+		path = append([]string{u}, path...)
 		if u == startRoom {
 			break
 		}
 	}
 
 	return path, dist[endRoom], nil
+}
+
+func (s *Service) AddRoom(ctx context.Context, room Room, connections []ConnectionDTO) error {
+	if err := s.repo.SaveRoom(ctx, &room); err != nil {
+		return err
+	}
+
+	for _, conn := range connections {
+		c := Connection{
+			RoomFrom: room.Name,
+			RoomTo:   conn.RoomTo,
+			Distance: conn.Distance,
+		}
+		if err := s.repo.SaveConnection(ctx, &c); err != nil {
+			return err
+		}
+	}
+	return nil
 }

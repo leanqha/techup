@@ -56,3 +56,23 @@ func GetPort() string {
 	}
 	return port
 }
+
+func GetDomain() string {
+	return os.Getenv("DOMAIN")
+}
+
+func GetAccessTokenTTLSeconds() int {
+	minutes, _ := strconv.Atoi(os.Getenv("JWT_ACCESS_TOKEN_TTL"))
+	if minutes == 0 {
+		minutes = 15
+	}
+	return minutes * int(time.Minute/time.Second)
+}
+
+func GetRefreshTokenTTLSeconds() int {
+	minutes, _ := strconv.Atoi(os.Getenv("JWT_REFRESH_TOKEN_TTL"))
+	if minutes == 0 {
+		minutes = 10080 // 7 days
+	}
+	return minutes * int(time.Minute/time.Second)
+}

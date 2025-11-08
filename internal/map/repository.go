@@ -87,3 +87,13 @@ func (r *Repository) AddConnection(ctx context.Context, conn *Connection) error 
 	`, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type)
 	return err
 }
+
+func (r *Repository) SaveRoom(ctx context.Context, room *Room) error {
+	_, err := r.db.Exec(ctx, `INSERT INTO rooms (name, building_id, floor) VALUES ($1, $2, $3)`, room.Name, room.BuildingID, room.Floor)
+	return err
+}
+
+func (r *Repository) SaveConnection(ctx context.Context, conn *Connection) error {
+	_, err := r.db.Exec(ctx, `INSERT INTO connections (room_from, room_to, distance) VALUES ($1, $2, $3)`, conn.RoomFrom, conn.RoomTo, conn.Distance)
+	return err
+}

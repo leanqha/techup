@@ -18,8 +18,8 @@ type Room struct {
 // Connection represents a link between two rooms (corridor, stairs, etc.)
 type Connection struct {
 	ID       int     `db:"id" json:"id"`
-	RoomFrom int     `db:"room_from" json:"room_from"`
-	RoomTo   int     `db:"room_to" json:"room_to"`
+	RoomFrom string  `db:"room_from" json:"room_from"`
+	RoomTo   string  `db:"room_to" json:"room_to"`
 	Distance float64 `db:"distance" json:"distance"`
 	Type     string  `db:"type" json:"type"` // corridor / stairs
 }

@@ -1,46 +1,28 @@
 package account
 
 import (
-	"net/http"
-	"strings"
-	"techup/config"
-
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"net/http"
 )
 
+// AuthMiddleware проверяет access_token в куки
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		header := c.GetHeader("Authorization")
-		if header == "" {
+		token, err := c.Cookie("access_token")
+		if err != nil || token == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
 			return
 		}
 
-		parts := strings.Fields(header)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token format"})
-			return
-		}
-
-		tokenStr := parts[1]
-
-		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-			return []byte(config.GetJWTSecret()), nil
-		})
-
-		if err != nil || !token.Valid {
+		claims, err := ParseToken(token)
+		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			return
 		}
 
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			c.Set("claims", claims)
-		} else {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
-			return
-		}
-
+		c.Set("user_id", claims["user_id"])
+		c.Set("claims", claims)
 		c.Next()
 	}
 }
