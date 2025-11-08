@@ -2,9 +2,7 @@ package maps
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"math"
 )
 
 type Service struct {
@@ -32,7 +30,7 @@ func (s *Service) FindShortestPath(ctx context.Context, startRoom, endRoom strin
 		return nil, 0, err
 	}
 
-	// Build graph using room names
+	// Строим граф
 	graph := make(map[string][]struct {
 		to       string
 		distance float64
@@ -48,7 +46,7 @@ func (s *Service) FindShortestPath(ctx context.Context, startRoom, endRoom strin
 		}{to: c.RoomFrom, distance: c.Distance})
 	}
 
-	// Validate start and end rooms exist
+	// Проверка существования комнат
 	if _, ok := graph[startRoom]; !ok {
 		return nil, 0, fmt.Errorf("start room %s not found in graph", startRoom)
 	}
@@ -56,54 +54,8 @@ func (s *Service) FindShortestPath(ctx context.Context, startRoom, endRoom strin
 		return nil, 0, fmt.Errorf("end room %s not found in graph", endRoom)
 	}
 
-	dist := make(map[string]float64)
-	prev := make(map[string]string)
-	visited := make(map[string]bool)
-
-	for node := range graph {
-		dist[node] = math.Inf(1)
-		prev[node] = ""
-	}
-	dist[startRoom] = 0
-
-	// Dijkstra's algorithm
-	for len(visited) < len(graph) {
-		minNode := ""
-		minDist := math.Inf(1)
-		for node, d := range dist {
-			if !visited[node] && d < minDist {
-				minNode, minDist = node, d
-			}
-		}
-		if minNode == "" {
-			break
-		}
-
-		visited[minNode] = true
-
-		for _, edge := range graph[minNode] {
-			alt := dist[minNode] + edge.distance
-			if alt < dist[edge.to] {
-				dist[edge.to] = alt
-				prev[edge.to] = minNode
-			}
-		}
-	}
-
-	if dist[endRoom] == math.Inf(1) {
-		return nil, 0, errors.New("no path found")
-	}
-
-	// Reconstruct path
-	path := []string{}
-	for u := endRoom; u != ""; u = prev[u] {
-		path = append([]string{u}, path...)
-		if u == startRoom {
-			break
-		}
-	}
-
-	return path, dist[endRoom], nil
+	// Используем вынесенный алгоритм
+	return DijkstraAlgorithm(graph, startRoom, endRoom)
 }
 
 func (s *Service) AddRoom(ctx context.Context, room Room, connections []ConnectionDTO) error {
