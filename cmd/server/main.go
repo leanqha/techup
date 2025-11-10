@@ -67,6 +67,7 @@ func main() {
 		AllowOrigins: []string{
 			"http://localhost:5173",
 			"https://leanqha.github.io",
+			"*",
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
