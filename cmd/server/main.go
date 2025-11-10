@@ -65,7 +65,7 @@ func main() {
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost:3000",
+			"http://localhost:5173",
 			"https://leanqha.github.io",
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -98,28 +98,54 @@ func main() {
 
 	// ---------- Schedule routes ----------
 	scheduleGroup := api.Group("/schedule")
-	scheduleGroup.Use(account.AuthMiddleware())
+	scheduleGroup.Use()
 	{
+		scheduleGroup.GET("/lessons", scheduleHandler.ListLessons)
+		scheduleGroup.GET("/groups", scheduleHandler.ListGroups)
+		scheduleGroup.GET("/faculties", scheduleHandler.ListFaculties)
 		scheduleGroup.GET("/search", scheduleHandler.SearchSchedule)
 	}
 
 	// ---------- Map / Building routes ----------
-	mapsGroup := api.Group("/map")
-	mapsGroup.Use()
+	mapGroup := api.Group("/map")
+	mapGroup.Use()
 	{
-		mapsGroup.GET("/buildings", mapsHandler.GetBuildings)
-		mapsGroup.GET("/buildings/:building_id/rooms", mapsHandler.GetRoomsByBuilding)
-		mapsGroup.GET("/path/:start/:end", mapsHandler.GetShortestPath)
+		//mapGroup.GET("/room", mapsHandler.ListRooms)
+		mapGroup.GET("/buildings", mapsHandler.GetBuildings)
+		mapGroup.GET("/path/:start/:end", mapsHandler.GetShortestPath)
 	}
 
 	// ---------- Admin routes ----------
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(account.AuthMiddleware(), account.RequireRole("admin"))
 	{
+		// Account roles
 		adminGroup.POST("/set-role", accountHandler.SetRole)
+
+		// Faculties
 		adminGroup.POST("/faculty", scheduleHandler.AddFaculty)
+		adminGroup.PUT("/faculty/:id", scheduleHandler.UpdateFaculty)
+		adminGroup.DELETE("/faculty/:id", scheduleHandler.DeleteFaculty)
+
+		// Groups
 		adminGroup.POST("/group", scheduleHandler.AddGroup)
+		adminGroup.PUT("/group/:id", scheduleHandler.UpdateGroup)
+		adminGroup.DELETE("/group/:id", scheduleHandler.DeleteGroup)
+
+		// Rooms
+		//adminGroup.POST("/room", mapsHandler.AddRoom)
+		//adminGroup.PUT("/room/:id", mapsHandler.UpdateRoom)
+		//adminGroup.DELETE("/room/:id", mapsHandler.DeleteRoom)
+
+		// Lessons
 		adminGroup.POST("/lesson", scheduleHandler.AddLesson)
+		adminGroup.PUT("/lesson/:id", scheduleHandler.UpdateLesson)
+		adminGroup.DELETE("/lesson/:id", scheduleHandler.DeleteLesson)
+
+		// Connections
+		//adminGroup.GET("/connection", mapsHandler.ListConnections)
+		//adminGroup.POST("/connection", mapsHandler.AddConnection)
+		//adminGroup.DELETE("/connection/:id", mapsHandler.DeleteConnection)
 	}
 
 	// ---------- Swagger ----------

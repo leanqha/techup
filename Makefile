@@ -14,7 +14,9 @@ logs:
 	docker compose -f docker-compose.yml logs -f app
 
 restart:
-	docker compose -f docker-compose.yml restart
+	docker compose -f docker-compose.yml down -v
+	docker compose -f docker-compose.yml build
+	docker compose -f docker-compose.yml up -d
 	docker compose -f docker-compose.yml logs -f
 
 migrate:

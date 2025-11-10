@@ -35,5 +35,8 @@ COPY --from=builder /app/server .
 COPY ./migrations ./migrations
 COPY .env .env
 
+# Копируем статические файлы
+COPY ./static ./static
+
 EXPOSE 8080
 CMD ["./server"]

@@ -1,9 +1,9 @@
 package schedule
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"path/filepath"
 	"strconv"
 )
 
@@ -15,135 +15,159 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-// UploadSchedule godoc
-// @Summary Upload schedule file
-// @Description Upload a schedule file in PDF or Excel format
-// @Tags schedule
-// @Accept multipart/form-data
-// @Produce json
-// @Param file formData file true "Schedule file (PDF or Excel)"
-// @Success 200 {object} map[string]string "schedule uploaded and imported successfully"
-// @Failure 400 {object} map[string]string "file is required or invalid file type"
-// @Failure 500 {object} map[string]string "failed to save file or import lessons"
-// @Router /schedule/upload [post]
-func (h *Handler) UploadSchedule(c *gin.Context) {
-	file, err := c.FormFile("file")
+// ---------------- Lessons ----------------
+
+func (h *Handler) ListLessons(c *gin.Context) {
+	lessons, err := h.service.ListLessons(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	ext := filepath.Ext(file.Filename)
-	if ext != ".pdf" && ext != ".xlsx" && ext != ".xls" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "only PDF and Excel files are allowed"})
-		return
-	}
-
-	savePath := "./" + file.Filename
-	if err := c.SaveUploadedFile(file, savePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
-		return
-	}
-
-	if ext == ".pdf" {
-		if err := h.service.ImportScheduleFromPDF(c.Request.Context(), savePath); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to import lessons from PDF"})
-			return
-		}
-	} else {
-		//TODO
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "schedule uploaded and imported successfully"})
+	c.JSON(http.StatusOK, lessons)
 }
 
-// AddLesson godoc
-// @Summary Add a lesson
-// @Description Add a new lesson to the schedule
-// @Tags schedule
-// @Accept json
-// @Produce json
-// @Param lesson body Lesson true "Lesson to add"
-// @Success 200 {object} map[string]string "lesson added"
-// @Failure 400 {object} map[string]string "invalid request"
-// @Failure 500 {object} map[string]string "failed to add lesson"
-// @Router /schedule/lesson [post]
 func (h *Handler) AddLesson(c *gin.Context) {
-	var req Lesson
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+	var l Lesson
+	if err := c.ShouldBindJSON(&l); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	lesson := Lesson{
-		GroupName:  req.GroupName,
-		DayOfWeek:  req.DayOfWeek,
-		StartTime:  req.StartTime,
-		EndTime:    req.EndTime,
-		Subject:    req.Subject,
-		Teacher:    req.Teacher,
-		Classroom:  req.Classroom,
-		IsOnline:   req.IsOnline,
-		IsEvenWeek: req.IsEvenWeek,
-	}
-	if err := h.service.AddLesson(c.Request.Context(), &lesson); err != nil {
+	fmt.Println(l)
+	err := h.service.AddLesson(c.Request.Context(), l)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"status": "lesson added"})
+	c.JSON(http.StatusOK, l)
 }
 
-// AddFaculty godoc
-// @Summary Add a faculty
-// @Description Add a new faculty
-// @Tags schedule
-// @Accept json
-// @Produce json
-// @Param faculty body Faculty true "Faculty to add"
-// @Success 200 {object} map[string]string "faculty added"
-// @Failure 400 {object} map[string]string "invalid request"
-// @Failure 500 {object} map[string]string "failed to add faculty"
-// @Router /schedule/faculty [post]
+func (h *Handler) UpdateLesson(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var l Lesson
+	if err := c.ShouldBindJSON(&l); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	l.ID = id
+	if err := h.service.UpdateLesson(c.Request.Context(), l); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, l)
+}
+
+func (h *Handler) DeleteLesson(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := h.service.DeleteLesson(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ---------------- Faculties ----------------
+
+func (h *Handler) ListFaculties(c *gin.Context) {
+	fac, err := h.service.ListFaculties(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, fac)
+}
+
 func (h *Handler) AddFaculty(c *gin.Context) {
-	var req Faculty
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+	var f Faculty
+	if err := c.ShouldBindJSON(&f); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	if err := h.service.AddFaculty(c.Request.Context(), &req); err != nil {
+	err := h.service.AddFaculty(c.Request.Context(), f)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"status": "faculty added"})
-
+	c.JSON(http.StatusOK, f)
 }
 
-// AddGroup godoc
-// @Summary Add a group
-// @Description Add a new group
-// @Tags schedule
-// @Accept json
-// @Produce json
-// @Param group body Group true "Group to add"
-// @Success 200 {object} map[string]string "group added"
-// @Failure 400 {object} map[string]string "invalid request"
-// @Failure 500 {object} map[string]string "failed to add group"
-// @Router /schedule/group [post]
+func (h *Handler) UpdateFaculty(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var f Faculty
+	if err := c.ShouldBindJSON(&f); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	f.ID = id
+	if err := h.service.UpdateFaculty(c.Request.Context(), f); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, f)
+}
+
+func (h *Handler) DeleteFaculty(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := h.service.DeleteFaculty(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ---------------- Groups ----------------
+
+func (h *Handler) ListGroups(c *gin.Context) {
+	groups, err := h.service.ListGroups(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, groups)
+}
+
 func (h *Handler) AddGroup(c *gin.Context) {
-	var req Group
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+	var g Group
+	if err := c.ShouldBindJSON(&g); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err := h.service.AddGroup(c.Request.Context(), g)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, g)
+}
+
+func (h *Handler) UpdateGroup(c *gin.Context) {
+	var g Group
+	if err := c.ShouldBindJSON(&g); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.service.AddGroup(c.Request.Context(), &req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if g.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group name is required"})
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "group added"})
+	err := h.service.UpdateGroup(c.Request.Context(), g)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
+	c.JSON(http.StatusOK, g.ID)
+}
+
+func (h *Handler) DeleteGroup(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := h.service.DeleteGroup(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 // SearchSchedule godoc

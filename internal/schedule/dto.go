@@ -1,5 +1,6 @@
 package schedule
 
+// TODO: изменить дто на нормальные блять че за хуйня кто просто дописал дто нахуй ебланы
 type UploadScheduleRequest struct {
 	FileData []byte `json:"file_data"`
 }

@@ -18,9 +18,9 @@ func (s *Service) GetAllBuildings(ctx context.Context) ([]Building, error) {
 	return s.repo.GetAllBuildings(ctx)
 }
 
-// GetRoomsByBuilding returns all rooms in a building
-func (s *Service) GetRoomsByBuilding(ctx context.Context, buildingID int) ([]Room, error) {
-	return s.repo.GetRoomsByBuilding(ctx, buildingID)
+// SearchRooms returns rooms filtered by building_id and/or floor
+func (s *Service) SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error) {
+	return s.repo.SearchRooms(ctx, buildingID, floor)
 }
 
 // FindShortestPath finds the shortest path between two rooms by room names
@@ -59,7 +59,7 @@ func (s *Service) FindShortestPath(ctx context.Context, startRoom, endRoom strin
 }
 
 func (s *Service) AddRoom(ctx context.Context, room Room, connections []ConnectionDTO) error {
-	if err := s.repo.SaveRoom(ctx, &room); err != nil {
+	if err := s.repo.AddRoom(ctx, &room); err != nil {
 		return err
 	}
 
@@ -69,9 +69,21 @@ func (s *Service) AddRoom(ctx context.Context, room Room, connections []Connecti
 			RoomTo:   conn.RoomTo,
 			Distance: conn.Distance,
 		}
-		if err := s.repo.SaveConnection(ctx, &c); err != nil {
+		if err := s.repo.AddConnection(ctx, &c); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (s *Service) DeleteRoom(ctx context.Context, id int) error {
+	return s.repo.DeleteRoom(ctx, id)
+}
+
+func (s *Service) AddConnection(ctx context.Context, connection Connection) error {
+	return s.repo.AddConnection(ctx, &connection)
+}
+
+func (s *Service) DeleteConnection(ctx context.Context, id int) error {
+	return s.repo.DeleteConnection(ctx, id)
 }

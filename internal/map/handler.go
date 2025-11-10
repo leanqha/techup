@@ -1,10 +1,8 @@
 package maps
 
 import (
-	"net/http"
-	"strconv"
-
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 // Handler handles HTTP requests for the map module.
@@ -32,37 +30,6 @@ func (h *Handler) GetBuildings(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, buildings)
-}
-
-// GetRoomsByBuilding godoc
-// @Summary Get rooms by building ID
-// @Description Returns a list of rooms for a given building ID
-// @Tags map
-// @Produce json
-// @Param building_id path int true "Building ID"
-// @Success 200 {array} Room
-// @Failure 400 {object} gin.H{"error": string}
-// @Failure 404 {object} gin.H{"error": string}
-// @Failure 500 {object} gin.H{"error": string}
-// @Router /buildings/{building_id}/rooms [get]
-func (h *Handler) GetRoomsByBuilding(c *gin.Context) {
-	buildingIDStr := c.Param("building_id")
-	buildingID, err := strconv.Atoi(buildingIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid building ID"})
-		return
-	}
-
-	rooms, err := h.Service.GetRoomsByBuilding(c.Request.Context(), buildingID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get rooms"})
-		return
-	}
-	if rooms == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Building not found"})
-		return
-	}
-	c.JSON(http.StatusOK, rooms)
 }
 
 // GetShortestPath godoc

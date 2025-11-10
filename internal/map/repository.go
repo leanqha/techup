@@ -2,6 +2,7 @@ package maps
 
 import (
 	"context"
+	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -15,7 +16,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 // GetAllBuildings retrieves all buildings from the database
 func (r *Repository) GetAllBuildings(ctx context.Context) ([]Building, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, name, address, floor_count, description FROM buildings`)
+	rows, err := r.db.Query(ctx, `SELECT id, name, address FROM buildings`)
 	if err != nil {
 		return nil, err
 	}
@@ -32,9 +33,25 @@ func (r *Repository) GetAllBuildings(ctx context.Context) ([]Building, error) {
 	return buildings, nil
 }
 
-// GetRoomsByBuilding retrieves all rooms of a specific building
-func (r *Repository) GetRoomsByBuilding(ctx context.Context, buildingID int) ([]Room, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, building_id, number, floor, type FROM rooms WHERE building_id=$1`, buildingID)
+// SearchRooms позволяет искать комнаты по building_id и/или floor
+func (r *Repository) SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error) {
+	query := `SELECT id, building_id, floor, name FROM rooms WHERE 1=1`
+	args := []interface{}{}
+	argIndex := 1
+
+	if buildingID != nil {
+		query += fmt.Sprintf(" AND building_id=$%d", argIndex)
+		args = append(args, *buildingID)
+		argIndex++
+	}
+
+	if floor != nil {
+		query += fmt.Sprintf(" AND floor=$%d", argIndex)
+		args = append(args, *floor)
+		argIndex++
+	}
+
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -43,11 +60,12 @@ func (r *Repository) GetRoomsByBuilding(ctx context.Context, buildingID int) ([]
 	var rooms []Room
 	for rows.Next() {
 		var room Room
-		if err := rows.Scan(&room.ID, &room.BuildingID, &room.Name, &room.Floor); err != nil {
+		if err := rows.Scan(&room.ID, &room.BuildingID, &room.Floor, &room.Name); err != nil {
 			return nil, err
 		}
 		rooms = append(rooms, room)
 	}
+
 	return rooms, nil
 }
 
@@ -73,8 +91,8 @@ func (r *Repository) GetConnections(ctx context.Context) ([]Connection, error) {
 // AddRoom inserts a new room into the database
 func (r *Repository) AddRoom(ctx context.Context, room *Room) error {
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO rooms (building_id, number, floor, type)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO rooms (building_id, floor, name)
+		VALUES ($1, $2, $3)
 	`, room.BuildingID, room.Name, room.Floor)
 	return err
 }
@@ -88,12 +106,12 @@ func (r *Repository) AddConnection(ctx context.Context, conn *Connection) error 
 	return err
 }
 
-func (r *Repository) SaveRoom(ctx context.Context, room *Room) error {
-	_, err := r.db.Exec(ctx, `INSERT INTO rooms (name, building_id, floor) VALUES ($1, $2, $3)`, room.Name, room.BuildingID, room.Floor)
+func (r *Repository) DeleteRoom(ctx context.Context, id int) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM rooms WHERE id = $1`, id)
 	return err
 }
 
-func (r *Repository) SaveConnection(ctx context.Context, conn *Connection) error {
-	_, err := r.db.Exec(ctx, `INSERT INTO connections (room_from, room_to, distance) VALUES ($1, $2, $3)`, conn.RoomFrom, conn.RoomTo, conn.Distance)
+func (r *Repository) DeleteConnection(ctx context.Context, id int) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM connections WHERE id = $1`, id)
 	return err
 }
