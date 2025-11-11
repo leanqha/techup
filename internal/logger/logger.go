@@ -5,19 +5,36 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 var Log zerolog.Logger
 
 func Init() {
-	env := os.Getenv("GIN_MODE") // Gin уже использует GIN_MODE (debug/release)
+	env := os.Getenv("GIN_MODE")
+	zerolog.TimeFieldFormat = time.RFC3339
+
+	var level zerolog.Level
 	if env == "release" {
-		zerolog.TimeFieldFormat = time.RFC3339
-		Log = log.Output(os.Stdout)
+		level = zerolog.InfoLevel
 	} else {
-		output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05"}
-		Log = log.Output(output).With().Timestamp().Logger()
+		level = zerolog.DebugLevel
 	}
-	Log.Info().Msg("logger initialized")
+
+	zerolog.SetGlobalLevel(level)
+
+	if env == "release" {
+		Log = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	} else {
+		output := zerolog.ConsoleWriter{
+			Out:        os.Stdout,
+			TimeFormat: "15:04:05",
+			NoColor:    false,
+		}
+		Log = zerolog.New(output).With().Timestamp().Logger()
+	}
+
+	Log.Info().
+		Str("mode", env).
+		Str("level", level.String()).
+		Msg("logger initialized")
 }

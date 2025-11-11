@@ -26,7 +26,7 @@ func NewHandler(s *Service) *Handler {
 // @Success 200 {object} map[string]interface{} "Successfully created"
 // @Failure 400 {object} map[string]string "Invalid input"
 // @Failure 500 {object} map[string]string "Server error"
-// @Router /register [post]
+// @Router /api/v1/account/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -45,15 +45,15 @@ func (h *Handler) Register(c *gin.Context) {
 
 // Login godoc
 // @Summary User login
-// @Description Authenticates user and returns JWT token
+// @Description Authenticates user and returns JWT tokens. Sets access and refresh tokens in HTTP-only cookies.
 // @Tags account
 // @Accept json
 // @Produce json
 // @Param request body LoginRequest true "User login info"
-// @Success 200 {object} LoginResponse "JWT tokens"
+// @Success 200 {object} map[string]string "Login successful message"
 // @Failure 400 {object} map[string]string "Invalid input"
 // @Failure 401 {object} map[string]string "Invalid credentials"
-// @Router /login [post]
+// @Router /api/v1/account/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -77,13 +77,13 @@ func (h *Handler) Login(c *gin.Context) {
 
 // Profile godoc
 // @Summary Get user profile
-// @Description Returns current user info based on JWT token
+// @Description Returns current user info based on JWT token passed in Authorization header as Bearer token.
 // @Tags account
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} ProfileResponse "User profile"
 // @Failure 401 {object} map[string]string "Unauthorized"
-// @Router /profile [get]
+// @Router /api/v1/account/secure/profile [get]
 func (h *Handler) Profile(c *gin.Context) {
 	claims, exists := c.Get("claims")
 	if !exists {
@@ -113,7 +113,7 @@ func (h *Handler) Profile(c *gin.Context) {
 
 // ChangePassword godoc
 // @Summary Change user password
-// @Description Allows a logged-in user to change their password
+// @Description Allows a logged-in user to change their password. Authentication required via Bearer token.
 // @Tags account
 // @Accept json
 // @Produce json
@@ -122,7 +122,7 @@ func (h *Handler) Profile(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid input"
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Security BearerAuth
-// @Router /account/change-password [post]
+// @Router /api/v1/account/secure/change-password [post]
 func (h *Handler) ChangePassword(c *gin.Context) {
 	claims, exists := c.Get("claims")
 	if !exists {
@@ -149,7 +149,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 
 // UpdateProfile godoc
 // @Summary Update user profile
-// @Description Allows a logged-in user to update profile information
+// @Description Allows a logged-in user to update profile information. Authentication required via Bearer token.
 // @Tags account
 // @Accept json
 // @Produce json
@@ -159,7 +159,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 // @Failure 409 {object} map[string]string "Email already exists"
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Security BearerAuth
-// @Router /account/update [put]
+// @Router /api/v1/account/secure/update [put]
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	claims, exists := c.Get("claims")
 	if !exists {
@@ -192,7 +192,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 // SetRole godoc
 // @Summary Set user role
-// @Description Allows admin to set the role of another user
+// @Description Allows admin to set the role of another user. Authentication required via Bearer token.
 // @Tags account
 // @Accept json
 // @Produce json
@@ -200,8 +200,9 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 // @Success 200 {object} map[string]string "Role updated successfully"
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 401 {object} map[string]string "Unauthorized"
 // @Security BearerAuth
-// @Router /account/set-role [post]
+// @Router /api/v1/account/set-role [post]
 func (h *Handler) SetRole(c *gin.Context) {
 	claims, exists := c.Get("claims")
 	if !exists {
@@ -232,7 +233,7 @@ func (h *Handler) SetRole(c *gin.Context) {
 
 // Refresh godoc
 // @Summary Refresh JWT tokens
-// @Description Refreshes access and refresh tokens using a valid refresh token
+// @Description Refreshes access and refresh tokens using a valid refresh token sent in request body.
 // @Tags account
 // @Accept json
 // @Produce json
@@ -240,7 +241,7 @@ func (h *Handler) SetRole(c *gin.Context) {
 // @Success 200 {object} LoginResponse "New tokens"
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 401 {object} map[string]string "Unauthorized"
-// @Router /refresh [post]
+// @Router /api/v1/account/refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

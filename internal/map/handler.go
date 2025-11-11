@@ -21,7 +21,7 @@ func NewHandler(service *Service) *Handler {
 // @Tags map
 // @Produce json
 // @Success 200 {array} Building
-// @Failure 500 {object} gin.H{"error": string}
+// @Failure 500 {object} error
 // @Router /buildings [get]
 func (h *Handler) GetBuildings(c *gin.Context) {
 	buildings, err := h.Service.GetAllBuildings(c.Request.Context())
@@ -33,15 +33,15 @@ func (h *Handler) GetBuildings(c *gin.Context) {
 }
 
 // GetShortestPath godoc
-// @Summary Get shortest path between two rooms
+// @Summary Get the shortest path between two rooms
 // @Description Calculates the shortest path between start_room_id and end_room_id
 // @Tags map
 // @Produce json
 // @Param start_room_id query int true "Start Room ID"
 // @Param end_room_id query int true "End Room ID"
 // @Success 200 {object} GetShortestPathResponse
-// @Failure 400 {object} gin.H{"error": string}
-// @Failure 500 {object} gin.H{"error": string}
+// @Failure 400 {object} error
+// @Failure 500 {object} error
 // @Router /shortest-path [get]
 func (h *Handler) GetShortestPath(c *gin.Context) {
 	startRoom := c.Param("start")

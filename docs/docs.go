@@ -15,14 +15,174 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/account/change-password": {
+        "/api/v1/account/login": {
+            "post": {
+                "description": "Authenticates user and returns JWT tokens. Sets access and refresh tokens in HTTP-only cookies.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "User login info",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Login successful message",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/refresh": {
+            "post": {
+                "description": "Refreshes access and refresh tokens using a valid refresh token sent in request body.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Refresh JWT tokens",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "New tokens",
+                        "schema": {
+                            "$ref": "#/definitions/account.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/register": {
+            "post": {
+                "description": "Creates a new user account with role \"student\"",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "User registration info",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/secure/change-password": {
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Allows a logged-in user to change their password",
+                "description": "Allows a logged-in user to change their password. Authentication required via Bearer token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -75,56 +235,30 @@ const docTemplate = `{
                 }
             }
         },
-        "/account/set-role": {
-            "post": {
+        "/api/v1/account/secure/profile": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Allows admin to set the role of another user",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Returns current user info based on JWT token passed in Authorization header as Bearer token.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "account"
                 ],
-                "summary": "Set user role",
-                "parameters": [
-                    {
-                        "description": "User ID and new role",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/account.SetRoleRequest"
-                        }
-                    }
-                ],
+                "summary": "Get user profile",
                 "responses": {
                     "200": {
-                        "description": "Role updated successfully",
+                        "description": "User profile",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/account.ProfileResponse"
                         }
                     },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -135,14 +269,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/account/update": {
+        "/api/v1/account/secure/update": {
             "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Allows a logged-in user to update profile information",
+                "description": "Allows a logged-in user to update profile information. Authentication required via Bearer token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -201,70 +335,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/schedule/teacher/{teacher_name}": {
-            "get": {
+        "/api/v1/account/set-role": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all lessons taught by a specific teacher",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Schedule"
-                ],
-                "summary": "Get schedule by teacher name",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Teacher's full name",
-                        "name": "teacher_name",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/schedule.TeacherScheduleResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/login": {
-            "post": {
-                "description": "Authenticates user and returns JWT token",
+                "description": "Allows admin to set the role of another user. Authentication required via Bearer token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -274,23 +352,26 @@ const docTemplate = `{
                 "tags": [
                     "account"
                 ],
-                "summary": "User login",
+                "summary": "Set user role",
                 "parameters": [
                     {
-                        "description": "User login info",
+                        "description": "User ID and new role",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/account.LoginRequest"
+                            "$ref": "#/definitions/account.SetRoleRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "JWT tokens",
+                        "description": "Role updated successfully",
                         "schema": {
-                            "$ref": "#/definitions/account.LoginResponse"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
@@ -303,7 +384,16 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "Invalid credentials",
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -314,43 +404,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/profile": {
-            "get": {
+        "/api/v1/admin/faculty": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns current user info based on JWT token",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "account"
-                ],
-                "summary": "Get user profile",
-                "responses": {
-                    "200": {
-                        "description": "User profile",
-                        "schema": {
-                            "$ref": "#/definitions/account.ProfileResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/refresh": {
-            "post": {
-                "description": "Refreshes access and refresh tokens using a valid refresh token",
+                "description": "Adds a new faculty",
                 "consumes": [
                     "application/json"
                 ],
@@ -358,168 +419,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "account"
+                    "admin-schedule"
                 ],
-                "summary": "Refresh JWT tokens",
+                "summary": "Add faculty",
                 "parameters": [
                     {
-                        "description": "Refresh token",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/account.RefreshRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "New tokens",
-                        "schema": {
-                            "$ref": "#/definitions/account.LoginResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/register": {
-            "post": {
-                "description": "Creates a new user account with role \"student\"",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "account"
-                ],
-                "summary": "Register a new user",
-                "parameters": [
-                    {
-                        "description": "User registration info",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/account.RegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/schedule": {
-            "get": {
-                "description": "Get lessons schedule for a specific group",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "schedule"
-                ],
-                "summary": "Get schedule by group",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Group name",
-                        "name": "group",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "lessons",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "group query parameter is required",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "failed to get lessons",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/schedule/faculty": {
-            "post": {
-                "description": "Add a new faculty",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "schedule"
-                ],
-                "summary": "Add a faculty",
-                "parameters": [
-                    {
-                        "description": "Faculty to add",
+                        "description": "Faculty data",
                         "name": "faculty",
                         "in": "body",
                         "required": true,
@@ -530,16 +435,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "faculty added",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/schedule.Faculty"
                         }
                     },
                     "400": {
-                        "description": "invalid request",
+                        "description": "Invalid input",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -548,7 +450,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "failed to add faculty",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -559,9 +461,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/schedule/group": {
-            "post": {
-                "description": "Add a new group",
+        "/api/v1/admin/faculty/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates faculty by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -569,12 +476,111 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "schedule"
+                    "admin-schedule"
                 ],
-                "summary": "Add a group",
+                "summary": "Update faculty",
                 "parameters": [
                     {
-                        "description": "Group to add",
+                        "type": "integer",
+                        "description": "Faculty ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated faculty",
+                        "name": "faculty",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/schedule.Faculty"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/schedule.Faculty"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes faculty by ID",
+                "tags": [
+                    "admin-schedule"
+                ],
+                "summary": "Delete faculty",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Faculty ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/group": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds a new group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-schedule"
+                ],
+                "summary": "Add group",
+                "parameters": [
+                    {
+                        "description": "Group data",
                         "name": "group",
                         "in": "body",
                         "required": true,
@@ -585,16 +591,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "group added",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/schedule.Group"
                         }
                     },
                     "400": {
-                        "description": "invalid request",
+                        "description": "Invalid input",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -603,7 +606,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "failed to add group",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -614,9 +617,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/schedule/lesson": {
-            "post": {
-                "description": "Add a new lesson to the schedule",
+        "/api/v1/admin/group/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates an existing group",
                 "consumes": [
                     "application/json"
                 ],
@@ -624,12 +632,111 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "schedule"
+                    "admin-schedule"
                 ],
-                "summary": "Add a lesson",
+                "summary": "Update group",
                 "parameters": [
                     {
-                        "description": "Lesson to add",
+                        "type": "integer",
+                        "description": "Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated group",
+                        "name": "group",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/schedule.Group"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/schedule.Group"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes group by ID",
+                "tags": [
+                    "admin-schedule"
+                ],
+                "summary": "Delete group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/lesson": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new lesson in the schedule",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-schedule"
+                ],
+                "summary": "Add a new lesson",
+                "parameters": [
+                    {
+                        "description": "Lesson data",
                         "name": "lesson",
                         "in": "body",
                         "required": true,
@@ -640,16 +747,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "lesson added",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/schedule.Lesson"
                         }
                     },
                     "400": {
-                        "description": "invalid request",
+                        "description": "Invalid request body",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -658,7 +762,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "failed to add lesson",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -669,40 +773,51 @@ const docTemplate = `{
                 }
             }
         },
-        "/schedule/upload": {
-            "post": {
-                "description": "Upload a schedule file in PDF or Excel format",
+        "/api/v1/admin/lesson/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates an existing lesson",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "schedule"
+                    "admin-schedule"
                 ],
-                "summary": "Upload schedule file",
+                "summary": "Update lesson by ID",
                 "parameters": [
                     {
-                        "type": "file",
-                        "description": "Schedule file (PDF or Excel)",
-                        "name": "file",
-                        "in": "formData",
+                        "type": "integer",
+                        "description": "Lesson ID",
+                        "name": "id",
+                        "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Updated lesson data",
+                        "name": "lesson",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/schedule.Lesson"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "schedule uploaded and imported successfully",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/schedule.Lesson"
                         }
                     },
                     "400": {
-                        "description": "file is required or invalid file type",
+                        "description": "Invalid request body",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -711,13 +826,320 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "failed to save file or import lessons",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
                                 "type": "string"
                             }
                         }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a lesson by ID",
+                "tags": [
+                    "admin-schedule"
+                ],
+                "summary": "Delete lesson",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Lesson ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/schedule/faculties": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all faculties",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "schedule"
+                ],
+                "summary": "Get all faculties",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/schedule.Faculty"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/schedule/groups": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns list of groups",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "schedule"
+                ],
+                "summary": "Get all groups",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/schedule.Group"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/schedule/lessons": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a list of all lessons",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "schedule"
+                ],
+                "summary": "Get all lessons",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/schedule.Lesson"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/schedule/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search lessons by group, teacher, classroom, day, time range, or even/odd week. At least one query parameter is required.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "schedule"
+                ],
+                "summary": "Search lessons schedule",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Teacher name",
+                        "name": "teacher",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Classroom",
+                        "name": "classroom",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Day of the week",
+                        "name": "day",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start time in HH:MM format",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End time in HH:MM format",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Even week (true/false)",
+                        "name": "is_even_week",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/schedule.Lesson"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "At least one query parameter is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/buildings": {
+            "get": {
+                "description": "Returns a list of all buildings",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "map"
+                ],
+                "summary": "Get all buildings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/maps.Building"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/shortest-path": {
+            "get": {
+                "description": "Calculates the shortest path between start_room_id and end_room_id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "map"
+                ],
+                "summary": "Get the shortest path between two rooms",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Start Room ID",
+                        "name": "start_room_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End Room ID",
+                        "name": "end_room_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/maps.GetShortestPathResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
                     }
                 }
             }
@@ -849,6 +1271,34 @@ const docTemplate = `{
                 }
             }
         },
+        "maps.Building": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "maps.GetShortestPathResponse": {
+            "type": "object",
+            "properties": {
+                "dist": {
+                    "type": "number"
+                },
+                "path": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "schedule.Faculty": {
             "type": "object",
             "properties": {
@@ -922,20 +1372,6 @@ const docTemplate = `{
                 },
                 "subject": {
                     "type": "string"
-                },
-                "teacher": {
-                    "type": "string"
-                }
-            }
-        },
-        "schedule.TeacherScheduleResponse": {
-            "type": "object",
-            "properties": {
-                "lessons": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/schedule.Lesson"
-                    }
                 },
                 "teacher": {
                     "type": "string"

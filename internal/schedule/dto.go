@@ -1,16 +1,5 @@
 package schedule
 
-// TODO: изменить дто на нормальные блять че за хуйня кто просто дописал дто нахуй ебланы
-type UploadScheduleRequest struct {
-	FileData []byte `json:"file_data"`
-}
-
-// ManualScheduleRequest - payload for manual schedule input
-type ManualScheduleRequest struct {
-	GroupID int         `json:"group_id" example:"1"`
-	Lessons []LessonDTO `json:"lessons"`
-}
-
 type LessonDTO struct {
 	GroupID    int    `json:"group_id"`
 	DayOfWeek  string `json:"day_of_week"`
@@ -23,9 +12,19 @@ type LessonDTO struct {
 	IsEvenWeek bool   `json:"is_even_week"`
 }
 
-type ScheduleDTO struct {
-	GroupID int         `json:"group_id"`
-	Lessons []LessonDTO `json:"lessons"`
+// ScheduleRequest используется для создания или фильтрации расписания
+type ScheduleRequest struct {
+	GroupID int    `json:"group_id" example:"1"`
+	Day     string `json:"day,omitempty" example:"monday"`
+	Week    string `json:"week,omitempty" example:"even"`
+}
+
+// ScheduleResponse возвращается при запросах расписания
+type ScheduleResponse struct {
+	GroupID   int         `json:"group_id" example:"1"`
+	GroupName string      `json:"group_name" example:"ИВТ-101"`
+	FacultyID int         `json:"faculty_id" example:"4"`
+	Lessons   []LessonDTO `json:"lessons"`
 }
 
 type FacultyDTO struct {
