@@ -2,10 +2,11 @@ package account
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"techup/config"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Handler struct {
@@ -69,9 +70,25 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("access_token", accessToken, config.GetAccessTokenTTLSeconds(), "/", config.GetDomain(), false, true)
-	c.SetCookie("refresh_token", refreshToken, config.GetRefreshTokenTTLSeconds(), "/", config.GetDomain(), false, true)
+	c.SetCookie(
+		"access_token",
+		accessToken,
+		config.GetAccessTokenTTLSeconds(),
+		"/", // Path
+		config.GetDomain(),
+		false, // Secure (HTTPS) — false на локальной dev-машине
+		true,  // HttpOnly
+	)
 
+	c.SetCookie(
+		"refresh_token",
+		refreshToken,
+		config.GetRefreshTokenTTLSeconds(),
+		"/",
+		config.GetDomain(),
+		false,
+		true,
+	)
 	c.JSON(http.StatusOK, gin.H{"message": "login successful"})
 }
 

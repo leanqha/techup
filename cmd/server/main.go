@@ -2,7 +2,7 @@
 // @version 1.0
 // @description Backend API for the TechUp university application.
 // @host localhost:8080
-// @BasePath /
+// @BasePath /api/v1
 // @schemes http
 // @securityDefinitions.apikey BearerAuth
 // @in header
