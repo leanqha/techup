@@ -3,6 +3,7 @@ package account
 import (
 	"fmt"
 	"net/http"
+	"techup/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -10,15 +11,12 @@ import (
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Println("Попытка получить аксес токен")
 		token, err := c.Cookie("access_token")
 		if err != nil || token == "" {
-			fmt.Println("ошибка: ")
-			fmt.Println(err)
+			logger.Log.Err(err).Msg("access_token cookie not found")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
 			return
 		}
-		fmt.Println("Access token:", token)
 
 		claims, err := ParseToken(token)
 		if err != nil {
