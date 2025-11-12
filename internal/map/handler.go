@@ -1,18 +1,20 @@
 package maps
 
 import (
-	"github.com/gin-gonic/gin"
+	"fmt"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Handler handles HTTP requests for the map module.
 type Handler struct {
-	Service *Service
+	service *Service
 }
 
 // NewHandler creates a new Handler with the given Service.
 func NewHandler(service *Service) *Handler {
-	return &Handler{Service: service}
+	return &Handler{service: service}
 }
 
 // GetBuildings godoc
@@ -24,7 +26,7 @@ func NewHandler(service *Service) *Handler {
 // @Failure 500 {object} error
 // @Router /buildings [get]
 func (h *Handler) GetBuildings(c *gin.Context) {
-	buildings, err := h.Service.GetAllBuildings(c.Request.Context())
+	buildings, err := h.service.GetAllBuildings(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get buildings"})
 		return
@@ -47,7 +49,7 @@ func (h *Handler) GetShortestPath(c *gin.Context) {
 	startRoom := c.Param("start")
 	endRoom := c.Param("end")
 
-	path, distance, err := h.Service.FindShortestPath(c.Request.Context(), startRoom, endRoom)
+	path, distance, err := h.service.FindShortestPath(c.Request.Context(), startRoom, endRoom)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate shortest path"})
 		return
@@ -72,10 +74,54 @@ func (h *Handler) AddRoom(c *gin.Context) {
 		Floor:      req.Floor,
 	}
 
-	if err := h.Service.AddRoom(c.Request.Context(), room, req.Connections); err != nil {
+	if err := h.service.AddRoom(c.Request.Context(), room, req.Connections); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "room added"})
+}
+
+// SearchRooms godoc
+// @Summary Search rooms
+// @Description Returns rooms filtered by building_id and/or floor
+// @Tags map
+// @Produce json
+// @Param building_id query int false "Building ID"
+// @Param floor query int false "Floor number"
+// @Success 200 {array} Room
+// @Failure 400 {object} map[string]string "Invalid query parameters"
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /api/v1/map/search [get]
+func (h *Handler) SearchRooms(c *gin.Context) {
+	var (
+		buildingID *int
+		floor      *int
+	)
+
+	if b := c.Query("building_id"); b != "" {
+		var id int
+		if _, err := fmt.Sscanf(b, "%d", &id); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid building_id"})
+			return
+		}
+		buildingID = &id
+	}
+
+	if f := c.Query("floor"); f != "" {
+		var fl int
+		if _, err := fmt.Sscanf(f, "%d", &fl); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid floor"})
+			return
+		}
+		floor = &fl
+	}
+
+	rooms, err := h.service.SearchRooms(c.Request.Context(), buildingID, floor)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, rooms)
 }
