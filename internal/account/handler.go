@@ -75,7 +75,7 @@ func (h *Handler) Login(c *gin.Context) {
 		accessToken,
 		config.GetAccessTokenTTLSeconds(),
 		"/",
-		config.GetDomain(),
+		"",
 		false,
 		true,
 	)
@@ -85,7 +85,7 @@ func (h *Handler) Login(c *gin.Context) {
 		refreshToken,
 		config.GetRefreshTokenTTLSeconds(),
 		"/",
-		config.GetDomain(),
+		"",
 		false,
 		true,
 	)
