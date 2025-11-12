@@ -103,6 +103,7 @@ func (h *Handler) Login(c *gin.Context) {
 // @Router /api/v1/account/secure/profile [get]
 func (h *Handler) Profile(c *gin.Context) {
 	claimsRaw, exists := c.Get("claims")
+	fmt.Println(claimsRaw)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
 		return
