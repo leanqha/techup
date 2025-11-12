@@ -10,8 +10,11 @@ import (
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		fmt.Println("Попытка получить аксес токен")
 		token, err := c.Cookie("access_token")
 		if err != nil || token == "" {
+			fmt.Println("ошибка: ")
+			fmt.Println(err)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
 			return
 		}
