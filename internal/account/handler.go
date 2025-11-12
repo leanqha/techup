@@ -74,10 +74,10 @@ func (h *Handler) Login(c *gin.Context) {
 		"access_token",
 		accessToken,
 		config.GetAccessTokenTTLSeconds(),
-		"/", // Path
+		"/",
 		config.GetDomain(),
-		false, // Secure (HTTPS) — false на локальной dev-машине
-		true,  // HttpOnly
+		false,
+		true,
 	)
 
 	c.SetCookie(
@@ -102,14 +102,24 @@ func (h *Handler) Login(c *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Router /api/v1/account/secure/profile [get]
 func (h *Handler) Profile(c *gin.Context) {
-	claims, exists := c.Get("claims")
+	claimsRaw, exists := c.Get("claims")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
 		return
 	}
 
-	userClaims := claims.(jwt.MapClaims)
-	userID := int(userClaims["user_id"].(float64))
+	claims, ok := claimsRaw.(jwt.MapClaims)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid claims"})
+		return
+	}
+
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user_id in claims"})
+		return
+	}
+	userID := int(userIDFloat)
 
 	acc, err := h.service.GetByID(c, userID)
 	if err != nil {

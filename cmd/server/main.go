@@ -87,7 +87,7 @@ func main() {
 	accountGroup.POST("/login", accountHandler.Login)
 	accountGroup.POST("/refresh", accountHandler.Refresh)
 
-	// --- Защищённые ---
+	// ---------- Secure routes ----------
 	secureAccount := accountGroup.Group("/secure")
 	secureAccount.Use(account.AuthMiddleware())
 	{

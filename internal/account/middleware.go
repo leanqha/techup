@@ -1,12 +1,13 @@
 package account
 
 import (
+	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"net/http"
 )
 
-// AuthMiddleware проверяет access_token в куки
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := c.Cookie("access_token")
@@ -14,14 +15,15 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
 			return
 		}
+		fmt.Println("Access token:", token)
 
 		claims, err := ParseToken(token)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			return
 		}
+		fmt.Printf("Claims: %+v\n", claims)
 
-		c.Set("user_id", claims["user_id"])
 		c.Set("claims", claims)
 		c.Next()
 	}
