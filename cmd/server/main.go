@@ -17,6 +17,7 @@ import (
 	"techup/internal/logger"
 	maps "techup/internal/map"
 	"techup/internal/schedule"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -72,6 +73,7 @@ func main() {
 		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	r.GET("/api/v1/health", health.Handler)

@@ -70,15 +70,15 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "access_token",
-		Value:    accessToken,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteNoneMode,
-		MaxAge:   config.GetAccessTokenTTLSeconds(),
-	})
+	c.SetCookie(
+		"access_token",
+		accessToken,
+		config.GetAccessTokenTTLSeconds(),
+		"/",
+		"",
+		false,
+		true,
+	)
 
 	c.SetCookie(
 		"refresh_token",
