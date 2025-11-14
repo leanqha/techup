@@ -3,6 +3,7 @@ package schedule
 import (
 	"context"
 	"fmt"
+	"techup/internal/logger"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -19,22 +20,30 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 func (r *Repository) AddFaculty(ctx context.Context, faculty Faculty) error {
 	var id int
-	err := r.db.QueryRow(ctx, `INSERT INTO faculties (name) VALUES ($1) RETURNING id`, faculty.Name).Scan(&id)
+	query := `INSERT INTO faculties (name) VALUES ($1) RETURNING id`
+	err := r.db.QueryRow(ctx, query, faculty.Name).Scan(&id)
+	if err != nil {
+		logger.LogSQLError(err, query, faculty.Name)
+	}
 	return err
 }
 
 func (r *Repository) GetFaculty(ctx context.Context, id int) (*Faculty, error) {
 	var f Faculty
-	err := r.db.QueryRow(ctx, `SELECT id, name FROM faculties WHERE id=$1`, id).Scan(&f.ID, &f.Name)
+	query := `SELECT id, name FROM faculties WHERE id=$1`
+	err := r.db.QueryRow(ctx, query, id).Scan(&f.ID, &f.Name)
 	if err != nil {
+		logger.LogSQLError(err, query, id)
 		return nil, err
 	}
 	return &f, nil
 }
 
 func (r *Repository) ListFaculties(ctx context.Context) ([]Faculty, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, name FROM faculties ORDER BY id`)
+	query := `SELECT id, name FROM faculties ORDER BY id`
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
+		logger.LogSQLError(err, query, "ListFaculties")
 		return nil, err
 	}
 	defer rows.Close()
@@ -51,12 +60,20 @@ func (r *Repository) ListFaculties(ctx context.Context) ([]Faculty, error) {
 }
 
 func (r *Repository) UpdateFaculty(ctx context.Context, faculty Faculty) error {
-	_, err := r.db.Exec(ctx, `UPDATE faculties SET name=$1 WHERE id=$2`, faculty.Name, faculty.ID)
+	query := `UPDATE faculties SET name=$1 WHERE id=$2`
+	_, err := r.db.Exec(ctx, query, faculty.Name, faculty.ID)
+	if err != nil {
+		logger.LogSQLError(err, query, faculty.Name)
+	}
 	return err
 }
 
 func (r *Repository) DeleteFaculty(ctx context.Context, id int) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM faculties WHERE id=$1`, id)
+	query := `DELETE FROM faculties WHERE id=$1`
+	_, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+	}
 	return err
 }
 
@@ -64,30 +81,36 @@ func (r *Repository) DeleteFaculty(ctx context.Context, id int) error {
 
 func (r *Repository) AddGroup(ctx context.Context, g Group) error {
 	var id int
-	err := r.db.QueryRow(ctx,
-		`INSERT INTO groups (faculty_id, name, course, degree, year_start, specialization, is_active)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+	query := `INSERT INTO groups (faculty_id, name, course, degree, year_start, specialization, is_active)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	err := r.db.QueryRow(ctx, query,
 		g.FacultyID, g.Name, g.Course, g.Degree, g.YearStart, g.Specialization, g.IsActive).Scan(&id)
+	if err != nil {
+		logger.LogSQLError(err, query,
+			g.FacultyID, g.Name, g.Course, g.Degree, g.YearStart, g.Specialization, g.IsActive)
+	}
 	return err
 }
 
 func (r *Repository) GetGroup(ctx context.Context, id int) (*Group, error) {
 	var g Group
-	err := r.db.QueryRow(ctx,
-		`SELECT id, faculty_id, name, course, degree, year_start, specialization, is_active
-		 FROM groups WHERE id=$1`, id).
+	query := `SELECT id, faculty_id, name, course, degree, year_start, specialization, is_active
+		 FROM groups WHERE id=$1`
+	err := r.db.QueryRow(ctx, query, id).
 		Scan(&g.ID, &g.FacultyID, &g.Name, &g.Course, &g.Degree, &g.YearStart, &g.Specialization, &g.IsActive)
 	if err != nil {
+		logger.LogSQLError(err, query, id)
 		return nil, err
 	}
 	return &g, nil
 }
 
 func (r *Repository) ListGroupsByFaculty(ctx context.Context, facultyID int) ([]Group, error) {
-	rows, err := r.db.Query(ctx,
-		`SELECT id, faculty_id, name, course, degree, year_start, specialization, is_active
-		 FROM groups WHERE faculty_id = $1 ORDER BY name`, facultyID)
+	query := `SELECT id, faculty_id, name, course, degree, year_start, specialization, is_active
+		 FROM groups WHERE faculty_id = $1 ORDER BY name`
+	rows, err := r.db.Query(ctx, query, facultyID)
 	if err != nil {
+		logger.LogSQLError(err, query, facultyID)
 		return nil, err
 	}
 	defer rows.Close()
@@ -105,10 +128,11 @@ func (r *Repository) ListGroupsByFaculty(ctx context.Context, facultyID int) ([]
 
 // ListGroups returns all groups without filtering
 func (r *Repository) ListGroups(ctx context.Context) ([]Group, error) {
-	rows, err := r.db.Query(ctx,
-		`SELECT id, faculty_id, name, course, degree, year_start, specialization, is_active
-		 FROM groups ORDER BY name`)
+	query := `SELECT id, faculty_id, name, course, degree, year_start, specialization, is_active
+		 FROM groups ORDER BY name`
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
+		logger.LogSQLError(err, query, "ListGroups")
 		return nil, err
 	}
 	defer rows.Close()
@@ -125,14 +149,21 @@ func (r *Repository) ListGroups(ctx context.Context) ([]Group, error) {
 }
 
 func (r *Repository) UpdateGroup(ctx context.Context, g Group) error {
-	_, err := r.db.Exec(ctx,
-		`UPDATE groups SET faculty_id=$1, name=$2, course=$3, degree=$4, year_start=$5, specialization=$6, is_active=$7 WHERE id=$8`,
+	query := `UPDATE groups SET faculty_id=$1, name=$2, course=$3, degree=$4, year_start=$5, specialization=$6, is_active=$7 WHERE id=$8`
+	_, err := r.db.Exec(ctx, query,
 		g.FacultyID, g.Name, g.Course, g.Degree, g.YearStart, g.Specialization, g.IsActive, g.ID)
+	if err != nil {
+		logger.LogSQLError(err, query, g.FacultyID, g.Name, g.Course, g.Degree, g.YearStart, g.Specialization, g.IsActive, g.ID)
+	}
 	return err
 }
 
 func (r *Repository) DeleteGroup(ctx context.Context, id int) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM groups WHERE id=$1`, id)
+	query := `DELETE FROM groups WHERE id=$1`
+	_, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+	}
 	return err
 }
 
@@ -145,16 +176,23 @@ func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 	err := r.db.QueryRow(ctx, query,
 		lesson.GroupName, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
 		lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek).Scan(&lesson.ID)
+	if err != nil {
+		logger.LogSQLError(err, query,
+			lesson.GroupName, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
+			lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek,
+		)
+	}
 	return err
 }
 
 func (r *Repository) GetLesson(ctx context.Context, id int) (*Lesson, error) {
 	var l Lesson
-	err := r.db.QueryRow(ctx,
-		`SELECT id, group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week, created_at
-		 FROM lessons WHERE id=$1`, id).
+	query := `SELECT id, group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week, created_at
+		 FROM lessons WHERE id=$1`
+	err := r.db.QueryRow(ctx, query, id).
 		Scan(&l.ID, &l.GroupName, &l.DayOfWeek, &l.StartTime, &l.EndTime, &l.Subject, &l.Teacher, &l.Classroom, &l.IsOnline, &l.IsEvenWeek, &l.CreatedAt)
 	if err != nil {
+		logger.LogSQLError(err, query, id)
 		return nil, err
 	}
 	return &l, nil
@@ -162,10 +200,11 @@ func (r *Repository) GetLesson(ctx context.Context, id int) (*Lesson, error) {
 
 // ListLessons returns all lessons without filtering
 func (r *Repository) ListLessons(ctx context.Context) ([]Lesson, error) {
-	rows, err := r.db.Query(ctx,
-		`SELECT id, group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week, created_at
-		 FROM lessons ORDER BY day_of_week, start_time`)
+	query := `SELECT id, group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week, created_at
+		 FROM lessons ORDER BY day_of_week, start_time`
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
+		logger.LogSQLError(err, query, "ListLessons")
 		return nil, err
 	}
 	defer rows.Close()
@@ -186,15 +225,24 @@ func (r *Repository) ListLessons(ctx context.Context) ([]Lesson, error) {
 }
 
 func (r *Repository) UpdateLesson(ctx context.Context, lesson Lesson) error {
-	_, err := r.db.Exec(ctx,
-		`UPDATE lessons SET group_name=$1, day_of_week=$2, start_time=$3, end_time=$4, subject=$5, teacher=$6, classroom=$7, is_online=$8, is_even_week=$9 WHERE id=$10`,
+	query := `UPDATE lessons SET group_name=$1, day_of_week=$2, start_time=$3, end_time=$4, subject=$5, teacher=$6, classroom=$7, is_online=$8, is_even_week=$9 WHERE id=$10`
+	_, err := r.db.Exec(ctx, query,
 		lesson.GroupName, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
 		lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek, lesson.ID)
+	if err != nil {
+		logger.LogSQLError(err, query, lesson.GroupName, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
+			lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek, lesson.ID,
+		)
+	}
 	return err
 }
 
 func (r *Repository) DeleteLesson(ctx context.Context, id int) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM lessons WHERE id=$1`, id)
+	query := `DELETE FROM lessons WHERE id=$1`
+	_, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+	}
 	return err
 }
 

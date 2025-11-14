@@ -24,14 +24,12 @@ import (
 	"github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	_ "techup/docs" // generated swagger files
+	_ "techup/docs"
 )
 
 func main() {
-	// Initialize logger
 	logger.Init()
 
-	// Load environment variables
 	if err := config.LoadEnv(); err != nil {
 		logger.Log.Fatal().Err(err).Msg("cannot load environment")
 	}
@@ -60,7 +58,8 @@ func main() {
 
 	// Initialize Gin engine
 	r := gin.New()
-	r.Use(gin.Recovery())
+	r.Use(logger.RecoveryLogger())
+	r.Use(logger.RequestIDMiddleware())
 	r.Use(logger.GinLoggerMiddleware())
 
 	// CORS middleware
