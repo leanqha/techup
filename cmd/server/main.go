@@ -135,9 +135,7 @@ func main() {
 		adminGroup.DELETE("/group/:id", scheduleHandler.DeleteGroup)
 
 		// Rooms
-		//adminGroup.POST("/room", mapsHandler.AddRoom)
-		//adminGroup.PUT("/room/:id", mapsHandler.UpdateRoom)
-		//adminGroup.DELETE("/room/:id", mapsHandler.DeleteRoom)
+		adminGroup.POST("/room", mapsHandler.AddRoom)
 
 		// Lessons
 		adminGroup.POST("/lesson", scheduleHandler.AddLesson)

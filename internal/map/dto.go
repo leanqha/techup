@@ -6,13 +6,19 @@ type GetShortestPathResponse struct {
 }
 
 type AddRoomRequest struct {
-	Name        string          `json:"name" binding:"required"`
-	BuildingID  int             `json:"building_id" binding:"required"`
-	Floor       int             `json:"floor" binding:"required"`
-	Connections []ConnectionDTO `json:"connections"`
+	Name       string `json:"name" binding:"required"`
+	BuildingID int    `json:"building_id" binding:"required"`
+	Floor      int    `json:"floor" binding:"required"`
 }
 
-type ConnectionDTO struct {
+type AddConnectionRequest struct {
+	RoomFrom string  `json:"room_from" binding:"required"`
 	RoomTo   string  `json:"room_to" binding:"required"`
 	Distance float64 `json:"distance" binding:"required"`
+	Type     string  `json:"type" binding:"required"`
+}
+
+type SearchRoomsRequest struct {
+	Floor      int `json:"floor" binding:"required"`
+	BuildingID int `json:"building_id" binding:"required"`
 }

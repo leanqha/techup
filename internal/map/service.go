@@ -20,7 +20,11 @@ func (s *Service) GetAllBuildings(ctx context.Context) ([]Building, error) {
 
 // SearchRooms returns rooms filtered by building_id and/or floor
 func (s *Service) SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error) {
-	return s.repo.SearchRooms(ctx, buildingID, floor)
+	room := &Room{
+		BuildingID: *buildingID,
+		Floor:      *floor,
+	}
+	return s.repo.SearchRooms(ctx, room)
 }
 
 // FindShortestPath finds the shortest path between two rooms by room names
@@ -58,22 +62,13 @@ func (s *Service) FindShortestPath(ctx context.Context, startRoom, endRoom strin
 	return DijkstraAlgorithm(graph, startRoom, endRoom)
 }
 
-func (s *Service) AddRoom(ctx context.Context, room Room, connections []ConnectionDTO) error {
-	if err := s.repo.AddRoom(ctx, &room); err != nil {
-		return err
+func (s *Service) AddRoom(ctx context.Context, name string, buildingID int, floor int) error {
+	room := &Room{
+		Name:       name,
+		BuildingID: buildingID,
+		Floor:      floor,
 	}
-
-	for _, conn := range connections {
-		c := Connection{
-			RoomFrom: room.Name,
-			RoomTo:   conn.RoomTo,
-			Distance: conn.Distance,
-		}
-		if err := s.repo.AddConnection(ctx, &c); err != nil {
-			return err
-		}
-	}
-	return nil
+	return s.repo.AddRoom(ctx, room)
 }
 
 func (s *Service) DeleteRoom(ctx context.Context, id int) error {

@@ -202,7 +202,7 @@ func (r *Repository) DeleteLesson(ctx context.Context, id int) error {
 func (r *Repository) SearchLessons(ctx context.Context, group, teacher, classroom, dayOfWeek, from, to string, isEvenWeek *bool) ([]Lesson, error) {
 	query := `SELECT id, group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week, created_at
 	          FROM lessons WHERE 1=1`
-	args := []interface{}{}
+	var args []interface{}
 	argID := 1
 
 	if group != "" {

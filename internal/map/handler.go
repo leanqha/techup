@@ -68,13 +68,7 @@ func (h *Handler) AddRoom(c *gin.Context) {
 		return
 	}
 
-	room := Room{
-		Name:       req.Name,
-		BuildingID: req.BuildingID,
-		Floor:      req.Floor,
-	}
-
-	if err := h.service.AddRoom(c.Request.Context(), room, req.Connections); err != nil {
+	if err := h.service.AddRoom(c.Request.Context(), req.Name, req.BuildingID, req.Floor); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -124,4 +118,13 @@ func (h *Handler) SearchRooms(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, rooms)
+}
+
+func (h *Handler) AddConnections(c *gin.Context) {
+	var req AddConnectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "room added"})
 }

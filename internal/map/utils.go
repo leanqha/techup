@@ -53,7 +53,7 @@ func DijkstraAlgorithm(graph map[string][]struct {
 	}
 
 	// Восстанавливаем путь
-	path := []string{}
+	var path []string
 	for u := end; u != ""; u = prev[u] {
 		path = append([]string{u}, path...)
 		if u == start {

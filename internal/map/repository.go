@@ -3,6 +3,7 @@ package maps
 import (
 	"context"
 	"fmt"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,20 +35,20 @@ func (r *Repository) GetAllBuildings(ctx context.Context) ([]Building, error) {
 }
 
 // SearchRooms позволяет искать комнаты по building_id и/или floor
-func (r *Repository) SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error) {
+func (r *Repository) SearchRooms(ctx context.Context, room *Room) ([]Room, error) {
 	query := `SELECT id, building_id, floor, name FROM rooms WHERE 1=1`
-	args := []interface{}{}
+	var args []interface{}
 	argIndex := 1
 
-	if buildingID != nil {
+	if &room.BuildingID != nil {
 		query += fmt.Sprintf(" AND building_id=$%d", argIndex)
-		args = append(args, *buildingID)
+		args = append(args, room.BuildingID)
 		argIndex++
 	}
 
-	if floor != nil {
+	if &room.Floor != nil {
 		query += fmt.Sprintf(" AND floor=$%d", argIndex)
-		args = append(args, *floor)
+		args = append(args, room.Floor)
 		argIndex++
 	}
 
