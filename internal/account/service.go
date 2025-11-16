@@ -3,9 +3,10 @@ package account
 import (
 	"context"
 	"errors"
-	"golang.org/x/crypto/bcrypt"
 	"techup/config"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/google/uuid"
 )
@@ -88,7 +89,6 @@ func (s *Service) UpdateProfile(ctx context.Context, userID int, req *UpdateProf
 	if err != nil {
 		return nil, err
 	}
-	// проверка уникальности email и обновление
 	acc.Email = req.Email
 	acc.FirstName = req.FirstName
 	acc.LastName = req.LastName
@@ -147,7 +147,6 @@ func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, s
 		return "", "", err
 	}
 
-	// issue new access token
 	newAccess, err := GenerateJWT(acc)
 	if err != nil {
 		return "", "", err
@@ -158,7 +157,6 @@ func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, s
 		return "", "", err
 	}
 
-	// delete old refresh
 	_ = s.repo.DeleteRefreshToken(ctx, oldToken)
 
 	return newAccess, *newRefresh, nil

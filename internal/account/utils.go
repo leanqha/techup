@@ -2,9 +2,10 @@ package account
 
 import (
 	"errors"
-	"golang.org/x/crypto/bcrypt"
 	"techup/config"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/golang-jwt/jwt/v5"
 )

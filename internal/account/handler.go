@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"techup/config"
+	"techup/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -41,6 +42,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
+	logger.Log.Info().Msgf("registered with email: %s", acc.Email)
 	c.JSON(http.StatusOK, gin.H{"id": acc.ID, "email": acc.Email})
 }
 
@@ -58,7 +60,6 @@ func (h *Handler) Register(c *gin.Context) {
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		fmt.Println(req)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
@@ -97,46 +98,28 @@ func (h *Handler) Login(c *gin.Context) {
 // @Description Returns current user info based on JWT token passed in Authorization header as Bearer token.
 // @Tags account
 // @Produce json
-// @Security BearerAuth
+// @Security cookieAuth
 // @Success 200 {object} ProfileResponse "User profile"
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Router /api/v1/account/secure/profile [get]
 func (h *Handler) Profile(c *gin.Context) {
-	claimsRaw, exists := c.Get("claims")
-	fmt.Println(claimsRaw)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
-		return
-	}
-
-	claims, ok := claimsRaw.(jwt.MapClaims)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid claims"})
-		return
-	}
-
-	userIDFloat, ok := claims["user_id"].(float64)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user_id in claims"})
-		return
-	}
-	userID := int(userIDFloat)
+	userID := c.GetInt("user_id")
 
 	acc, err := h.service.GetByID(c, userID)
 	if err != nil {
+		logger.Log.Err(err).Msg("failed to get user")
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
 
-	resp := ProfileResponse{
+	c.JSON(http.StatusOK, ProfileResponse{
 		ID:        acc.ID,
 		UID:       acc.UID,
 		Email:     acc.Email,
 		FirstName: acc.FirstName,
 		LastName:  acc.LastName,
 		Role:      acc.Role,
-	}
-	c.JSON(http.StatusOK, resp)
+	})
 }
 
 // ChangePassword godoc
@@ -149,7 +132,7 @@ func (h *Handler) Profile(c *gin.Context) {
 // @Success 200 {object} map[string]string "Password changed successfully"
 // @Failure 400 {object} map[string]string "Invalid input"
 // @Failure 401 {object} map[string]string "Unauthorized"
-// @Security BearerAuth
+// @Security cookieAuth
 // @Router /api/v1/account/secure/change-password [post]
 func (h *Handler) ChangePassword(c *gin.Context) {
 	claims, exists := c.Get("claims")
@@ -186,7 +169,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid input"
 // @Failure 409 {object} map[string]string "Email already exists"
 // @Failure 401 {object} map[string]string "Unauthorized"
-// @Security BearerAuth
+// @Security cookieAuth
 // @Router /api/v1/account/secure/update [put]
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	claims, exists := c.Get("claims")
@@ -229,7 +212,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 400 {object} map[string]string "Invalid input"
 // @Failure 401 {object} map[string]string "Unauthorized"
-// @Security BearerAuth
+// @Security cookieAuth
 // @Router /api/v1/account/set-role [post]
 func (h *Handler) SetRole(c *gin.Context) {
 	claims, exists := c.Get("claims")

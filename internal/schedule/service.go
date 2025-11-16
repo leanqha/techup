@@ -12,7 +12,8 @@ func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
 }
 
-// Faculties
+// ---------- Faculties -----------
+
 func (s *Service) AddFaculty(ctx context.Context, faculty Faculty) error {
 	return s.repo.AddFaculty(ctx, faculty)
 }
@@ -30,6 +31,7 @@ func (s *Service) DeleteFaculty(ctx context.Context, id int) error {
 }
 
 // Groups
+
 func (s *Service) AddGroup(ctx context.Context, g Group) error {
 	return s.repo.AddGroup(ctx, g)
 }
@@ -47,6 +49,7 @@ func (s *Service) DeleteGroup(ctx context.Context, id int) error {
 }
 
 // Lessons
+
 func (s *Service) AddLesson(ctx context.Context, lesson Lesson) error {
 	return s.repo.AddLesson(ctx, lesson)
 }
