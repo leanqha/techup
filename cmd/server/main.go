@@ -121,6 +121,7 @@ func main() {
 	adminGroup.Use(account.AuthMiddleware(), account.RequireRole("admin"))
 	{
 		// Account roles
+		adminGroup.DELETE("/account/:id", accountHandler.DeleteAccount)
 		adminGroup.POST("/set-role", accountHandler.SetRole)
 
 		// Faculties

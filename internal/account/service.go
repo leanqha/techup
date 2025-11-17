@@ -20,6 +20,7 @@ type RepositoryInterface interface {
 	GetRefreshToken(ctx context.Context, token string) (*RefreshToken, error)
 	DeleteRefreshToken(ctx context.Context, token string) error
 	DeleteRefreshTokens(ctx context.Context, userID int) error
+	DeleteAccount(ctx context.Context, userID int) error
 }
 
 type Service struct {
@@ -180,4 +181,8 @@ func (s *Service) Logout(ctx context.Context, userID int) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Service) DeleteAccount(ctx context.Context, userID int) error {
+	return s.repo.DeleteAccount(ctx, userID)
 }

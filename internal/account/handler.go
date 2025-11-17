@@ -1,7 +1,10 @@
 package account
 
 import (
+	"context"
+	"errors"
 	"net/http"
+	"strconv"
 	"techup/config"
 	"techup/internal/logger"
 
@@ -9,11 +12,35 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type Handler struct {
-	service *Service
+type ServiceInterface interface {
+	Register(ctx context.Context, req RegisterRequest) (*Account, string, string, error)
+	Login(ctx context.Context, email, password string) (string, string, error)
+	GetByID(ctx context.Context, id int) (*Account, error)
+	UpdateProfile(ctx context.Context, userID int, req *UpdateProfileRequest) (*Account, error)
+	ChangePassword(ctx context.Context, userID int, req *ChangePasswordRequest) error
+	SetRole(ctx context.Context, adminID int, req *SetRoleRequest) error
+	RefreshTokens(ctx context.Context, refreshToken string) (string, string, error)
+	Logout(ctx context.Context, userID int) error
+	DeleteAccount(ctx context.Context, userID int) error
 }
 
-func NewHandler(s *Service) *Handler {
+type HandlerInterface interface {
+	Register(c *gin.Context)
+	Login(c *gin.Context)
+	Profile(c *gin.Context)
+	UpdateProfile(c *gin.Context)
+	ChangePassword(c *gin.Context)
+	SetRole(c *gin.Context)
+	Refresh(c *gin.Context)
+	Logout(c *gin.Context)
+	DeleteAccount(c *gin.Context)
+}
+
+type Handler struct {
+	service ServiceInterface
+}
+
+func NewHandler(s ServiceInterface) *Handler {
 	return &Handler{service: s}
 }
 
@@ -282,18 +309,22 @@ func (h *Handler) SetRole(c *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Router /api/v1/account/refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
-	var req RefreshRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "invalid request"})
+	// Получаем refresh_token из cookie
+	cookie, err := c.Cookie("refresh_token")
+	if err != nil || cookie == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "refresh token not provided"})
 		return
 	}
+	refreshToken := cookie
 
-	accessToken, newRefreshToken, err := h.service.RefreshTokens(c.Request.Context(), req.RefreshToken)
+	// Генерируем новые токены через сервис
+	accessToken, newRefreshToken, err := h.service.RefreshTokens(c.Request.Context(), refreshToken)
 	if err != nil {
-		c.JSON(401, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Устанавливаем новые cookies
 	c.SetCookie(
 		"access_token",
 		accessToken,
@@ -303,7 +334,6 @@ func (h *Handler) Refresh(c *gin.Context) {
 		false,
 		true, // HttpOnly
 	)
-
 	c.SetCookie(
 		"refresh_token",
 		newRefreshToken,
@@ -345,4 +375,40 @@ func (h *Handler) Logout(c *gin.Context) {
 	c.SetCookie("refresh_token", "", -1, "/", config.GetDomain(), false, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "logout successful"})
+}
+
+func (h *Handler) DeleteAccount(c *gin.Context) {
+	idParam := c.Param("id")
+	userID, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	// Можно проверять claims: только админ или сам пользователь
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims"})
+		return
+	}
+	claims := claimsRaw.(jwt.MapClaims)
+	role := claims["role"].(string)
+	claimsUserID := int(claims["user_id"].(float64))
+
+	if role != "admin" && claimsUserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		return
+	}
+
+	err = h.service.DeleteAccount(c, userID)
+	if err != nil {
+		if err == errors.New("account not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "account deleted"})
 }

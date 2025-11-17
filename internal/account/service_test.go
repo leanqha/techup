@@ -3,7 +3,6 @@ package account
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -102,6 +101,26 @@ func (m *MockRepo) DeleteRefreshTokens(_ context.Context, userID int) error {
 		}
 	}
 	return nil
+}
+
+func (m *MockRepo) DeleteAccount(ctx context.Context, userID int) error {
+	if m.deleteError != nil {
+		return m.deleteError
+	}
+	// Удаляем refresh токены пользователя
+	for token, rt := range m.refreshTokens {
+		if rt.AccountID == userID {
+			delete(m.refreshTokens, token)
+		}
+	}
+	// Удаляем сам аккаунт
+	for email, acc := range m.accounts {
+		if acc.ID == userID {
+			delete(m.accounts, email)
+			return nil
+		}
+	}
+	return errors.New("account not found")
 }
 
 // --- Tests ---
@@ -435,12 +454,4 @@ func TestUpdateProfileEmailConflict(t *testing.T) {
 		LastName:  "B",
 	})
 	assert.Error(t, err)
-}
-
-func TestMain(m *testing.M) {
-	err := os.Setenv("JWT_SECRET", "testsecret")
-	if err != nil {
-		return
-	}
-	os.Exit(m.Run())
 }

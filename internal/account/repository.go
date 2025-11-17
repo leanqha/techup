@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"techup/internal/logger"
@@ -135,4 +136,22 @@ func (r *Repository) DeleteRefreshTokens(ctx context.Context, userID int) error 
 		WHERE account_id = $1
 	`, userID)
 	return err
+}
+
+func (r *Repository) DeleteAccount(ctx context.Context, id int) error {
+	// Сначала удаляем все refresh токены пользователя
+	if err := r.DeleteRefreshTokens(ctx, id); err != nil {
+		return err
+	}
+
+	query := `DELETE FROM accounts WHERE id = $1`
+	ct, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	if ct.RowsAffected() != 1 {
+		return errors.New("account not found")
+	}
+	return nil
 }
