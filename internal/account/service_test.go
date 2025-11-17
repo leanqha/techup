@@ -20,7 +20,7 @@ type MockRepo struct {
 	deleteError   error
 }
 
-func (m *MockRepo) CreateAccount(ctx context.Context, acc *Account) error {
+func (m *MockRepo) CreateAccount(_ context.Context, acc *Account) error {
 	if m.saveError != nil {
 		return m.saveError
 	}
@@ -32,7 +32,7 @@ func (m *MockRepo) CreateAccount(ctx context.Context, acc *Account) error {
 	return nil
 }
 
-func (m *MockRepo) GetByEmail(ctx context.Context, email string) (*Account, error) {
+func (m *MockRepo) GetByEmail(_ context.Context, email string) (*Account, error) {
 	if m.getError != nil {
 		return nil, m.getError
 	}
@@ -43,7 +43,7 @@ func (m *MockRepo) GetByEmail(ctx context.Context, email string) (*Account, erro
 	return acc, nil
 }
 
-func (m *MockRepo) GetByID(ctx context.Context, id int) (*Account, error) {
+func (m *MockRepo) GetByID(_ context.Context, id int) (*Account, error) {
 	for _, acc := range m.accounts {
 		if acc.ID == id {
 			return acc, nil
@@ -52,7 +52,7 @@ func (m *MockRepo) GetByID(ctx context.Context, id int) (*Account, error) {
 	return nil, errors.New("account not found")
 }
 
-func (m *MockRepo) UpdateAccount(ctx context.Context, acc *Account) error {
+func (m *MockRepo) UpdateAccount(_ context.Context, acc *Account) error {
 	// Check for email conflict with other accounts
 	for email, a := range m.accounts {
 		if email == acc.Email && a.ID != acc.ID {
@@ -69,14 +69,14 @@ func (m *MockRepo) UpdateAccount(ctx context.Context, acc *Account) error {
 	m.accounts[acc.Email] = acc
 	return nil
 }
-func (m *MockRepo) SaveRefreshToken(ctx context.Context, token *RefreshToken) error {
+func (m *MockRepo) SaveRefreshToken(_ context.Context, token *RefreshToken) error {
 	if m.saveError != nil {
 		return m.saveError
 	}
 	m.refreshTokens[token.Token] = token
 	return nil
 }
-func (m *MockRepo) GetRefreshToken(ctx context.Context, token string) (*RefreshToken, error) {
+func (m *MockRepo) GetRefreshToken(_ context.Context, token string) (*RefreshToken, error) {
 	t, ok := m.refreshTokens[token]
 	if !ok {
 		return nil, errors.New("not found")
@@ -84,7 +84,7 @@ func (m *MockRepo) GetRefreshToken(ctx context.Context, token string) (*RefreshT
 	return t, nil
 }
 
-func (m *MockRepo) DeleteRefreshToken(ctx context.Context, token string) error {
+func (m *MockRepo) DeleteRefreshToken(_ context.Context, token string) error {
 	if m.deleteError != nil {
 		return m.deleteError
 	}
@@ -92,7 +92,7 @@ func (m *MockRepo) DeleteRefreshToken(ctx context.Context, token string) error {
 	return nil
 }
 
-func (m *MockRepo) DeleteRefreshTokens(ctx context.Context, userID int) error {
+func (m *MockRepo) DeleteRefreshTokens(_ context.Context, userID int) error {
 	if m.deleteError != nil {
 		return m.deleteError
 	}
@@ -438,6 +438,9 @@ func TestUpdateProfileEmailConflict(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	os.Setenv("JWT_SECRET", "testsecret")
+	err := os.Setenv("JWT_SECRET", "testsecret")
+	if err != nil {
+		return
+	}
 	os.Exit(m.Run())
 }
