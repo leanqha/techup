@@ -14,6 +14,8 @@ type LoginRequest struct {
 	Password string `json:"password" example:"strongpassword"`
 }
 
+// LoginResponse - payload returned by /login
+
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`

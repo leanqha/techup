@@ -309,7 +309,6 @@ func (h *Handler) SetRole(c *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Router /api/v1/account/refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
-	// Получаем refresh_token из cookie
 	cookie, err := c.Cookie("refresh_token")
 	if err != nil || cookie == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "refresh token not provided"})
@@ -317,14 +316,12 @@ func (h *Handler) Refresh(c *gin.Context) {
 	}
 	refreshToken := cookie
 
-	// Генерируем новые токены через сервис
 	accessToken, newRefreshToken, err := h.service.RefreshTokens(c.Request.Context(), refreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Устанавливаем новые cookies
 	c.SetCookie(
 		"access_token",
 		accessToken,
@@ -332,7 +329,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 		"/",
 		config.GetDomain(),
 		false,
-		true, // HttpOnly
+		true,
 	)
 	c.SetCookie(
 		"refresh_token",
@@ -364,13 +361,11 @@ func (h *Handler) Logout(c *gin.Context) {
 	claims := claimsRaw.(jwt.MapClaims)
 	userID := int(claims["user_id"].(float64))
 
-	// Сервис удаляет токены из БД
 	if err := h.service.Logout(c.Request.Context(), userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Очищаем куки
 	c.SetCookie("access_token", "", -1, "/", config.GetDomain(), false, true)
 	c.SetCookie("refresh_token", "", -1, "/", config.GetDomain(), false, true)
 
@@ -385,7 +380,6 @@ func (h *Handler) DeleteAccount(c *gin.Context) {
 		return
 	}
 
-	// Можно проверять claims: только админ или сам пользователь
 	claimsRaw, exists := c.Get("claims")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims"})

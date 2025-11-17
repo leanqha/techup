@@ -129,7 +129,6 @@ func (r *Repository) DeleteRefreshToken(ctx context.Context, oldToken string) er
 	return nil
 }
 
-// DeleteRefreshTokens удаляет все refresh токены для пользователя
 func (r *Repository) DeleteRefreshTokens(ctx context.Context, userID int) error {
 	_, err := r.db.Exec(ctx, `
 		DELETE FROM refresh_tokens
@@ -139,7 +138,6 @@ func (r *Repository) DeleteRefreshTokens(ctx context.Context, userID int) error 
 }
 
 func (r *Repository) DeleteAccount(ctx context.Context, id int) error {
-	// Сначала удаляем все refresh токены пользователя
 	if err := r.DeleteRefreshTokens(ctx, id); err != nil {
 		return err
 	}

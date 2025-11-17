@@ -32,7 +32,6 @@ func GenerateTokens(acc *Account) (string, string, error) {
 	accessTTL := time.Duration(config.GetAccessTokenTTLSeconds()) * time.Second
 	refreshTTL := time.Duration(config.GetRefreshTokenTTLSeconds()) * time.Second
 
-	// --- Access token ---
 	accessClaims := TokenClaims{
 		UserID: acc.ID,
 		Role:   acc.Role,
@@ -49,7 +48,6 @@ func GenerateTokens(acc *Account) (string, string, error) {
 		return "", "", err
 	}
 
-	// --- Refresh Token ---
 	refreshClaims := TokenClaims{
 		UserID: acc.ID,
 		Role:   acc.Role,

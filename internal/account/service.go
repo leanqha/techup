@@ -65,13 +65,11 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*Account, 
 		return nil, "", "", err
 	}
 
-	// Создать токены
 	accessToken, refreshToken, err := GenerateTokens(acc)
 	if err != nil {
 		return nil, "", "", err
 	}
 
-	// Сохранить refresh токен
 	if err := s.repo.SaveRefreshToken(ctx, &RefreshToken{
 		AccountID: acc.ID,
 		Token:     refreshToken,

@@ -55,7 +55,7 @@ func GetAccessTokenTTLSeconds() int {
 func GetRefreshTokenTTLSeconds() int {
 	minutes, _ := strconv.Atoi(os.Getenv("JWT_REFRESH_TOKEN_TTL"))
 	if minutes == 0 {
-		minutes = 10080 // 7 days
+		minutes = 10080
 	}
 	return minutes * int(time.Minute/time.Second)
 }

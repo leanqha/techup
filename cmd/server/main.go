@@ -33,7 +33,6 @@ func main() {
 		logger.Log.Fatal().Err(err).Msg("cannot load environment")
 	}
 
-	// Connect to PostgreSQL
 	db, err := config.NewPostgresPool()
 	if err != nil {
 		logger.Log.Fatal().Err(err).Msg("failed to connect to database")
@@ -41,12 +40,10 @@ func main() {
 	defer db.Close()
 	logger.Log.Info().Msg("database connected")
 
-	// Initialize account repository, service and handler
 	accountRepo := account.NewRepository(db)
 	accountSvc := account.NewService(accountRepo)
 	accountHandler := account.NewHandler(accountSvc)
 
-	// Initialize schedule repository, service and handler
 	scheduleRepo := schedule.NewRepository(db)
 	scheduleSvc := schedule.NewService(scheduleRepo)
 	scheduleHandler := schedule.NewHandler(scheduleSvc)
@@ -55,13 +52,11 @@ func main() {
 	mapsSvc := maps.NewService(mapsRepo)
 	mapsHandler := maps.NewHandler(mapsSvc)
 
-	// Initialize Gin engine
 	r := gin.New()
 	r.Use(logger.RecoveryLogger())
 	r.Use(logger.RequestIDMiddleware())
 	r.Use(logger.GinLoggerMiddleware())
 
-	// CORS middleware
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:5173",
@@ -76,18 +71,14 @@ func main() {
 
 	r.GET("/api/v1/health", health.Handler)
 
-	// Базовая группа API
 	api := r.Group("/api/v1")
 
-	// ---------- Account routes ----------
 	accountGroup := api.Group("/account")
 
-	// --- Публичные ---
 	accountGroup.POST("/register", accountHandler.Register)
 	accountGroup.POST("/login", accountHandler.Login)
 	accountGroup.POST("/refresh", accountHandler.Refresh)
 
-	// ---------- Secure routes ----------
 	secureAccount := accountGroup.Group("/secure")
 	secureAccount.Use(account.AuthMiddleware())
 	{
@@ -97,7 +88,6 @@ func main() {
 		secureAccount.POST("/logout", accountHandler.Logout)
 	}
 
-	// ---------- Schedule routes ----------
 	scheduleGroup := api.Group("/schedule")
 	scheduleGroup.Use()
 	{
@@ -107,7 +97,6 @@ func main() {
 		scheduleGroup.GET("/search", scheduleHandler.SearchSchedule)
 	}
 
-	// ---------- Map / Building routes ----------
 	mapGroup := api.Group("/map")
 	mapGroup.Use()
 	{
@@ -116,42 +105,33 @@ func main() {
 		mapGroup.GET("/path/:start/:end", mapsHandler.GetShortestPath)
 	}
 
-	// ---------- Admin routes ----------
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(account.AuthMiddleware(), account.RequireRole("admin"))
 	{
-		// Account roles
 		adminGroup.DELETE("/account/:id", accountHandler.DeleteAccount)
 		adminGroup.POST("/set-role", accountHandler.SetRole)
 
-		// Faculties
 		adminGroup.POST("/faculty", scheduleHandler.AddFaculty)
 		adminGroup.PUT("/faculty/:id", scheduleHandler.UpdateFaculty)
 		adminGroup.DELETE("/faculty/:id", scheduleHandler.DeleteFaculty)
 
-		// Groups
 		adminGroup.POST("/group", scheduleHandler.AddGroup)
 		adminGroup.PUT("/group/:id", scheduleHandler.UpdateGroup)
 		adminGroup.DELETE("/group/:id", scheduleHandler.DeleteGroup)
 
-		// Rooms
 		adminGroup.POST("/room", mapsHandler.AddRoom)
 
-		// Lessons
 		adminGroup.POST("/lesson", scheduleHandler.AddLesson)
 		adminGroup.PUT("/lesson/:id", scheduleHandler.UpdateLesson)
 		adminGroup.DELETE("/lesson/:id", scheduleHandler.DeleteLesson)
 
-		// Connections
 		//adminGroup.GET("/connection", mapsHandler.ListConnections)
 		//adminGroup.POST("/connection", mapsHandler.AddConnection)
 		//adminGroup.DELETE("/connection/:id", mapsHandler.DeleteConnection)
 	}
 
-	// ---------- Swagger ----------
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Start server
 	port := config.GetPort()
 	err = r.Run(":" + port)
 	if err != nil {

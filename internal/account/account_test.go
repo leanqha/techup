@@ -21,7 +21,6 @@ var svc *account.Service
 var repo *account.Repository
 
 func TestMain(m *testing.M) {
-	// Загружаем переменные окружения
 	if err := godotenv.Load("../../.env"); err != nil {
 		fmt.Printf("No .env.test file found: %v", err)
 	}
@@ -35,7 +34,6 @@ func TestMain(m *testing.M) {
 	repo = account.NewRepository(db)
 	svc = account.NewService(repo)
 
-	// Запуск тестов
 	os.Exit(m.Run())
 }
 
@@ -46,13 +44,11 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	email := "integration_test@example.com"
 	password := "password123"
 
-	// --- Очистка старых данных ---
 	if acc, _ := repo.GetByEmail(ctx, email); acc != nil {
 		_ = repo.DeleteRefreshTokens(ctx, acc.ID)
 		_ = repo.DeleteAccount(ctx, acc.ID)
 	}
 
-	// --- Создаём хендлер и роутер ---
 	h := account.NewHandler(svc)
 	r := gin.New()
 	r.POST("/api/v1/account/register", h.Register)
@@ -66,7 +62,6 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	client := &http.Client{}
 	var cookies []*http.Cookie
 
-	// --- Регистрация ---
 	registerBody := map[string]string{
 		"email":      email,
 		"password":   password,
@@ -92,7 +87,6 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	assert.NotEmpty(t, accessToken, "access_token cookie should be set")
 	assert.NotEmpty(t, refreshToken, "refresh_token cookie should be set")
 
-	// --- Логин ---
 	loginBody := map[string]string{
 		"email":    email,
 		"password": password,
@@ -114,9 +108,8 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	assert.NotEmpty(t, accessToken)
 	assert.NotEmpty(t, refreshToken)
 
-	// --- Refresh с использованием cookie ---
 	req, _ := http.NewRequest("POST", ts.URL+"/api/v1/account/refresh", nil)
-	for _, c := range cookies { // используем куки с refresh_token
+	for _, c := range cookies {
 		req.AddCookie(c)
 	}
 	resp, _ = client.Do(req)
@@ -134,7 +127,6 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	assert.NotEmpty(t, newAccessToken, "new access_token cookie should be set")
 	assert.NotEmpty(t, newRefreshToken, "new refresh_token cookie should be set")
 
-	// --- Logout ---
 	req, _ = http.NewRequest("POST", ts.URL+"/api/v1/account/logout", nil)
 	req.AddCookie(&http.Cookie{Name: "access_token", Value: newAccessToken})
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: newRefreshToken})
@@ -154,7 +146,6 @@ func TestCleanup(t *testing.T) {
 	ctx := context.Background()
 	email := "integration_test@example.com"
 
-	// Удаляем пользователя, если он есть
 	acc, err := repo.GetByEmail(ctx, email)
 	if err == nil {
 		_ = repo.DeleteRefreshTokens(ctx, acc.ID)

@@ -33,7 +33,6 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Установим в контекст
 		c.Set("user_id", int(uidFloat))
 		c.Set("role", role)
 		c.Set("claims", claims)
@@ -42,7 +41,6 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-// RequireRole позволяет ограничить доступ по роли (например, только админам)
 func RequireRole(role string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, exists := c.Get("claims")

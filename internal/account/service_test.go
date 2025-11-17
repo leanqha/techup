@@ -10,7 +10,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// --- Mock Repository ---
 type MockRepo struct {
 	accounts      map[string]*Account
 	refreshTokens map[string]*RefreshToken
@@ -52,13 +51,11 @@ func (m *MockRepo) GetByID(_ context.Context, id int) (*Account, error) {
 }
 
 func (m *MockRepo) UpdateAccount(_ context.Context, acc *Account) error {
-	// Check for email conflict with other accounts
 	for email, a := range m.accounts {
 		if email == acc.Email && a.ID != acc.ID {
 			return errors.New("email already exists")
 		}
 	}
-	// Update the account in the map
 	for email, a := range m.accounts {
 		if a.ID == acc.ID {
 			delete(m.accounts, email)
@@ -107,13 +104,11 @@ func (m *MockRepo) DeleteAccount(ctx context.Context, userID int) error {
 	if m.deleteError != nil {
 		return m.deleteError
 	}
-	// Удаляем refresh токены пользователя
 	for token, rt := range m.refreshTokens {
 		if rt.AccountID == userID {
 			delete(m.refreshTokens, token)
 		}
 	}
-	// Удаляем сам аккаунт
 	for email, acc := range m.accounts {
 		if acc.ID == userID {
 			delete(m.accounts, email)
@@ -123,7 +118,6 @@ func (m *MockRepo) DeleteAccount(ctx context.Context, userID int) error {
 	return errors.New("account not found")
 }
 
-// --- Tests ---
 func TestRegisterAndLogin(t *testing.T) {
 	repo := &MockRepo{
 		accounts:      make(map[string]*Account),
@@ -132,7 +126,6 @@ func TestRegisterAndLogin(t *testing.T) {
 
 	service := NewService(repo)
 
-	// --- Register ---
 	acc, accessToken, refreshToken, err := service.Register(context.Background(), RegisterRequest{
 		Email:     "test@example.com",
 		Password:  "password",
@@ -145,7 +138,6 @@ func TestRegisterAndLogin(t *testing.T) {
 	assert.NotEmpty(t, accessToken)
 	assert.NotEmpty(t, refreshToken)
 
-	// --- Duplicate email ---
 	_, _, _, err = service.Register(context.Background(), RegisterRequest{
 		Email:     "test@example.com",
 		Password:  "password",
@@ -154,13 +146,11 @@ func TestRegisterAndLogin(t *testing.T) {
 	})
 	assert.Error(t, err)
 
-	// --- Login ---
 	access, refresh, err := service.Login(context.Background(), "test@example.com", "password")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, access)
 	assert.NotEmpty(t, refresh)
 
-	// --- Wrong password ---
 	_, _, err = service.Login(context.Background(), "test@example.com", "wrongpassword")
 	assert.Error(t, err)
 }
@@ -197,7 +187,6 @@ func TestRefreshTokens(t *testing.T) {
 	assert.NotEmpty(t, access)
 	assert.NotEmpty(t, refresh)
 
-	// Save refresh token
 	err = service.repo.SaveRefreshToken(context.Background(), &RefreshToken{
 		AccountID: acc.ID,
 		Token:     refresh,
@@ -214,7 +203,6 @@ func TestLogout(t *testing.T) {
 
 	service := NewService(repo)
 
-	// Создаем пользователя и refresh токен
 	acc := &Account{ID: 1, Email: "user@example.com"}
 	repo.accounts[acc.Email] = acc
 
@@ -225,11 +213,9 @@ func TestLogout(t *testing.T) {
 		ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
 	}
 
-	// Логаут: удалить все токены пользователя
 	err := service.Logout(context.Background(), acc.ID)
 	assert.NoError(t, err)
 
-	// Проверяем, что токены удалены
 	_, exists := repo.refreshTokens[refreshToken]
 	assert.False(t, exists)
 }
@@ -244,7 +230,6 @@ func TestUpdateProfile(t *testing.T) {
 	acc := &Account{ID: 1, Email: "user@example.com", FirstName: "John", LastName: "Doe"}
 	repo.accounts[acc.Email] = acc
 
-	// Обновляем профиль
 	req := UpdateProfileRequest{
 		Email:     "new@example.com",
 		FirstName: "Jane",
@@ -257,7 +242,6 @@ func TestUpdateProfile(t *testing.T) {
 	assert.Equal(t, "Jane", updatedAcc.FirstName)
 	assert.Equal(t, "Smith", updatedAcc.LastName)
 
-	// Ошибка: обновляем несуществующего пользователя
 	_, err = service.UpdateProfile(context.Background(), 999, &req)
 	assert.Error(t, err)
 }
@@ -270,7 +254,6 @@ func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
 
 	service := NewService(repo)
 
-	// --- Создаем аккаунт с хэшем пароля ---
 	hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
 	acc := &Account{
 		ID:           1,
@@ -282,21 +265,17 @@ func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
 	}
 	repo.accounts[acc.Email] = acc
 
-	// --- Логин с правильным паролем ---
 	access, refresh, err := service.Login(context.Background(), acc.Email, "password")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, access)
 	assert.NotEmpty(t, refresh)
 
-	// --- Логин с неверным паролем ---
 	_, _, err = service.Login(context.Background(), acc.Email, "wrongpassword")
 	assert.Error(t, err)
 
-	// --- Логин с несуществующим email ---
 	_, _, err = service.Login(context.Background(), "missing@example.com", "password")
 	assert.Error(t, err)
 
-	// --- Сохраняем refresh токен ---
 	err = repo.SaveRefreshToken(context.Background(), &RefreshToken{
 		AccountID: acc.ID,
 		Token:     refresh,
@@ -304,24 +283,20 @@ func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// --- Попытка обновления токенов с недействительным токеном ---
 	_, _, err = service.RefreshTokens(context.Background(), "invalid-token")
 	assert.Error(t, err)
 
-	// --- Успешный refresh ---
 	newAccess, newRefresh, err := service.RefreshTokens(context.Background(), refresh)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, newAccess)
 	assert.NotEmpty(t, newRefresh)
 
-	// --- Логаут ---
 	err = service.Logout(context.Background(), acc.ID)
 	assert.NoError(t, err)
 	for _, rt := range repo.refreshTokens {
 		assert.NotEqual(t, acc.ID, rt.AccountID)
 	}
 
-	// --- Попытка logout для несуществующего пользователя ---
 	err = service.Logout(context.Background(), 999)
 	assert.NoError(t, err) // не должно падать, просто ничего не удаляет
 }
@@ -330,25 +305,21 @@ func TestRegisterValidation(t *testing.T) {
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
 
-	// Empty email
 	_, _, _, err := service.Register(context.Background(), RegisterRequest{
 		Email: "", Password: "password", FirstName: "A", LastName: "B",
 	})
 	assert.Error(t, err)
 
-	// Password too short
 	_, _, _, err = service.Register(context.Background(), RegisterRequest{
 		Email: "a@b.c", Password: "123", FirstName: "A", LastName: "B",
 	})
 	assert.Error(t, err)
 
-	// Empty first name
 	_, _, _, err = service.Register(context.Background(), RegisterRequest{
 		Email: "a@b.c", Password: "password", FirstName: "", LastName: "B",
 	})
 	assert.Error(t, err)
 
-	// Empty last name
 	_, _, _, err = service.Register(context.Background(), RegisterRequest{
 		Email: "a@b.c", Password: "password", FirstName: "A", LastName: "",
 	})
