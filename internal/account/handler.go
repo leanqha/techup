@@ -36,14 +36,44 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	acc, err := h.service.Register(c.Request.Context(), req.Email, req.Password, req.FirstName, req.LastName)
+	acc, access, refresh, err := h.service.Register(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	logger.Log.Info().Msgf("registered with email: %s", acc.Email)
-	c.JSON(http.StatusOK, gin.H{"id": acc.ID, "email": acc.Email})
+	// Set cookies
+	c.SetCookie(
+		"access_token",
+		access,
+		config.GetAccessTokenTTLSeconds(),
+		"/",
+		config.GetDomain(),
+		false,
+		true,
+	)
+	c.SetCookie(
+		"refresh_token",
+		refresh,
+		config.GetRefreshTokenTTLSeconds(),
+		"/",
+		config.GetDomain(),
+		false,
+		true,
+	)
+
+	// Response
+	c.JSON(http.StatusOK, gin.H{
+		"message": "registration successful",
+		"user": ProfileResponse{
+			ID:        acc.ID,
+			UID:       acc.UID,
+			Email:     acc.Email,
+			FirstName: acc.FirstName,
+			LastName:  acc.LastName,
+			Role:      acc.Role,
+		},
+	})
 }
 
 // Login godoc

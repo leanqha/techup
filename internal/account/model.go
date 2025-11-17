@@ -10,6 +10,8 @@ type Account struct {
 	FirstName    string
 	LastName     string
 	Role         string
+	IsVerified   bool
+	GroupName    string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

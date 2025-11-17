@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func LoadEnv() error {
@@ -29,24 +30,6 @@ func GetDBDSN() string {
 
 func GetJWTSecret() string {
 	return os.Getenv("JWT_SECRET")
-}
-
-func GetJWTAccessTTL() time.Duration {
-	minutesStr := os.Getenv("JWT_ACCESS_TOKEN_TTL")
-	minutes, err := strconv.Atoi(minutesStr)
-	if err != nil {
-		minutes = 15
-	}
-	return time.Duration(minutes) * time.Minute
-}
-
-func GetJWTRefreshTTL() time.Duration {
-	minutesStr := os.Getenv("JWT_REFRESH_TOKEN_TTL")
-	minutes, err := strconv.Atoi(minutesStr)
-	if err != nil {
-		minutes = 7 * 24 * 60
-	}
-	return time.Duration(minutes) * time.Minute
 }
 
 func GetPort() string {
