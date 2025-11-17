@@ -94,6 +94,7 @@ func main() {
 		secureAccount.GET("/profile", accountHandler.Profile)
 		secureAccount.POST("/change-password", accountHandler.ChangePassword)
 		secureAccount.PUT("/update", accountHandler.UpdateProfile)
+		secureAccount.POST("/logout", accountHandler.Logout)
 	}
 
 	// ---------- Schedule routes ----------

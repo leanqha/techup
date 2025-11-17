@@ -1,7 +1,6 @@
 package account
 
 import (
-	"fmt"
 	"net/http"
 	"techup/config"
 	"techup/internal/logger"
@@ -93,7 +92,6 @@ func (h *Handler) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
-	fmt.Println(req)
 
 	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
@@ -290,14 +288,61 @@ func (h *Handler) Refresh(c *gin.Context) {
 		return
 	}
 
-	access, refresh, err := h.service.RefreshTokens(c.Request.Context(), req.RefreshToken)
+	accessToken, newRefreshToken, err := h.service.RefreshTokens(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		c.JSON(401, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"access_token":  access,
-		"refresh_token": refresh,
-	})
+	c.SetCookie(
+		"access_token",
+		accessToken,
+		config.GetAccessTokenTTLSeconds(),
+		"/",
+		config.GetDomain(),
+		false,
+		true, // HttpOnly
+	)
+
+	c.SetCookie(
+		"refresh_token",
+		newRefreshToken,
+		config.GetRefreshTokenTTLSeconds(),
+		"/",
+		config.GetDomain(),
+		false,
+		true,
+	)
+
+	c.JSON(http.StatusOK, gin.H{"message": "tokens refreshed"})
+}
+
+// Logout godoc
+// @Summary Logout user
+// @Description Clears access and refresh tokens (HTTP-only cookies)
+// @Tags account
+// @Produce json
+// @Success 200 {object} map[string]string "Logout successful"
+// @Router /api/v1/account/logout [post]
+func (h *Handler) Logout(c *gin.Context) {
+	claimsRaw, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "not logged in"})
+		return
+	}
+
+	claims := claimsRaw.(jwt.MapClaims)
+	userID := int(claims["user_id"].(float64))
+
+	// Сервис удаляет токены из БД
+	if err := h.service.Logout(c.Request.Context(), userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Очищаем куки
+	c.SetCookie("access_token", "", -1, "/", config.GetDomain(), false, true)
+	c.SetCookie("refresh_token", "", -1, "/", config.GetDomain(), false, true)
+
+	c.JSON(http.StatusOK, gin.H{"message": "logout successful"})
 }

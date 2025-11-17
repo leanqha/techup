@@ -60,7 +60,7 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	return acc, nil
 }
 
-func (r *Repository) Update(ctx context.Context, acc *Account) error {
+func (r *Repository) UpdateAccount(ctx context.Context, acc *Account) error {
 	query := `
 		UPDATE accounts
 		SET email = $1,
@@ -118,12 +118,21 @@ func (r *Repository) GetRefreshToken(ctx context.Context, token string) (*Refres
 	return &t, nil
 }
 
-func (r *Repository) DeleteRefreshToken(ctx context.Context, token string) error {
+func (r *Repository) DeleteRefreshToken(ctx context.Context, oldToken string) error {
 	query := `DELETE FROM refresh_tokens WHERE token = $1`
-	_, err := r.db.Exec(ctx, query, token)
+	_, err := r.db.Exec(ctx, query, oldToken)
 	if err != nil {
-		logger.LogSQLError(err, query, token)
+		logger.LogSQLError(err, query, oldToken)
 		return err
 	}
 	return nil
+}
+
+// DeleteRefreshTokens удаляет все refresh токены для пользователя
+func (r *Repository) DeleteRefreshTokens(ctx context.Context, userID int) error {
+	_, err := r.db.Exec(ctx, `
+		DELETE FROM refresh_tokens
+		WHERE account_id = $1
+	`, userID)
+	return err
 }
