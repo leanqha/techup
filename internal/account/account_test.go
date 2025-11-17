@@ -3,7 +3,6 @@ package account_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +11,7 @@ import (
 	"techup/internal/account"
 	"testing"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
@@ -39,15 +39,7 @@ func TestMain(m *testing.M) {
 
 func TestRegisterLoginRefreshLogout(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	ctx := context.Background()
-
-	email := "integration_test@example.com"
-	password := "password123"
-
-	if acc, _ := repo.GetByEmail(ctx, email); acc != nil {
-		_ = repo.DeleteRefreshTokens(ctx, acc.ID)
-		_ = repo.DeleteAccount(ctx, acc.ID)
-	}
+	gofakeit.Seed(0)
 
 	h := account.NewHandler(svc)
 	r := gin.New()
@@ -56,95 +48,112 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	r.POST("/api/v1/account/refresh", h.Refresh)
 	r.POST("/api/v1/account/logout", account.AuthMiddleware(), h.Logout)
 
-	ts := httptest.NewServer(r)
-	defer ts.Close()
+	email := gofakeit.Email()
+	password := "password123"
 
-	client := &http.Client{}
-	var cookies []*http.Cookie
+	// -----------------------------
+	// REGISTER
+	// -----------------------------
+	regBody := fmt.Sprintf(`{
+        "email": "%s",
+        "password": "%s",
+        "first_name": "%s",
+        "last_name": "%s"
+    }`, email, password, gofakeit.FirstName(), gofakeit.LastName())
 
-	registerBody := map[string]string{
-		"email":      email,
-		"password":   password,
-		"first_name": "Test",
-		"last_name":  "User",
-	}
-	b, _ := json.Marshal(registerBody)
-	resp, _ := client.Post(ts.URL+"/api/v1/account/register", "application/json", bytes.NewBuffer(b))
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/v1/account/register",
+		bytes.NewBufferString(regBody))
+	req.Header.Set("Content-Type", "application/json")
 
-	cookies = resp.Cookies()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	cookies := w.Result().Cookies()
 	assert.NotEmpty(t, cookies, "cookies should be set on registration")
 
-	accessToken, refreshToken := "", ""
-	for _, c := range cookies {
-		if c.Name == "access_token" {
-			accessToken = c.Value
-		}
-		if c.Name == "refresh_token" {
-			refreshToken = c.Value
-		}
-	}
-	assert.NotEmpty(t, accessToken, "access_token cookie should be set")
-	assert.NotEmpty(t, refreshToken, "refresh_token cookie should be set")
-
-	loginBody := map[string]string{
-		"email":    email,
-		"password": password,
-	}
-	b, _ = json.Marshal(loginBody)
-	resp, _ = client.Post(ts.URL+"/api/v1/account/login", "application/json", bytes.NewBuffer(b))
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	cookies = resp.Cookies()
-	assert.NotEmpty(t, cookies, "cookies should be set on login")
-	for _, c := range cookies {
-		if c.Name == "access_token" {
-			accessToken = c.Value
-		}
-		if c.Name == "refresh_token" {
-			refreshToken = c.Value
-		}
-	}
+	accessToken, refreshToken := extractTokens(cookies)
 	assert.NotEmpty(t, accessToken)
 	assert.NotEmpty(t, refreshToken)
 
-	req, _ := http.NewRequest("POST", ts.URL+"/api/v1/account/refresh", nil)
+	// -----------------------------
+	// LOGIN
+	// -----------------------------
+	loginBody := fmt.Sprintf(`{
+        "email":"%s",
+        "password":"%s"
+    }`, email, password)
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest("POST", "/api/v1/account/login",
+		bytes.NewBufferString(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	cookies = w.Result().Cookies()
+	assert.NotEmpty(t, cookies, "cookies should be set on login")
+
+	accessToken, refreshToken = extractTokens(cookies)
+	assert.NotEmpty(t, accessToken)
+	assert.NotEmpty(t, refreshToken)
+
+	// -----------------------------
+	// REFRESH TOKENS
+	// -----------------------------
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest("POST", "/api/v1/account/refresh", nil)
+
 	for _, c := range cookies {
 		req.AddCookie(c)
 	}
-	resp, _ = client.Do(req)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	newAccessToken, newRefreshToken := "", ""
-	for _, c := range resp.Cookies() {
-		if c.Name == "access_token" {
-			newAccessToken = c.Value
-		}
-		if c.Name == "refresh_token" {
-			newRefreshToken = c.Value
-		}
-	}
-	assert.NotEmpty(t, newAccessToken, "new access_token cookie should be set")
-	assert.NotEmpty(t, newRefreshToken, "new refresh_token cookie should be set")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
 
-	req, _ = http.NewRequest("POST", ts.URL+"/api/v1/account/logout", nil)
+	newAccessToken, newRefreshToken := extractTokens(w.Result().Cookies())
+	assert.NotEmpty(t, newAccessToken)
+	assert.NotEmpty(t, newRefreshToken)
+
+	// -----------------------------
+	// LOGOUT
+	// -----------------------------
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest("POST", "/api/v1/account/logout", nil)
 	req.AddCookie(&http.Cookie{Name: "access_token", Value: newAccessToken})
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: newRefreshToken})
-	resp, _ = client.Do(req)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func extractTokens(cookies []*http.Cookie) (string, string) {
+	var accessToken, refreshToken string
+	for _, c := range cookies {
+		switch c.Name {
+		case "access_token":
+			accessToken = c.Value
+		case "refresh_token":
+			refreshToken = c.Value
+		}
+	}
+	return accessToken, refreshToken
 }
 
 func TestLoginWithWrongPassword(t *testing.T) {
+	gofakeit.Seed(0)
 	ctx := context.Background()
-	email := "integration_test@example.com"
+	email := gofakeit.Email()
 
 	_, _, err := svc.Login(ctx, email, "wrongpassword")
 	assert.Error(t, err)
 }
 
 func TestCleanup(t *testing.T) {
+	gofakeit.Seed(0)
 	ctx := context.Background()
-	email := "integration_test@example.com"
+	email := gofakeit.Email()
 
 	acc, err := repo.GetByEmail(ctx, email)
 	if err == nil {

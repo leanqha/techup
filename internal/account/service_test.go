@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -119,6 +120,7 @@ func (m *MockRepo) DeleteAccount(ctx context.Context, userID int) error {
 }
 
 func TestRegisterAndLogin(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts:      make(map[string]*Account),
 		refreshTokens: make(map[string]*RefreshToken),
@@ -156,6 +158,7 @@ func TestRegisterAndLogin(t *testing.T) {
 }
 
 func TestGetByID(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts: map[string]*Account{
 			"user@example.com": {ID: 1, Email: "user@example.com", FirstName: "Alice", LastName: "Smith"},
@@ -173,6 +176,7 @@ func TestGetByID(t *testing.T) {
 }
 
 func TestRefreshTokens(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts:      make(map[string]*Account),
 		refreshTokens: make(map[string]*RefreshToken),
@@ -196,6 +200,7 @@ func TestRefreshTokens(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts:      make(map[string]*Account),
 		refreshTokens: make(map[string]*RefreshToken),
@@ -221,6 +226,7 @@ func TestLogout(t *testing.T) {
 }
 
 func TestUpdateProfile(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts: make(map[string]*Account),
 	}
@@ -247,6 +253,7 @@ func TestUpdateProfile(t *testing.T) {
 }
 
 func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts:      make(map[string]*Account),
 		refreshTokens: make(map[string]*RefreshToken),
@@ -302,6 +309,7 @@ func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
 }
 
 func TestRegisterValidation(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
 
@@ -327,6 +335,7 @@ func TestRegisterValidation(t *testing.T) {
 }
 
 func TestPasswordHashing(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
 
@@ -339,9 +348,10 @@ func TestPasswordHashing(t *testing.T) {
 }
 
 func TestRefreshTokenExpired(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
-	acc := &Account{ID: 1, Email: "user@test.com"}
+	acc := &Account{ID: 1, Email: gofakeit.Email()}
 	repo.accounts[acc.Email] = acc
 
 	refresh := "expired-token"
@@ -356,10 +366,11 @@ func TestRefreshTokenExpired(t *testing.T) {
 }
 
 func TestRefreshTokenWrongUser(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
 
-	acc := &Account{ID: 1, Email: "real@test.com"}
+	acc := &Account{ID: 1, Email: gofakeit.Email()}
 	repo.accounts[acc.Email] = acc
 
 	refresh := "wrong-user-token"
@@ -374,6 +385,7 @@ func TestRefreshTokenWrongUser(t *testing.T) {
 }
 
 func TestLogoutRepoError(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts: make(map[string]*Account),
 		refreshTokens: map[string]*RefreshToken{
@@ -387,22 +399,36 @@ func TestLogoutRepoError(t *testing.T) {
 }
 
 func TestLoginInvalidHash(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts: map[string]*Account{
-			"bad@hash.com": {ID: 1, Email: "bad@hash.com", PasswordHash: "not-a-valid-hash"},
+			gofakeit.Email(): {ID: 1, Email: gofakeit.Email(), PasswordHash: "not-a-valid-hash"},
 		},
 		refreshTokens: make(map[string]*RefreshToken),
 	}
 	service := NewService(repo)
-	_, _, err := service.Login(context.Background(), "bad@hash.com", "password")
+	var email string
+	for k := range repo.accounts {
+		email = k
+		break
+	}
+	_, _, err := service.Login(context.Background(), email, gofakeit.Password(true, true, true, false, false, 12))
 	assert.Error(t, err)
 }
 
 func TestRegisterSavesRefreshToken(t *testing.T) {
+	gofakeit.Seed(0)
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
+	email := gofakeit.Email()
+	password := gofakeit.Password(true, true, true, false, false, 12)
+	firstName := gofakeit.FirstName()
+	lastName := gofakeit.LastName()
 	_, _, refreshToken, err := service.Register(context.Background(), RegisterRequest{
-		Email: "x@test.com", Password: "password", FirstName: "X", LastName: "Y",
+		Email:     email,
+		Password:  password,
+		FirstName: firstName,
+		LastName:  lastName,
 	})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, repo.refreshTokens)
@@ -410,19 +436,22 @@ func TestRegisterSavesRefreshToken(t *testing.T) {
 }
 
 func TestUpdateProfileEmailConflict(t *testing.T) {
+	gofakeit.Seed(0)
+	emailA := gofakeit.Email()
+	emailB := gofakeit.Email()
 	repo := &MockRepo{
 		accounts: map[string]*Account{
-			"a@test.com": {ID: 1, Email: "a@test.com"},
-			"b@test.com": {ID: 2, Email: "b@test.com"},
+			emailA: {ID: 1, Email: emailA},
+			emailB: {ID: 2, Email: emailB},
 		},
 		refreshTokens: make(map[string]*RefreshToken),
 	}
 	service := NewService(repo)
 
 	_, err := service.UpdateProfile(context.Background(), 1, &UpdateProfileRequest{
-		Email:     "b@test.com",
-		FirstName: "A",
-		LastName:  "B",
+		Email:     emailB,
+		FirstName: gofakeit.FirstName(),
+		LastName:  gofakeit.LastName(),
 	})
 	assert.Error(t, err)
 }

@@ -24,3 +24,12 @@ migrate:
 
 psql:
 	docker compose -f docker-compose.yml exec db psql -U $${DB_USER} -d $${DB_NAME}
+
+test:
+	go test ./... -p 1 -v
+
+cover:
+	go tool cover -html=coverage.out
+
+tidy:
+	go mod tidy

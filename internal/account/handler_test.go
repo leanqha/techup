@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
@@ -96,6 +97,7 @@ func (m *MockService) DeleteAccount(ctx context.Context, userID int) error {
 
 func setupRouter() (*gin.Engine, *Handler) {
 	gin.SetMode(gin.TestMode)
+	gofakeit.Seed(0)
 	mockSvc := &MockService{}
 	h := NewHandler(mockSvc)
 	r := gin.New()
@@ -107,10 +109,10 @@ func TestRegisterHandler(t *testing.T) {
 	r.POST("/register", h.Register)
 
 	reqBody := RegisterRequest{
-		Email:     "test@example.com",
+		Email:     gofakeit.Email(),
 		Password:  "pass1234",
-		FirstName: "John",
-		LastName:  "Doe",
+		FirstName: gofakeit.FirstName(),
+		LastName:  gofakeit.LastName(),
 	}
 	b, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(b))
@@ -123,7 +125,7 @@ func TestRegisterHandler(t *testing.T) {
 
 	// Проверяем тело ответа
 	assert.Contains(t, w.Body.String(), "registration successful")
-	assert.Contains(t, w.Body.String(), "test@example.com")
+	assert.Contains(t, w.Body.String(), reqBody.Email)
 
 	// Проверяем куки
 	cookies := w.Result().Cookies()
@@ -146,9 +148,9 @@ func TestRegisterHandlerFail(t *testing.T) {
 
 	reqBody := RegisterRequest{
 		Email:     "fail@example.com",
-		Password:  "pass1234",
-		FirstName: "John",
-		LastName:  "Doe",
+		Password:  gofakeit.Password(true, true, true, false, false, 8),
+		FirstName: gofakeit.FirstName(),
+		LastName:  gofakeit.LastName(),
 	}
 	b, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(b))
@@ -165,9 +167,10 @@ func TestLoginHandler(t *testing.T) {
 	r, h := setupRouter()
 	r.POST("/login", h.Login)
 
+	password := gofakeit.Password(true, true, true, false, false, 12)
 	reqBody := LoginRequest{
-		Email:    "test@example.com",
-		Password: "pass1234",
+		Email:    gofakeit.Email(),
+		Password: password,
 	}
 	b, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(b))
@@ -184,6 +187,7 @@ func TestProfileHandler(t *testing.T) {
 	r, h := setupRouter()
 	r.GET("/profile", func(c *gin.Context) {
 		c.Set("user_id", 1)
+		// MockService returns fixed email, override here for test
 		h.Profile(c)
 	})
 
