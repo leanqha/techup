@@ -28,7 +28,7 @@ func (s *Service) SearchRooms(ctx context.Context, buildingID *int, floor *int) 
 }
 
 // FindShortestPath finds the shortest path between two rooms by room names
-func (s *Service) FindShortestPath(ctx context.Context, startRoom, endRoom string) ([]string, float64, error) {
+func (s *Service) FindPath(ctx context.Context, startRoom, endRoom string) ([]string, float64, error) {
 	conns, err := s.repo.GetConnections(ctx)
 	if err != nil {
 		return nil, 0, err

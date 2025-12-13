@@ -102,7 +102,7 @@ func main() {
 	{
 		mapGroup.GET("/search", mapsHandler.SearchRooms)
 		mapGroup.GET("/buildings", mapsHandler.GetBuildings)
-		mapGroup.GET("/path/:start/:end", mapsHandler.GetShortestPath)
+		mapGroup.GET("/path/:start/:end", mapsHandler.GetPath)
 	}
 
 	adminGroup := api.Group("/admin")

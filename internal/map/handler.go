@@ -34,27 +34,27 @@ func (h *Handler) GetBuildings(c *gin.Context) {
 	c.JSON(http.StatusOK, buildings)
 }
 
-// GetShortestPath godoc
-// @Summary Get the shortest path between two rooms
-// @Description Calculates the shortest path between start_room_id and end_room_id
+// GetPath godoc
+// @Summary Get path between two rooms
+// @Description Calculates path between start_room_id and end_room_id
 // @Tags map
 // @Produce json
 // @Param start_room_id query int true "Start Room ID"
 // @Param end_room_id query int true "End Room ID"
-// @Success 200 {object} GetShortestPathResponse
+// @Success 200 {object} GetPathResponse
 // @Failure 400 {object} error
 // @Failure 500 {object} error
 // @Router /shortest-path [get]
-func (h *Handler) GetShortestPath(c *gin.Context) {
+func (h *Handler) GetPath(c *gin.Context) {
 	startRoom := c.Param("start")
 	endRoom := c.Param("end")
 
-	path, distance, err := h.service.FindShortestPath(c.Request.Context(), startRoom, endRoom)
+	path, distance, err := h.service.FindPath(c.Request.Context(), startRoom, endRoom)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate shortest path"})
 		return
 	}
-	response := GetShortestPathResponse{
+	response := GetPathResponse{
 		Path: path,
 		Dist: distance,
 	}

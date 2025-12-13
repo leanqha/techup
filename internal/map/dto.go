@@ -1,6 +1,6 @@
 package maps
 
-type GetShortestPathResponse struct {
+type GetPathResponse struct {
 	Path []string `json:"path"`
 	Dist float64  `json:"dist"`
 }
