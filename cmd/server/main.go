@@ -64,8 +64,13 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	r.OPTIONS("/*path", func(c *gin.Context) {
-		c.Status(204)
+	r.Use(func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.Status(204)
+			c.Abort()
+			return
+		}
+		c.Next()
 	})
 
 	r.Use(logger.RecoveryLogger())
