@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"techup/internal/account"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,20 +20,38 @@ func NewHandler(service *Service) *Handler {
 // ---------------- Lessons ----------------
 
 // ListLessons godoc
-// @Summary Get all lessons
-// @Description Returns a list of all lessons
+// @Summary Get lessons by group and date range
+// @Description Returns lessons for a group in a date range
 // @Tags schedule
 // @Produce json
+// @Param group_id query int true "Group ID"
+// @Param from query string true "From date YYYY-MM-DD"
+// @Param to query string true "To date YYYY-MM-DD"
 // @Success 200 {array} schedule.Lesson
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Security BearerAuth
-// @Router /api/v1/schedule/lessons [get]
+// @Router /api/v1/schedule [get]
 func (h *Handler) ListLessons(c *gin.Context) {
-	lessons, err := h.service.ListLessons(c.Request.Context())
+	groupID, err := strconv.Atoi(c.Query("group_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group_id"})
+		return
+	}
+
+	from := c.Query("from")
+	to := c.Query("to")
+	if from == "" || to == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "from and to dates are required"})
+		return
+	}
+
+	lessons, err := h.service.ListLessonsByPeriod(c.Request.Context(), groupID, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, lessons)
 }
 
@@ -300,52 +319,77 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// SearchSchedule godoc
-// @Summary Search lessons schedule
-// @Description Search lessons by group, teacher, classroom, day, time range, or even/odd week. At least one query parameter is required.
+// ---------------- Lesson Notes ----------------
+
+// GetLessonNote godoc
+// @Summary Get user note for lesson
 // @Tags schedule
 // @Produce json
-// @Param group query string false "Group name"
-// @Param teacher query string false "Teacher name"
-// @Param classroom query string false "Classroom"
-// @Param day query string false "Day of the week"
-// @Param from query string false "Start time in HH:MM format"
-// @Param to query string false "End time in HH:MM format"
-// @Param is_even_week query bool false "Even week (true/false)"
-// @Success 200 {array} schedule.Lesson
-// @Failure 400 {object} map[string]string "At least one query parameter is required"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Param id path int true "Lesson ID"
+// @Success 200 {object} schedule.LessonNote
+// @Success 204 "No Content"
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Security BearerAuth
-// @Router /api/v1/schedule/search [get]
-func (h *Handler) SearchSchedule(c *gin.Context) {
-	group := c.Query("group")
-	teacher := c.Query("teacher")
-	classroom := c.Query("classroom")
-	dayOfWeek := c.Query("day")
-	from := c.Query("from")
-	to := c.Query("to")
-
-	var isEvenWeek *bool
-	isEvenStr := c.Query("is_even_week")
-	if isEvenStr != "" {
-		val, err := strconv.ParseBool(isEvenStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "is_even_week must be a boolean"})
-			return
-		}
-		isEvenWeek = &val
-	}
-
-	if group == "" && teacher == "" && classroom == "" && dayOfWeek == "" && from == "" && to == "" && isEvenWeek == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one query parameter is required"})
+// @Router /api/v1/lessons/{id}/note [get]
+func (h *Handler) GetLessonNote(c *gin.Context) {
+	userID, err := account.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	lessons, err := h.service.SearchSchedule(c.Request.Context(), group, teacher, classroom, dayOfWeek, from, to, isEvenWeek)
+	lessonID, _ := strconv.Atoi(c.Param("id"))
+
+	note, err := h.service.GetLessonNote(c.Request.Context(), userID, lessonID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, lessons)
+	if note == nil {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	c.JSON(http.StatusOK, note)
+}
+
+// UpsertLessonNote godoc
+// @Summary Create or update user note for lesson
+// @Tags schedule
+// @Accept json
+// @Produce json
+// @Param id path int true "Lesson ID"
+// @Param body body map[string]string true "Note text"
+// @Success 200
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Security BearerAuth
+// @Router /api/v1/lessons/{id}/note [post]
+func (h *Handler) AddLessonNote(c *gin.Context) {
+	userID, err := account.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	lessonID, _ := strconv.Atoi(c.Param("id"))
+
+	var req struct {
+		Text string `json:"text" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.UpsertLessonNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
 }

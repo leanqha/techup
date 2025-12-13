@@ -89,16 +89,16 @@ func main() {
 	}
 
 	scheduleGroup := api.Group("/schedule")
-	scheduleGroup.Use()
 	{
 		scheduleGroup.GET("/lessons", scheduleHandler.ListLessons)
 		scheduleGroup.GET("/groups", scheduleHandler.ListGroups)
 		scheduleGroup.GET("/faculties", scheduleHandler.ListFaculties)
-		scheduleGroup.GET("/search", scheduleHandler.SearchSchedule)
 	}
 
+	scheduleGroup.GET("/lessons/:id/note", scheduleHandler.GetLessonNote)
+	scheduleGroup.POST("/lessons/:id/note", scheduleHandler.AddLessonNote)
+
 	mapGroup := api.Group("/map")
-	mapGroup.Use()
 	{
 		mapGroup.GET("/search", mapsHandler.SearchRooms)
 		mapGroup.GET("/buildings", mapsHandler.GetBuildings)

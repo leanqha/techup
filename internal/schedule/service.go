@@ -2,6 +2,8 @@ package schedule
 
 import (
 	"context"
+	"errors"
+	"time"
 )
 
 type Service struct {
@@ -51,14 +53,16 @@ func (s *Service) DeleteGroup(ctx context.Context, id int) error {
 // Lessons
 
 func (s *Service) AddLesson(ctx context.Context, lesson Lesson) error {
+	if lesson.StartTime.After(lesson.EndTime) {
+		return errors.New("start_time must be before end_time")
+	}
 	return s.repo.AddLesson(ctx, lesson)
 }
 
-func (s *Service) ListLessons(ctx context.Context) ([]Lesson, error) {
-	return s.repo.ListLessons(ctx)
-}
-
 func (s *Service) UpdateLesson(ctx context.Context, lesson Lesson) error {
+	if lesson.StartTime.After(lesson.EndTime) {
+		return errors.New("start_time must be before end_time")
+	}
 	return s.repo.UpdateLesson(ctx, lesson)
 }
 
@@ -66,7 +70,38 @@ func (s *Service) DeleteLesson(ctx context.Context, id int) error {
 	return s.repo.DeleteLesson(ctx, id)
 }
 
-// SearchSchedule performs search with extended filters
-func (s *Service) SearchSchedule(ctx context.Context, group, teacher, classroom, dayOfWeek, from, to string, isEvenWeek *bool) ([]Lesson, error) {
-	return s.repo.SearchLessons(ctx, group, teacher, classroom, dayOfWeek, from, to, isEvenWeek)
+func (s *Service) ListLessonsByPeriod(
+	ctx context.Context,
+	groupID int,
+	fromStr, toStr string,
+) ([]Lesson, error) {
+	from, err := time.Parse("2006-01-02", fromStr)
+	if err != nil {
+		return nil, errors.New("invalid from date format")
+	}
+
+	to, err := time.Parse("2006-01-02", toStr)
+	if err != nil {
+		return nil, errors.New("invalid to date format")
+	}
+
+	if from.After(to) {
+		return nil, errors.New("from date must be before to date")
+	}
+
+	return s.repo.ListLessonsByPeriod(ctx, groupID, from, to)
+}
+
+// ---------- Lesson Notes ----------
+
+func (s *Service) GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+	return s.repo.GetLessonNote(ctx, userID, lessonID)
+}
+
+func (s *Service) UpsertLessonNote(ctx context.Context, userID, lessonID int, text string) error {
+	if len(text) > 5000 {
+		return errors.New("note is too long")
+	}
+
+	return s.repo.UpsertLessonNote(ctx, userID, lessonID, text)
 }

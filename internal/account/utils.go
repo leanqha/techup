@@ -2,12 +2,14 @@ package account
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"techup/config"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -80,4 +82,17 @@ func ParseToken(tokenStr string) (jwt.MapClaims, error) {
 	}
 
 	return token.Claims.(jwt.MapClaims), nil
+}
+
+// GetUserIDFromContext extracts the user ID from gin.Context.
+func GetUserIDFromContext(c *gin.Context) (int, error) {
+	uid, exists := c.Get("user_id")
+	if !exists {
+		return 0, fmt.Errorf("user_id not found in context")
+	}
+	userID, ok := uid.(int)
+	if !ok {
+		return 0, fmt.Errorf("user_id in context is not of type int")
+	}
+	return userID, nil
 }

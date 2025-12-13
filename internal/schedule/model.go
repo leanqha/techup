@@ -20,17 +20,25 @@ type Group struct {
 	IsActive       bool   `db:"is_active"`
 }
 
-// Lesson represents a single class session
+// Lesson — конкретная пара в конкретную дату
 type Lesson struct {
-	ID         int       `db:"id"`
-	GroupName  string    `db:"group_name"`
-	DayOfWeek  string    `db:"day_of_week"`
-	StartTime  string    `db:"start_time"`
-	EndTime    string    `db:"end_time"`
-	Subject    string    `db:"subject"`
-	Teacher    string    `db:"teacher"`
-	Classroom  string    `db:"classroom"`
-	IsOnline   bool      `db:"is_online"`
-	IsEvenWeek bool      `db:"is_even_week"`
-	CreatedAt  time.Time `db:"created_at"`
+	ID        int       `json:"id"`
+	GroupID   int       `json:"group_id"`
+	Date      time.Time `json:"date"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+	Subject   string    `json:"subject"`
+	Teacher   string    `json:"teacher"`
+	Classroom string    `json:"classroom"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// LessonNote — персональная заметка пользователя к паре
+type LessonNote struct {
+	ID        int       `json:"id"`
+	UserID    int       `json:"-"`
+	LessonID  int       `json:"lesson_id"`
+	Text      string    `json:"text"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

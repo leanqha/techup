@@ -2,9 +2,10 @@ package schedule
 
 import (
 	"context"
-	"fmt"
 	"techup/internal/logger"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -170,70 +171,58 @@ func (r *Repository) DeleteGroup(ctx context.Context, id int) error {
 // ---------- LESSONS ----------
 
 func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
-	query := `INSERT INTO lessons (group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		 RETURNING id`
+	query := `
+	INSERT INTO lessons (group_id, date, start_time, end_time, subject, teacher, classroom)
+	VALUES ($1, $2, $3, $4, $5, $6, $7)
+	RETURNING id`
+
 	err := r.db.QueryRow(ctx, query,
-		lesson.GroupName, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
-		lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek).Scan(&lesson.ID)
+		lesson.GroupID,
+		lesson.Date,
+		lesson.StartTime,
+		lesson.EndTime,
+		lesson.Subject,
+		lesson.Teacher,
+		lesson.Classroom,
+	).Scan(&lesson.ID)
+
 	if err != nil {
 		logger.LogSQLError(err, query,
-			lesson.GroupName, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
-			lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek,
+			lesson.GroupID,
+			lesson.Date,
+			lesson.StartTime,
+			lesson.EndTime,
+			lesson.Subject,
+			lesson.Teacher,
+			lesson.Classroom,
 		)
 	}
+
 	return err
 }
 
-func (r *Repository) GetLesson(ctx context.Context, id int) (*Lesson, error) {
-	var l Lesson
-	query := `SELECT id, group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week, created_at
-		 FROM lessons WHERE id=$1`
-	err := r.db.QueryRow(ctx, query, id).
-		Scan(&l.ID, &l.GroupName, &l.DayOfWeek, &l.StartTime, &l.EndTime, &l.Subject, &l.Teacher, &l.Classroom, &l.IsOnline, &l.IsEvenWeek, &l.CreatedAt)
-	if err != nil {
-		logger.LogSQLError(err, query, id)
-		return nil, err
-	}
-	return &l, nil
-}
-
-// ListLessons returns all lessons without filtering
-func (r *Repository) ListLessons(ctx context.Context) ([]Lesson, error) {
-	query := `SELECT id, group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week, created_at
-		 FROM lessons ORDER BY day_of_week, start_time`
-	rows, err := r.db.Query(ctx, query)
-	if err != nil {
-		logger.LogSQLError(err, query, "ListLessons")
-		return nil, err
-	}
-	defer rows.Close()
-
-	var lessons []Lesson
-	for rows.Next() {
-		var l Lesson
-		if err := rows.Scan(
-			&l.ID, &l.GroupName, &l.DayOfWeek,
-			&l.StartTime, &l.EndTime, &l.Subject, &l.Teacher,
-			&l.Classroom, &l.IsOnline, &l.IsEvenWeek, &l.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		lessons = append(lessons, l)
-	}
-	return lessons, nil
-}
-
 func (r *Repository) UpdateLesson(ctx context.Context, lesson Lesson) error {
-	query := `UPDATE lessons SET group_name=$1, day_of_week=$2, start_time=$3, end_time=$4, subject=$5, teacher=$6, classroom=$7, is_online=$8, is_even_week=$9 WHERE id=$10`
+	query := `
+	UPDATE lessons
+	SET group_id=$1, date=$2, start_time=$3, end_time=$4,
+		subject=$5, teacher=$6, classroom=$7
+	WHERE id=$8`
+
 	_, err := r.db.Exec(ctx, query,
-		lesson.GroupName, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
-		lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek, lesson.ID)
+		lesson.GroupID,
+		lesson.Date,
+		lesson.StartTime,
+		lesson.EndTime,
+		lesson.Subject,
+		lesson.Teacher,
+		lesson.Classroom,
+		lesson.ID,
+	)
+
 	if err != nil {
-		logger.LogSQLError(err, query, lesson.GroupName, lesson.DayOfWeek, lesson.StartTime, lesson.EndTime, lesson.Subject,
-			lesson.Teacher, lesson.Classroom, lesson.IsOnline, lesson.IsEvenWeek, lesson.ID,
-		)
+		logger.LogSQLError(err, query, lesson.ID)
 	}
+
 	return err
 }
 
@@ -246,53 +235,22 @@ func (r *Repository) DeleteLesson(ctx context.Context, id int) error {
 	return err
 }
 
-// SearchLessons with optional filters: group, teacher, classroom, day_of_week, start/end time, is_even_week
-func (r *Repository) SearchLessons(ctx context.Context, group, teacher, classroom, dayOfWeek, from, to string, isEvenWeek *bool) ([]Lesson, error) {
-	query := `SELECT id, group_name, day_of_week, start_time, end_time, subject, teacher, classroom, is_online, is_even_week, created_at
-	          FROM lessons WHERE 1=1`
-	var args []interface{}
-	argID := 1
+func (r *Repository) ListLessonsByPeriod(
+	ctx context.Context,
+	groupID int,
+	from, to time.Time,
+) ([]Lesson, error) {
 
-	if group != "" {
-		query += fmt.Sprintf(" AND LOWER(group_name) = LOWER($%d)", argID)
-		args = append(args, group)
-		argID++
-	}
-	if teacher != "" {
-		query += fmt.Sprintf(" AND LOWER(teacher) = LOWER($%d)", argID)
-		args = append(args, teacher)
-		argID++
-	}
-	if classroom != "" {
-		query += fmt.Sprintf(" AND LOWER(classroom) = LOWER($%d)", argID)
-		args = append(args, classroom)
-		argID++
-	}
-	if dayOfWeek != "" {
-		query += fmt.Sprintf(" AND LOWER(day_of_week) = LOWER($%d)", argID)
-		args = append(args, dayOfWeek)
-		argID++
-	}
-	if from != "" {
-		query += fmt.Sprintf(" AND start_time >= $%d", argID)
-		args = append(args, from)
-		argID++
-	}
-	if to != "" {
-		query += fmt.Sprintf(" AND end_time <= $%d", argID)
-		args = append(args, to)
-		argID++
-	}
-	if isEvenWeek != nil {
-		query += fmt.Sprintf(" AND is_even_week = $%d", argID)
-		args = append(args, *isEvenWeek)
-		argID++
-	}
+	query := `
+	SELECT id, group_id, date, start_time, end_time,
+		subject, teacher, classroom, created_at
+	FROM lessons
+	WHERE group_id=$1 AND date BETWEEN $2 AND $3
+	ORDER BY date, start_time`
 
-	query += " ORDER BY day_of_week, start_time"
-
-	rows, err := r.db.Query(ctx, query, args...)
+	rows, err := r.db.Query(ctx, query, groupID, from, to)
 	if err != nil {
+		logger.LogSQLError(err, query, groupID, from, to)
 		return nil, err
 	}
 	defer rows.Close()
@@ -301,13 +259,67 @@ func (r *Repository) SearchLessons(ctx context.Context, group, teacher, classroo
 	for rows.Next() {
 		var l Lesson
 		if err := rows.Scan(
-			&l.ID, &l.GroupName, &l.DayOfWeek,
-			&l.StartTime, &l.EndTime, &l.Subject, &l.Teacher,
-			&l.Classroom, &l.IsOnline, &l.IsEvenWeek, &l.CreatedAt,
+			&l.ID,
+			&l.GroupID,
+			&l.Date,
+			&l.StartTime,
+			&l.EndTime,
+			&l.Subject,
+			&l.Teacher,
+			&l.Classroom,
+			&l.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
 		lessons = append(lessons, l)
 	}
-	return lessons, nil
+
+	return lessons, rows.Err()
+}
+
+// ---------- LESSON NOTES ----------
+
+func (r *Repository) GetLessonNote(
+	ctx context.Context,
+	userID, lessonID int,
+) (*LessonNote, error) {
+
+	query := `
+	SELECT id, user_id, lesson_id, text, created_at, updated_at
+	FROM lesson_notes
+	WHERE user_id=$1 AND lesson_id=$2`
+
+	var n LessonNote
+	err := r.db.QueryRow(ctx, query, userID, lessonID).
+		Scan(&n.ID, &n.UserID, &n.LessonID, &n.Text, &n.CreatedAt, &n.UpdatedAt)
+
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+
+	if err != nil {
+		logger.LogSQLError(err, query, userID, lessonID)
+	}
+
+	return &n, err
+}
+
+func (r *Repository) UpsertLessonNote(
+	ctx context.Context,
+	userID, lessonID int,
+	text string,
+) error {
+
+	query := `
+	INSERT INTO lesson_notes (user_id, lesson_id, text)
+	VALUES ($1, $2, $3)
+	ON CONFLICT (user_id, lesson_id)
+	DO UPDATE SET text=EXCLUDED.text, updated_at=now()`
+
+	_, err := r.db.Exec(ctx, query, userID, lessonID, text)
+	if err != nil {
+		logger.LogSQLError(err, query, userID, lessonID)
+	}
+
+	return err
 }
