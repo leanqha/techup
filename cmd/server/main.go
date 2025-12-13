@@ -10,15 +10,12 @@
 package main
 
 import (
-	"fmt"
-	"strings"
 	"techup/config"
 	"techup/internal/account"
 	"techup/internal/health"
 	"techup/internal/logger"
 	maps "techup/internal/map"
 	"techup/internal/schedule"
-	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -57,22 +54,15 @@ func main() {
 	r := gin.New()
 
 	r.Use(cors.New(cors.Config{
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
 		AllowOriginFunc: func(origin string) bool {
-			fmt.Println("Origin:", origin) // для отладки
-			if origin == "http://localhost:5173" || origin == "https://leanqha.github.io" {
-				return true
+			allowed := map[string]bool{
+				"https://leanqha.github.io/techup-frontend/": true,
 			}
-			// Разрешаем все динамические ngrok URL
-			if strings.HasSuffix(origin, ".ngrok-free.dev") {
-				return true
-			}
-			return false
+			return allowed[origin]
 		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
 	}))
 
 	r.Use(logger.RecoveryLogger())
