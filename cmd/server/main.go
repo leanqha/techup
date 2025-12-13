@@ -1,6 +1,17 @@
+// @title TechUp API
+// @version 1.0
+// @description Backend API for the TechUp university application.
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http
+// @securityDefinitions.cookie cookieAuth
+// @name access_token
+
 package main
 
 import (
+	"fmt"
+	"strings"
 	"techup/config"
 	"techup/internal/account"
 	"techup/internal/health"
@@ -11,7 +22,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
+	"github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "techup/docs"
@@ -31,7 +42,6 @@ func main() {
 	defer db.Close()
 	logger.Log.Info().Msg("database connected")
 
-	// Repos & services
 	accountRepo := account.NewRepository(db)
 	accountSvc := account.NewService(accountRepo)
 	accountHandler := account.NewHandler(accountSvc)
@@ -44,48 +54,37 @@ func main() {
 	mapsSvc := maps.NewService(mapsRepo)
 	mapsHandler := maps.NewHandler(mapsSvc)
 
-	// Gin router
 	r := gin.New()
 
-	// --- CORS ---
 	r.Use(cors.New(cors.Config{
-		AllowOriginFunc: func(origin string) bool {
-			allowed := []string{
-				"http://localhost:5173",
-				"https://leanqha.github.io",
-				"https://nonimpregnated-turner-acknowledgingly.ngrok-free.dev",
-			}
-			for _, o := range allowed {
-				if o == origin {
-					return true
-				}
-			}
-			return false
-		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
+		AllowOriginFunc: func(origin string) bool {
+			fmt.Println("Origin:", origin) // для отладки
+			if origin == "http://localhost:5173" || origin == "https://leanqha.github.io" {
+				return true
+			}
+			// Разрешаем все динамические ngrok URL
+			if strings.HasSuffix(origin, ".ngrok-free.dev") {
+				return true
+			}
+			return false
+		},
 	}))
 
-	// OPTIONS preflight handler (для всех путей)
-	r.OPTIONS("/*path", func(c *gin.Context) {
-		c.Status(200)
-	})
-
-	// Logger / Recovery
 	r.Use(logger.RecoveryLogger())
 	r.Use(logger.RequestIDMiddleware())
 	r.Use(logger.GinLoggerMiddleware())
 
-	// Health
 	r.GET("/api/v1/health", health.Handler)
 
 	api := r.Group("/api/v1")
 
-	// Account routes
 	accountGroup := api.Group("/account")
+
 	accountGroup.POST("/register", accountHandler.Register)
 	accountGroup.POST("/login", accountHandler.Login)
 	accountGroup.POST("/refresh", accountHandler.Refresh)
@@ -99,17 +98,16 @@ func main() {
 		secureAccount.POST("/logout", accountHandler.Logout)
 	}
 
-	// Schedule routes
 	scheduleGroup := api.Group("/schedule")
 	{
 		scheduleGroup.GET("/lessons", scheduleHandler.ListLessons)
 		scheduleGroup.GET("/groups", scheduleHandler.ListGroups)
 		scheduleGroup.GET("/faculties", scheduleHandler.ListFaculties)
 	}
+
 	scheduleGroup.GET("/lessons/:id/note", scheduleHandler.GetLessonNote)
 	scheduleGroup.POST("/lessons/:id/note", scheduleHandler.AddLessonNote)
 
-	// Map routes
 	mapGroup := api.Group("/map")
 	{
 		mapGroup.GET("/search", mapsHandler.SearchRooms)
@@ -117,7 +115,6 @@ func main() {
 		mapGroup.GET("/path/:start/:end", mapsHandler.GetPath)
 	}
 
-	// Admin routes
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(account.AuthMiddleware(), account.RequireRole("admin"))
 	{
@@ -133,16 +130,21 @@ func main() {
 		adminGroup.DELETE("/group/:id", scheduleHandler.DeleteGroup)
 
 		adminGroup.POST("/room", mapsHandler.AddRoom)
+
 		adminGroup.POST("/lesson", scheduleHandler.AddLesson)
 		adminGroup.PUT("/lesson/:id", scheduleHandler.UpdateLesson)
 		adminGroup.DELETE("/lesson/:id", scheduleHandler.DeleteLesson)
+
+		//adminGroup.GET("/connection", mapsHandler.ListConnections)
+		//adminGroup.POST("/connection", mapsHandler.AddConnection)
+		//adminGroup.DELETE("/connection/:id", mapsHandler.DeleteConnection)
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Run server
 	port := config.GetPort()
-	if err := r.Run(":" + port); err != nil {
+	err = r.Run(":" + port)
+	if err != nil {
 		logger.Log.Fatal().Err(err).Msg("cannot start server")
 	}
 }
