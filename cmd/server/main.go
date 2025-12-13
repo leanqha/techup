@@ -55,9 +55,18 @@ func main() {
 	r := gin.New()
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:5173",
-			"https://leanqha.github.io", "https://nonimpregnated-turner-acknowledgingly.ngrok-free.dev",
+		AllowOriginFunc: func(origin string) bool {
+			allowed := []string{
+				"http://localhost:5173",
+				"https://leanqha.github.io",
+				"https://nonimpregnated-turner-acknowledgingly.ngrok-free.dev",
+			}
+			for _, o := range allowed {
+				if o == origin {
+					return true
+				}
+			}
+			return false
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},

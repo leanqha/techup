@@ -69,24 +69,25 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	// Set cookies
-	c.SetCookie(
-		"access_token",
-		access,
-		config.GetAccessTokenTTLSeconds(),
-		"/",
-		config.GetDomain(),
-		false,
-		true,
-	)
-	c.SetCookie(
-		"refresh_token",
-		refresh,
-		config.GetRefreshTokenTTLSeconds(),
-		"/",
-		config.GetDomain(),
-		false,
-		true,
-	)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "access_token",
+		Value:    access,
+		Path:     "/",
+		MaxAge:   config.GetAccessTokenTTLSeconds(),
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	})
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refresh,
+		Path:     "/",
+		MaxAge:   config.GetRefreshTokenTTLSeconds(),
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	})
 
 	// Response
 	c.JSON(http.StatusOK, gin.H{
