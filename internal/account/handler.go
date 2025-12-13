@@ -68,28 +68,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	// Set cookies
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "access_token",
-		Value:    access,
-		Path:     "/",
-		MaxAge:   config.GetAccessTokenTTLSeconds(),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
-	})
-
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    refresh,
-		Path:     "/",
-		MaxAge:   config.GetRefreshTokenTTLSeconds(),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
-	})
-
-	// Response
+	// Response without cookies
 	c.JSON(http.StatusOK, gin.H{
 		"message": "registration successful",
 		"user": ProfileResponse{
@@ -100,6 +79,8 @@ func (h *Handler) Register(c *gin.Context) {
 			LastName:  acc.LastName,
 			Role:      acc.Role,
 		},
+		"access_token":  access,
+		"refresh_token": refresh,
 	})
 }
 
@@ -131,27 +112,12 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "access_token",
-		Value:    accessToken,
-		Path:     "/",
-		MaxAge:   config.GetAccessTokenTTLSeconds(),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+	// Response without cookies
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "login successful",
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
 	})
-
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    refreshToken,
-		Path:     "/",
-		MaxAge:   config.GetRefreshTokenTTLSeconds(),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
-	})
-
-	c.JSON(http.StatusOK, gin.H{"message": "login successful"})
 }
 
 // Profile godoc
@@ -315,12 +281,12 @@ func (h *Handler) SetRole(c *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Router /api/v1/account/refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
-	cookie, err := c.Cookie("refresh_token")
-	if err != nil || cookie == "" {
+	var req RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "refresh token not provided"})
 		return
 	}
-	refreshToken := cookie
+	refreshToken := req.RefreshToken
 
 	accessToken, newRefreshToken, err := h.service.RefreshTokens(c.Request.Context(), refreshToken)
 	if err != nil {
@@ -328,26 +294,14 @@ func (h *Handler) Refresh(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie(
-		"access_token",
-		accessToken,
-		config.GetAccessTokenTTLSeconds(),
-		"/",
-		"",
-		false,
-		true,
-	)
-	c.SetCookie(
-		"refresh_token",
-		newRefreshToken,
-		config.GetRefreshTokenTTLSeconds(),
-		"/",
-		"",
-		false,
-		true,
-	)
+	response := gin.H{
+		"access_token": accessToken,
+	}
+	if newRefreshToken != "" {
+		response["refresh_token"] = newRefreshToken
+	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "tokens refreshed"})
+	c.JSON(http.StatusOK, response)
 }
 
 // Logout godoc

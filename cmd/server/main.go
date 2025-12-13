@@ -4,8 +4,6 @@
 // @host localhost:8080
 // @BasePath /api/v1
 // @schemes http
-// @securityDefinitions.cookie cookieAuth
-// @name access_token
 
 package main
 
@@ -55,13 +53,9 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			allowed := map[string]bool{
-				"https://leanqha.github.io": true}
-			return allowed[origin]
+			return origin == "https://leanqha.github.io"
 		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,
+		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
 	}))
 
 	r.Use(func(c *gin.Context) {
