@@ -65,6 +65,10 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	r.OPTIONS("/*path", func(c *gin.Context) {
+		c.Status(204)
+	})
+
 	r.Use(logger.RecoveryLogger())
 	r.Use(logger.RequestIDMiddleware())
 	r.Use(logger.GinLoggerMiddleware())
