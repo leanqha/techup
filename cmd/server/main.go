@@ -1,12 +1,3 @@
-// @title TechUp API
-// @version 1.0
-// @description Backend API for the TechUp university application.
-// @host localhost:8080
-// @BasePath /api/v1
-// @schemes http
-// @securityDefinitions.cookie cookieAuth
-// @name access_token
-
 package main
 
 import (
@@ -20,7 +11,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/swaggo/files"
+	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "techup/docs"
@@ -40,6 +31,7 @@ func main() {
 	defer db.Close()
 	logger.Log.Info().Msg("database connected")
 
+	// Repos & services
 	accountRepo := account.NewRepository(db)
 	accountSvc := account.NewService(accountRepo)
 	accountHandler := account.NewHandler(accountSvc)
@@ -52,8 +44,10 @@ func main() {
 	mapsSvc := maps.NewService(mapsRepo)
 	mapsHandler := maps.NewHandler(mapsSvc)
 
+	// Gin router
 	r := gin.New()
 
+	// --- CORS ---
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			allowed := []string{
@@ -75,16 +69,23 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// OPTIONS preflight handler (для всех путей)
+	r.OPTIONS("/*path", func(c *gin.Context) {
+		c.Status(200)
+	})
+
+	// Logger / Recovery
 	r.Use(logger.RecoveryLogger())
 	r.Use(logger.RequestIDMiddleware())
 	r.Use(logger.GinLoggerMiddleware())
 
+	// Health
 	r.GET("/api/v1/health", health.Handler)
 
 	api := r.Group("/api/v1")
 
+	// Account routes
 	accountGroup := api.Group("/account")
-
 	accountGroup.POST("/register", accountHandler.Register)
 	accountGroup.POST("/login", accountHandler.Login)
 	accountGroup.POST("/refresh", accountHandler.Refresh)
@@ -98,16 +99,17 @@ func main() {
 		secureAccount.POST("/logout", accountHandler.Logout)
 	}
 
+	// Schedule routes
 	scheduleGroup := api.Group("/schedule")
 	{
 		scheduleGroup.GET("/lessons", scheduleHandler.ListLessons)
 		scheduleGroup.GET("/groups", scheduleHandler.ListGroups)
 		scheduleGroup.GET("/faculties", scheduleHandler.ListFaculties)
 	}
-
 	scheduleGroup.GET("/lessons/:id/note", scheduleHandler.GetLessonNote)
 	scheduleGroup.POST("/lessons/:id/note", scheduleHandler.AddLessonNote)
 
+	// Map routes
 	mapGroup := api.Group("/map")
 	{
 		mapGroup.GET("/search", mapsHandler.SearchRooms)
@@ -115,6 +117,7 @@ func main() {
 		mapGroup.GET("/path/:start/:end", mapsHandler.GetPath)
 	}
 
+	// Admin routes
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(account.AuthMiddleware(), account.RequireRole("admin"))
 	{
@@ -130,21 +133,16 @@ func main() {
 		adminGroup.DELETE("/group/:id", scheduleHandler.DeleteGroup)
 
 		adminGroup.POST("/room", mapsHandler.AddRoom)
-
 		adminGroup.POST("/lesson", scheduleHandler.AddLesson)
 		adminGroup.PUT("/lesson/:id", scheduleHandler.UpdateLesson)
 		adminGroup.DELETE("/lesson/:id", scheduleHandler.DeleteLesson)
-
-		//adminGroup.GET("/connection", mapsHandler.ListConnections)
-		//adminGroup.POST("/connection", mapsHandler.AddConnection)
-		//adminGroup.DELETE("/connection/:id", mapsHandler.DeleteConnection)
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Run server
 	port := config.GetPort()
-	err = r.Run(":" + port)
-	if err != nil {
+	if err := r.Run(":" + port); err != nil {
 		logger.Log.Fatal().Err(err).Msg("cannot start server")
 	}
 }
