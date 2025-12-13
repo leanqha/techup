@@ -56,8 +56,7 @@ func main() {
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			allowed := map[string]bool{
-				"https://leanqha.github.io/techup-frontend/": true,
-			}
+				"https://leanqha.github.io": true}
 			return allowed[origin]
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},

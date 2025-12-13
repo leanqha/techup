@@ -333,7 +333,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 		accessToken,
 		config.GetAccessTokenTTLSeconds(),
 		"/",
-		config.GetDomain(),
+		"",
 		false,
 		true,
 	)
@@ -342,7 +342,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 		newRefreshToken,
 		config.GetRefreshTokenTTLSeconds(),
 		"/",
-		config.GetDomain(),
+		"",
 		false,
 		true,
 	)
