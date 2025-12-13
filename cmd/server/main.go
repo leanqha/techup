@@ -53,9 +53,6 @@ func main() {
 	mapsHandler := maps.NewHandler(mapsSvc)
 
 	r := gin.New()
-	r.Use(logger.RecoveryLogger())
-	r.Use(logger.RequestIDMiddleware())
-	r.Use(logger.GinLoggerMiddleware())
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
@@ -68,6 +65,10 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	r.Use(logger.RecoveryLogger())
+	r.Use(logger.RequestIDMiddleware())
+	r.Use(logger.GinLoggerMiddleware())
 
 	r.GET("/api/v1/health", health.Handler)
 
