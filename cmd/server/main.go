@@ -53,7 +53,7 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "https://leanqha.github.io"
+			return origin == "https://mytechup.ru"
 		},
 		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
 	}))
