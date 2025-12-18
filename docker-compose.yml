@@ -10,7 +10,7 @@ services:
       GOOSE_DRIVER: postgres
       GOOSE_DBSTRING: "user=${DB_USER} password=${DB_PASSWORD} host=${DB_HOST} port=${DB_PORT} dbname=${DB_NAME} sslmode=${DB_SSLMODE}"
     ports:
-      - "${PORT}:8080"
+      - "${PORT}:3000"
     restart: unless-stopped
     command: >
       sh -c "goose -dir ${GOOSE_MIGRATION_DIR} up && ./server"
