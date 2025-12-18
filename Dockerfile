@@ -4,7 +4,6 @@ WORKDIR /app
 
 RUN apk add --no-cache git
 
-# Set GOPATH
 ENV GOPATH=/go
 ENV PATH=$PATH:$GOPATH/bin
 
@@ -15,7 +14,7 @@ RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source
+# Copy source code
 COPY . .
 
 # Build app
@@ -27,16 +26,13 @@ WORKDIR /app
 
 RUN apk add --no-cache tzdata ca-certificates bash
 
-# Copy goose from builder
+# Copy goose binary
 COPY --from=builder /go/bin/goose /usr/local/bin/goose
 
-# Copy server binary, migrations and env
+# Copy server, migrations, env
 COPY --from=builder /app/server .
-COPY ./migrations ./migrations
-COPY .env .env
+COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/.env .env
 
-# Копируем статические файлы
-COPY ./static ./static
-
-EXPOSE 8080
+EXPOSE 3000
 CMD ["./server"]
