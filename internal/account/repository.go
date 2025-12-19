@@ -48,16 +48,24 @@ func (r *Repository) GetByEmail(ctx context.Context, email string) (*Account, er
 
 func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	acc := &Account{}
-	query := `SELECT id, uid, email, password_hash, first_name, last_name, role 
-	          FROM accounts WHERE id=$1`
+
+	query := `
+		SELECT a.id, a.uid, a.email, a.password_hash, a.first_name, a.last_name, a.role, g.name
+		FROM accounts a
+		LEFT JOIN groups g ON a.group_id = g.id
+		WHERE a.id = $1
+	`
+
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&acc.ID, &acc.UID, &acc.Email, &acc.PasswordHash,
 		&acc.FirstName, &acc.LastName, &acc.Role,
+		&acc.GroupName,
 	)
 	if err != nil {
 		logger.LogSQLError(err, query, id)
 		return nil, err
 	}
+
 	return acc, nil
 }
 

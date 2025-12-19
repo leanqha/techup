@@ -62,7 +62,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	acc, access, refresh, err := h.service.Register(c.Request.Context(), req)
+	acc, accessToken, refreshToken, err := h.service.Register(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -70,7 +70,7 @@ func (h *Handler) Register(c *gin.Context) {
 
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "access_token",
-		Value:    access,
+		Value:    accessToken,
 		Path:     "/",
 		MaxAge:   config.GetAccessTokenTTLSeconds(),
 		HttpOnly: true,
@@ -80,7 +80,7 @@ func (h *Handler) Register(c *gin.Context) {
 
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "refresh_token",
-		Value:    refresh,
+		Value:    refreshToken,
 		Path:     "/",
 		MaxAge:   config.GetRefreshTokenTTLSeconds(),
 		HttpOnly: true,
@@ -178,6 +178,7 @@ func (h *Handler) Profile(c *gin.Context) {
 		Email:     acc.Email,
 		FirstName: acc.FirstName,
 		LastName:  acc.LastName,
+		GroupName: acc.GroupName,
 		Role:      acc.Role,
 	})
 }
