@@ -178,6 +178,7 @@ func (h *Handler) Profile(c *gin.Context) {
 		Email:     acc.Email,
 		FirstName: acc.FirstName,
 		LastName:  acc.LastName,
+		GroupID:   acc.GroupID,
 		GroupName: acc.GroupName,
 		Role:      acc.Role,
 	})

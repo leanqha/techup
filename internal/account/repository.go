@@ -50,7 +50,7 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	acc := &Account{}
 
 	query := `
-		SELECT a.id, a.uid, a.email, a.password_hash, a.first_name, a.last_name, a.role, g.name
+		SELECT a.id, a.uid, a.email, a.password_hash, a.first_name, a.last_name, a.role, g.name, a.group_id
 		FROM accounts a
 		LEFT JOIN groups g ON a.group_id = g.id
 		WHERE a.id = $1
@@ -59,7 +59,7 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&acc.ID, &acc.UID, &acc.Email, &acc.PasswordHash,
 		&acc.FirstName, &acc.LastName, &acc.Role,
-		&acc.GroupName,
+		&acc.GroupName, &acc.GroupID,
 	)
 	if err != nil {
 		logger.LogSQLError(err, query, id)

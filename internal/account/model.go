@@ -11,6 +11,7 @@ type Account struct {
 	LastName     string
 	Role         string
 	IsVerified   bool
+	GroupID      int
 	GroupName    string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
