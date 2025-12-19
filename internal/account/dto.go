@@ -28,7 +28,7 @@ type ProfileResponse struct {
 	Email     string `json:"email" example:"user@example.com"`
 	FirstName string `json:"first_name" example:"John"`
 	LastName  string `json:"last_name" example:"Doe"`
-	GroupName string `json:"group" example:"Group 1234"`
+	GroupName string `json:"group_name" example:"Group 1234"`
 	Role      string `json:"role" example:"student"`
 }
 
