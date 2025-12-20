@@ -36,8 +36,8 @@ type Lesson struct {
 type LessonCSV struct {
 	Date      time.Time
 	Group     string
-	StartTime string
-	EndTime   string
+	StartTime time.Time
+	EndTime   time.Time
 	Subject   string
 	Teacher   string
 	Classroom string

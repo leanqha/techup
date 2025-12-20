@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
-	"techup/internal/utils"
 	"time"
 )
 
@@ -16,8 +15,6 @@ type Service struct {
 func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
 }
-
-// ---------- Faculties -----------
 
 func (s *Service) AddFaculty(ctx context.Context, faculty Faculty) error {
 	return s.repo.AddFaculty(ctx, faculty)
@@ -35,8 +32,6 @@ func (s *Service) DeleteFaculty(ctx context.Context, id int) error {
 	return s.repo.DeleteFaculty(ctx, id)
 }
 
-// Groups
-
 func (s *Service) AddGroup(ctx context.Context, g Group) error {
 	return s.repo.AddGroup(ctx, g)
 }
@@ -52,8 +47,6 @@ func (s *Service) UpdateGroup(ctx context.Context, g Group) error {
 func (s *Service) DeleteGroup(ctx context.Context, id int) error {
 	return s.repo.DeleteGroup(ctx, id)
 }
-
-// Lessons
 
 func (s *Service) AddLesson(ctx context.Context, lesson Lesson) error {
 	if lesson.StartTime.After(lesson.EndTime) {
@@ -95,8 +88,6 @@ func (s *Service) GetLessons(
 	return s.repo.GetLessons(ctx, groupID, from, to)
 }
 
-// ---------- Lesson Notes ----------
-
 func (s *Service) GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
 	return s.repo.GetLessonNote(ctx, userID, lessonID)
 }
@@ -130,11 +121,20 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 			return nil, err
 		}
 
+		start, err := time.Parse("15:04:05", rec[2])
+		if err != nil {
+			return nil, err
+		}
+		end, err := time.Parse("15:04:05", rec[3])
+		if err != nil {
+			return nil, err
+		}
+
 		res = append(res, LessonCSV{
 			Date:      date,
 			Group:     rec[1],
-			StartTime: rec[2],
-			EndTime:   rec[3],
+			StartTime: start,
+			EndTime:   end,
 			Subject:   rec[4],
 			Teacher:   rec[5],
 			Classroom: rec[6],
@@ -165,8 +165,8 @@ func (s *Service) ImportSchedule(
 		lesson := Lesson{
 			GroupID:   groupID,
 			Date:      row.Date,
-			StartTime: utils.Combine(row.Date, row.StartTime),
-			EndTime:   utils.Combine(row.Date, row.EndTime),
+			StartTime: row.StartTime,
+			EndTime:   row.EndTime,
 			Subject:   row.Subject,
 			Teacher:   row.Teacher,
 			Classroom: row.Classroom,
