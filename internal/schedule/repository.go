@@ -304,7 +304,7 @@ func (r *Repository) GetLessonNote(
 	return &n, err
 }
 
-func (r *Repository) UpsertLessonNote(
+func (r *Repository) AddLessonNote(
 	ctx context.Context,
 	userID, lessonID int,
 	text string,

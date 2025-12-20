@@ -98,10 +98,10 @@ func (s *Service) GetLessonNote(ctx context.Context, userID, lessonID int) (*Les
 	return s.repo.GetLessonNote(ctx, userID, lessonID)
 }
 
-func (s *Service) UpsertLessonNote(ctx context.Context, userID, lessonID int, text string) error {
+func (s *Service) AddLessonNote(ctx context.Context, userID, lessonID int, text string) error {
 	if len(text) > 5000 {
 		return errors.New("note is too long")
 	}
 
-	return s.repo.UpsertLessonNote(ctx, userID, lessonID, text)
+	return s.repo.AddLessonNote(ctx, userID, lessonID, text)
 }
