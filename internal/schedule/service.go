@@ -2,7 +2,10 @@ package schedule
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
+	"io"
+	"techup/internal/utils"
 	"time"
 )
 
@@ -104,4 +107,75 @@ func (s *Service) AddLessonNote(ctx context.Context, userID, lessonID int, text 
 	}
 
 	return s.repo.AddLessonNote(ctx, userID, lessonID, text)
+}
+
+func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
+	reader := csv.NewReader(r)
+	reader.Comma = ','
+
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var res []LessonCSV
+
+	for i, rec := range records {
+		if i == 0 {
+			continue
+		}
+
+		date, err := time.Parse("2006-01-02", rec[0])
+		if err != nil {
+			return nil, err
+		}
+
+		res = append(res, LessonCSV{
+			Date:      date,
+			Group:     rec[1],
+			StartTime: rec[2],
+			EndTime:   rec[3],
+			Subject:   rec[4],
+			Teacher:   rec[5],
+			Classroom: rec[6],
+		})
+	}
+
+	return res, nil
+}
+
+func (s *Service) ImportSchedule(
+	ctx context.Context,
+	userID int,
+	csvFile io.Reader,
+) error {
+
+	rows, err := s.parseCSV(csvFile)
+	if err != nil {
+		return err
+	}
+
+	for _, row := range rows {
+
+		groupID, err := s.repo.GetGroupIDByName(ctx, row.Group)
+		if err != nil {
+			return err
+		}
+
+		lesson := Lesson{
+			GroupID:   groupID,
+			Date:      row.Date,
+			StartTime: utils.Combine(row.Date, row.StartTime),
+			EndTime:   utils.Combine(row.Date, row.EndTime),
+			Subject:   row.Subject,
+			Teacher:   row.Teacher,
+			Classroom: row.Classroom,
+		}
+
+		if err := s.repo.AddLesson(ctx, lesson); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

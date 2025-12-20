@@ -2,7 +2,8 @@
 CREATE TABLE IF NOT EXISTS groups (
                         id SERIAL PRIMARY KEY,
                         faculty_id INT REFERENCES faculties(id) ON DELETE CASCADE,
-                        name TEXT NOT NULL,                        course INT NOT NULL,             -- курс
+                        name TEXT NOT NULL UNIQUE,
+                        course INT NOT NULL,             -- курс
                         degree TEXT NOT NULL,            -- бакалавриат / магистратура
                         year_start INT NOT NULL,         -- год набора
                         specialization TEXT,             -- профиль / направление

@@ -126,9 +126,7 @@ func main() {
 		adminGroup.PUT("/lesson/:id", scheduleHandler.UpdateLesson)
 		adminGroup.DELETE("/lesson/:id", scheduleHandler.DeleteLesson)
 
-		//adminGroup.GET("/connection", mapsHandler.ListConnections)
-		//adminGroup.POST("/connection", mapsHandler.AddConnection)
-		//adminGroup.DELETE("/connection/:id", mapsHandler.DeleteConnection)
+		adminGroup.POST("/schedule/import", scheduleHandler.ImportSchedule)
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

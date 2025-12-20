@@ -228,3 +228,31 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 
 	c.Status(http.StatusOK)
 }
+
+func (h *Handler) ImportSchedule(c *gin.Context) {
+	userID, err := account.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		return
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer f.Close()
+
+	if err := h.service.ImportSchedule(c.Request.Context(), userID, f); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusCreated)
+}

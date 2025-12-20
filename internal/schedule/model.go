@@ -33,6 +33,16 @@ type Lesson struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type LessonCSV struct {
+	Date      time.Time
+	Group     string
+	StartTime string
+	EndTime   string
+	Subject   string
+	Teacher   string
+	Classroom string
+}
+
 // LessonNote — персональная заметка пользователя к паре
 type LessonNote struct {
 	ID        int       `json:"id"`

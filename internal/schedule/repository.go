@@ -323,3 +323,25 @@ func (r *Repository) AddLessonNote(
 
 	return err
 }
+
+func (r *Repository) GetGroupIDByName(
+	ctx context.Context,
+	name string,
+) (int, error) {
+
+	var id int
+
+	query := `
+	SELECT id
+	FROM groups
+	WHERE name = $1 AND is_active = true
+	`
+
+	err := r.db.QueryRow(ctx, query, name).Scan(&id)
+	if err != nil {
+		logger.LogSQLError(err, query, name)
+		return 0, err
+	}
+
+	return id, nil
+}
