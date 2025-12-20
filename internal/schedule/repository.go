@@ -235,7 +235,7 @@ func (r *Repository) DeleteLesson(ctx context.Context, id int) error {
 	return err
 }
 
-func (r *Repository) ListLessonsByPeriod(
+func (r *Repository) GetLessons(
 	ctx context.Context,
 	groupID int,
 	from, to time.Time,

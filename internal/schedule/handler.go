@@ -19,7 +19,7 @@ func NewHandler(service *Service) *Handler {
 
 // ---------------- Lessons ----------------
 
-// ListLessons godoc
+// GetLessons godoc
 // @Summary Get lessons by group and date range
 // @Description Returns lessons for a group in a date range
 // @Tags schedule
@@ -32,7 +32,7 @@ func NewHandler(service *Service) *Handler {
 // @Failure 500 {object} map[string]string
 // @Security BearerAuth
 // @Router /api/v1/schedule [get]
-func (h *Handler) ListLessons(c *gin.Context) {
+func (h *Handler) GetLessons(c *gin.Context) {
 	groupID, err := strconv.Atoi(c.Query("group_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group_id"})
@@ -46,7 +46,7 @@ func (h *Handler) ListLessons(c *gin.Context) {
 		return
 	}
 
-	lessons, err := h.service.ListLessonsByPeriod(c.Request.Context(), groupID, from, to)
+	lessons, err := h.service.GetLessons(c.Request.Context(), groupID, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

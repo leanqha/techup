@@ -70,7 +70,7 @@ func (s *Service) DeleteLesson(ctx context.Context, id int) error {
 	return s.repo.DeleteLesson(ctx, id)
 }
 
-func (s *Service) ListLessonsByPeriod(
+func (s *Service) GetLessons(
 	ctx context.Context,
 	groupID int,
 	fromStr, toStr string,
@@ -89,7 +89,7 @@ func (s *Service) ListLessonsByPeriod(
 		return nil, errors.New("from date must be before to date")
 	}
 
-	return s.repo.ListLessonsByPeriod(ctx, groupID, from, to)
+	return s.repo.GetLessons(ctx, groupID, from, to)
 }
 
 // ---------- Lesson Notes ----------
