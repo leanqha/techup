@@ -5,7 +5,7 @@ VALUES (0, 'Тестовый факультет')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO groups (id, faculty_id, name, course, degree, year_start, specialization, is_active)
-VALUES (0, 0, 'Тестовая группа', 1, 'Бакалавриат', 2024, 'Тестовая специальность', true)
+VALUES (0, 0, 'Нет', 0, 'Нет', 1970, 'Нет', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- +goose Down
