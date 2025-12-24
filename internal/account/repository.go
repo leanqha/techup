@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -37,17 +38,30 @@ func (r *Repository) CreateAccount(ctx context.Context, acc *Account) error {
 
 func (r *Repository) GetByEmail(ctx context.Context, email string) (*Account, error) {
 	acc := &Account{}
-	query := `SELECT id, email, password_hash, first_name, middle_name, last_name, role FROM accounts WHERE email=$1`
-	err := r.db.QueryRow(ctx, query, email).Scan(&acc.ID, &acc.Email, &acc.PasswordHash, &acc.FirstName, &acc.MiddleName, &acc.LastName, &acc.Role)
+	var middleName sql.NullString
+
+	query := `SELECT id, email, password_hash, first_name, middle_name, last_name, role 
+	          FROM accounts WHERE email=$1`
+	err := r.db.QueryRow(ctx, query, email).Scan(
+		&acc.ID, &acc.Email, &acc.PasswordHash,
+		&acc.FirstName, &middleName, &acc.LastName, &acc.Role,
+	)
 	if err != nil {
 		logger.LogSQLError(err, query, email)
 		return nil, fmt.Errorf("account not found")
 	}
+
+	if middleName.Valid {
+		acc.MiddleName = middleName.String
+	}
+
 	return acc, nil
 }
 
 func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	acc := &Account{}
+	var middleName sql.NullString
+	var groupName sql.NullString
 
 	query := `
 		SELECT a.id, a.uid, a.email, a.password_hash, a.first_name, a.middle_name, a.last_name, a.role, g.name, a.group_id
@@ -58,12 +72,19 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&acc.ID, &acc.UID, &acc.Email, &acc.PasswordHash,
-		&acc.FirstName, &acc.MiddleName, &acc.LastName, &acc.Role,
-		&acc.GroupName, &acc.GroupID,
+		&acc.FirstName, &middleName, &acc.LastName, &acc.Role,
+		&groupName, &acc.GroupID,
 	)
 	if err != nil {
 		logger.LogSQLError(err, query, id)
 		return nil, err
+	}
+
+	if middleName.Valid {
+		acc.MiddleName = middleName.String
+	}
+	if groupName.Valid {
+		acc.GroupName = groupName.String
 	}
 
 	return acc, nil
