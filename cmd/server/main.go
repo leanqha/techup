@@ -98,6 +98,8 @@ func main() {
 		scheduleGroup.GET("/lessons/:id/note", scheduleHandler.GetLessonNote)
 		scheduleGroup.POST("/lessons/:id/note", scheduleHandler.AddLessonNote)
 		scheduleGroup.GET("/lessons/search", scheduleHandler.SearchLessons)
+		scheduleGroup.GET("/api/v1/schedule/teachers", scheduleHandler.GetTeachers)
+		scheduleGroup.GET("/api/v1/schedule/classrooms", scheduleHandler.GetClassrooms)
 	}
 
 	mapGroup := api.Group("/map")

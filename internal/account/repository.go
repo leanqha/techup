@@ -37,8 +37,8 @@ func (r *Repository) CreateAccount(ctx context.Context, acc *Account) error {
 
 func (r *Repository) GetByEmail(ctx context.Context, email string) (*Account, error) {
 	acc := &Account{}
-	query := `SELECT id, email, password_hash, first_name, last_name, role FROM accounts WHERE email=$1`
-	err := r.db.QueryRow(ctx, query, email).Scan(&acc.ID, &acc.Email, &acc.PasswordHash, &acc.FirstName, &acc.LastName, &acc.Role)
+	query := `SELECT id, email, password_hash, first_name, middle_name, last_name, role FROM accounts WHERE email=$1`
+	err := r.db.QueryRow(ctx, query, email).Scan(&acc.ID, &acc.Email, &acc.PasswordHash, &acc.FirstName, &acc.MiddleName, &acc.LastName, &acc.Role)
 	if err != nil {
 		logger.LogSQLError(err, query, email)
 		return nil, fmt.Errorf("account not found")
@@ -50,7 +50,7 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	acc := &Account{}
 
 	query := `
-		SELECT a.id, a.uid, a.email, a.password_hash, a.first_name, a.last_name, a.role, g.name, a.group_id
+		SELECT a.id, a.uid, a.email, a.password_hash, a.first_name, a.middle_name, a.last_name, a.role, g.name, a.group_id
 		FROM accounts a
 		LEFT JOIN groups g ON a.group_id = g.id
 		WHERE a.id = $1
@@ -58,7 +58,7 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&acc.ID, &acc.UID, &acc.Email, &acc.PasswordHash,
-		&acc.FirstName, &acc.LastName, &acc.Role,
+		&acc.FirstName, &acc.MiddleName, &acc.LastName, &acc.Role,
 		&acc.GroupName, &acc.GroupID,
 	)
 	if err != nil {
@@ -74,6 +74,7 @@ func (r *Repository) UpdateAccount(ctx context.Context, acc *Account) error {
 		UPDATE accounts
 		SET email = $1,
 		    first_name = $2,
+		    middle_name = $3,
 		    last_name = $3,
 		    password_hash = $4,
 		    role = $5,
@@ -83,6 +84,7 @@ func (r *Repository) UpdateAccount(ctx context.Context, acc *Account) error {
 	commandTag, err := r.db.Exec(ctx, query,
 		acc.Email,
 		acc.FirstName,
+		acc.MiddleName,
 		acc.LastName,
 		acc.PasswordHash,
 		acc.Role,

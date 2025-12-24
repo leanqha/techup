@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"techup/internal/account"
 	"techup/internal/logger"
 	"time"
 
@@ -396,4 +397,46 @@ func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) (
 	}
 
 	return lessons, nil
+}
+
+func (r *Repository) GetTeachers(ctx context.Context) ([]account.Account, error) {
+	query := `SELECT id, uid, email, first_name, middle_name, last_name, role, created_at 
+                                        FROM accounts 
+                                        WHERE role = 'teacher'`
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var teachers []account.Account
+	for rows.Next() {
+		var acc account.Account
+		if err := rows.Scan(&acc.ID, &acc.UID, &acc.Email, &acc.FirstName, &acc.MiddleName, &acc.LastName, &acc.Role, &acc.CreatedAt); err != nil {
+			return nil, err
+		}
+		teachers = append(teachers, acc)
+	}
+
+	return teachers, nil
+}
+
+func (r *Repository) GetClassrooms(ctx context.Context) ([]string, error) {
+	query := `SELECT DISTINCT name FROM rooms`
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var classrooms []string
+	for rows.Next() {
+		var room string
+		if err := rows.Scan(&room); err != nil {
+			return nil, err
+		}
+		classrooms = append(classrooms, room)
+	}
+
+	return classrooms, nil
 }

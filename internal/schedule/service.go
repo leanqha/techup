@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"techup/internal/account"
 	"time"
 )
 
@@ -182,4 +183,12 @@ func (s *Service) ImportSchedule(
 
 func (s *Service) SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]Lesson, error) {
 	return s.repo.SearchLessons(ctx, f)
+}
+
+func (s *Service) GetTeachers(ctx context.Context) ([]account.Account, error) {
+	return s.repo.GetTeachers(ctx)
+}
+
+func (s *Service) GetClassrooms(ctx context.Context) ([]string, error) {
+	return s.repo.GetClassrooms(ctx)
 }

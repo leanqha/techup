@@ -5,10 +5,11 @@ CREATE TABLE IF NOT EXISTS accounts (
                                         email TEXT UNIQUE NOT NULL,
                                         password_hash TEXT NOT NULL,
                                         first_name TEXT,
+                                        middle_name TEXT;
                                         last_name TEXT,
                                         role TEXT DEFAULT 'student',
                                         is_verified BOOLEAN NOT NULL DEFAULT false,
-                                        group_id INT REFERENCES groups(id),
+                                        group_id INT REFERENCES groups(id) NOT NULL DEFAULT 0,
                                         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                                         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );

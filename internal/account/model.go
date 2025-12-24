@@ -8,6 +8,7 @@ type Account struct {
 	Email        string
 	PasswordHash string
 	FirstName    string
+	MiddleName   string
 	LastName     string
 	Role         string
 	IsVerified   bool

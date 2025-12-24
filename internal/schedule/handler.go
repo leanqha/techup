@@ -292,3 +292,21 @@ func (h *Handler) SearchLessons(c *gin.Context) {
 
 	c.JSON(http.StatusOK, lessons)
 }
+
+func (h *Handler) GetTeachers(c *gin.Context) {
+	teachers, err := h.service.GetTeachers(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get teachers"})
+		return
+	}
+	c.JSON(http.StatusOK, teachers)
+}
+
+func (h *Handler) GetClassrooms(c *gin.Context) {
+	classrooms, err := h.service.GetClassrooms(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get classrooms"})
+		return
+	}
+	c.JSON(http.StatusOK, classrooms)
+}

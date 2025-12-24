@@ -23,14 +23,15 @@ type LoginResponse struct {
 
 // ProfileResponse - payload returned by /profile
 type ProfileResponse struct {
-	ID        int    `json:"id" example:"1"`
-	UID       string `json:"uid" example:"123456"`
-	Email     string `json:"email" example:"user@example.com"`
-	FirstName string `json:"first_name" example:"John"`
-	LastName  string `json:"last_name" example:"Doe"`
-	GroupID   int    `json:"group_id" example:"1"`
-	GroupName string `json:"group_name" example:"Group 1234"`
-	Role      string `json:"role" example:"student"`
+	ID         int    `json:"id" example:"1"`
+	UID        string `json:"uid" example:"123456"`
+	Email      string `json:"email" example:"user@example.com"`
+	FirstName  string `json:"first_name" example:"John"`
+	MiddleName string `json:"middle_name" example:"Jane"`
+	LastName   string `json:"last_name" example:"Doe"`
+	GroupID    int    `json:"group_id" example:"1"`
+	GroupName  string `json:"group_name" example:"Group 1234"`
+	Role       string `json:"role" example:"student"`
 }
 
 // ChangePasswordRequest - payload for changing password
