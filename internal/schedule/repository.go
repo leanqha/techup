@@ -2,6 +2,8 @@ package schedule
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"techup/internal/logger"
 	"time"
 
@@ -16,8 +18,6 @@ type Repository struct {
 func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
-
-// ---------- FACULTIES ----------
 
 func (r *Repository) AddFaculty(ctx context.Context, faculty Faculty) error {
 	var id int
@@ -78,8 +78,6 @@ func (r *Repository) DeleteFaculty(ctx context.Context, id int) error {
 	return err
 }
 
-// ---------- GROUPS ----------
-
 func (r *Repository) AddGroup(ctx context.Context, g Group) error {
 	var id int
 	query := `INSERT INTO groups (faculty_id, name, course, degree, year_start, specialization, is_active)
@@ -127,7 +125,6 @@ func (r *Repository) ListGroupsByFaculty(ctx context.Context, facultyID int) ([]
 	return groups, rows.Err()
 }
 
-// ListGroups returns all groups without filtering
 func (r *Repository) ListGroups(ctx context.Context) ([]Group, error) {
 	query := `SELECT id, faculty_id, name, course, degree, year_start, specialization, is_active
 		 FROM groups ORDER BY name`
@@ -168,11 +165,9 @@ func (r *Repository) DeleteGroup(ctx context.Context, id int) error {
 	return err
 }
 
-// ---------- LESSONS ----------
-
 func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 	query := `
-	INSERT INTO lessons (group_id, date, start_time, end_time, subject, teacher, classroom)
+	INSERT INTO lessons (group_id, date, start_time, end_time, subject, teacher_id, classroom)
 	VALUES ($1, $2, $3, $4, $5, $6, $7)
 	RETURNING id`
 
@@ -182,7 +177,7 @@ func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 		lesson.StartTime,
 		lesson.EndTime,
 		lesson.Subject,
-		lesson.Teacher,
+		lesson.TeacherID,
 		lesson.Classroom,
 	).Scan(&lesson.ID)
 
@@ -193,7 +188,7 @@ func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 			lesson.StartTime,
 			lesson.EndTime,
 			lesson.Subject,
-			lesson.Teacher,
+			lesson.TeacherID,
 			lesson.Classroom,
 		)
 	}
@@ -205,7 +200,7 @@ func (r *Repository) UpdateLesson(ctx context.Context, lesson Lesson) error {
 	query := `
 	UPDATE lessons
 	SET group_id=$1, date=$2, start_time=$3, end_time=$4,
-		subject=$5, teacher=$6, classroom=$7
+		subject=$5, teacher_id=$6, classroom=$7
 	WHERE id=$8`
 
 	_, err := r.db.Exec(ctx, query,
@@ -214,7 +209,7 @@ func (r *Repository) UpdateLesson(ctx context.Context, lesson Lesson) error {
 		lesson.StartTime,
 		lesson.EndTime,
 		lesson.Subject,
-		lesson.Teacher,
+		lesson.TeacherID,
 		lesson.Classroom,
 		lesson.ID,
 	)
@@ -243,7 +238,7 @@ func (r *Repository) GetLessons(
 
 	query := `
 	SELECT id, group_id, date, start_time, end_time,
-		subject, teacher, classroom, created_at
+		subject, teacher_id, classroom, created_at
 	FROM lessons
 	WHERE group_id=$1 AND date BETWEEN $2 AND $3
 	ORDER BY date, start_time`
@@ -265,7 +260,7 @@ func (r *Repository) GetLessons(
 			&l.StartTime,
 			&l.EndTime,
 			&l.Subject,
-			&l.Teacher,
+			&l.TeacherID,
 			&l.Classroom,
 			&l.CreatedAt,
 		); err != nil {
@@ -276,8 +271,6 @@ func (r *Repository) GetLessons(
 
 	return lessons, rows.Err()
 }
-
-// ---------- LESSON NOTES ----------
 
 func (r *Repository) GetLessonNote(
 	ctx context.Context,
@@ -344,4 +337,63 @@ func (r *Repository) GetGroupIDByName(
 	}
 
 	return id, nil
+}
+
+func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]Lesson, error) {
+	query := `
+		SELECT id, date, teacher_id, group_id, classroom, subject
+		FROM lessons
+	`
+	var conditions []string
+	args := []any{}
+	i := 1
+
+	if f.Date != nil {
+		conditions = append(conditions, fmt.Sprintf("date::date = $%d", i))
+		args = append(args, *f.Date)
+		i++
+	}
+	if f.TeacherID != nil {
+		conditions = append(conditions, fmt.Sprintf("teacher_id = $%d", i))
+		args = append(args, *f.TeacherID)
+		i++
+	}
+	if f.GroupID != nil {
+		conditions = append(conditions, fmt.Sprintf("group_id = $%d", i))
+		args = append(args, *f.GroupID)
+		i++
+	}
+	if f.Classroom != nil {
+		conditions = append(conditions, fmt.Sprintf("room = $%d", i))
+		args = append(args, *f.Classroom)
+		i++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var lessons []Lesson
+	for rows.Next() {
+		var l Lesson
+		if err := rows.Scan(
+			&l.ID,
+			&l.Date,
+			&l.TeacherID,
+			&l.GroupID,
+			&l.Classroom,
+			&l.Subject,
+		); err != nil {
+			return nil, err
+		}
+		lessons = append(lessons, l)
+	}
+
+	return lessons, nil
 }

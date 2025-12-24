@@ -97,6 +97,7 @@ func main() {
 		scheduleGroup.GET("/faculties", scheduleHandler.ListFaculties)
 		scheduleGroup.GET("/lessons/:id/note", scheduleHandler.GetLessonNote)
 		scheduleGroup.POST("/lessons/:id/note", scheduleHandler.AddLessonNote)
+		scheduleGroup.GET("/lessons/search", scheduleHandler.SearchLessons)
 	}
 
 	mapGroup := api.Group("/map")

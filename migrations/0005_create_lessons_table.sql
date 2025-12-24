@@ -14,7 +14,9 @@ CREATE TABLE lessons (
                          end_time TIME NOT NULL,
 
                          subject TEXT NOT NULL,
-                         teacher TEXT NOT NULL,
+                         teacher_id INT NOT NULL
+                             REFERENCES accounts(id)
+                                 ON DELETE RESTRICT,
                          classroom TEXT NOT NULL,
 
                          created_at TIMESTAMPTZ NOT NULL DEFAULT now()

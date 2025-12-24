@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"techup/internal/account"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -255,4 +256,39 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 	}
 
 	c.Status(http.StatusCreated)
+}
+
+func (h *Handler) SearchLessons(c *gin.Context) {
+	var f SearchLessonsFilter
+
+	if v := c.Query("date"); v != "" {
+		d, err := time.Parse("2006-01-02", v)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date"})
+			return
+		}
+		f.Date = &d
+	}
+
+	if v := c.Query("teacher_id"); v != "" {
+		id, _ := strconv.Atoi(v)
+		f.TeacherID = &id
+	}
+
+	if v := c.Query("group_id"); v != "" {
+		id, _ := strconv.Atoi(v)
+		f.GroupID = &id
+	}
+
+	if v := c.Query("classroom"); v != "" {
+		f.Classroom = &v
+	}
+
+	lessons, err := h.service.SearchLessons(c.Request.Context(), f)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, lessons)
 }

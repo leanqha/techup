@@ -136,7 +136,7 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 			StartTime: start,
 			EndTime:   end,
 			Subject:   rec[4],
-			Teacher:   rec[5],
+			TeacherID: rec[5],
 			Classroom: rec[6],
 		})
 	}
@@ -168,7 +168,7 @@ func (s *Service) ImportSchedule(
 			StartTime: row.StartTime,
 			EndTime:   row.EndTime,
 			Subject:   row.Subject,
-			Teacher:   row.Teacher,
+			TeacherID: row.TeacherID,
 			Classroom: row.Classroom,
 		}
 
@@ -178,4 +178,8 @@ func (s *Service) ImportSchedule(
 	}
 
 	return nil
+}
+
+func (s *Service) SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]Lesson, error) {
+	return s.repo.SearchLessons(ctx, f)
 }

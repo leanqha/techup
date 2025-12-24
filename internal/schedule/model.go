@@ -28,7 +28,7 @@ type Lesson struct {
 	StartTime time.Time `json:"start_time"`
 	EndTime   time.Time `json:"end_time"`
 	Subject   string    `json:"subject"`
-	Teacher   string    `json:"teacher"`
+	TeacherID string    `json:"teacher_id"`
 	Classroom string    `json:"classroom"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -39,7 +39,7 @@ type LessonCSV struct {
 	StartTime time.Time
 	EndTime   time.Time
 	Subject   string
-	Teacher   string
+	TeacherID string
 	Classroom string
 }
 
