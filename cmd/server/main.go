@@ -97,7 +97,7 @@ func main() {
 		scheduleGroup.GET("/faculties", scheduleHandler.ListFaculties)
 		scheduleGroup.GET("/lessons/:id/note", scheduleHandler.GetLessonNote)
 		scheduleGroup.POST("/lessons/:id/note", scheduleHandler.AddLessonNote)
-		scheduleGroup.GET("/lessons/search", scheduleHandler.SearchLessons)
+		scheduleGroup.GET("/search", scheduleHandler.SearchLessons)
 		scheduleGroup.GET("/teachers", scheduleHandler.GetTeachers)
 		scheduleGroup.GET("/classrooms", scheduleHandler.GetClassrooms)
 	}
