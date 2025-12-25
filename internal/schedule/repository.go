@@ -365,7 +365,7 @@ func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) (
 		i++
 	}
 	if f.Classroom != nil {
-		conditions = append(conditions, fmt.Sprintf("room = $%d", i))
+		conditions = append(conditions, fmt.Sprintf("classroom = $%d", i))
 		args = append(args, *f.Classroom)
 		i++
 	}
