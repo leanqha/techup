@@ -231,20 +231,13 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 }
 
 func (h *Handler) ImportSchedule(c *gin.Context) {
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+	var lessons []Lesson
+	if err := c.ShouldBindJSON(&lessons); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
 		return
 	}
 
-	f, err := file.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	defer f.Close()
-
-	if err := h.service.ImportSchedule(c.Request.Context(), f); err != nil {
+	if err := h.service.ImportSchedule(c.Request.Context(), lessons); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

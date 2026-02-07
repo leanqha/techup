@@ -145,38 +145,14 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 	return res, nil
 }
 
-func (s *Service) ImportSchedule(
-	ctx context.Context,
-	csvFile io.Reader,
-) error {
-
-	rows, err := s.parseCSV(csvFile)
-	if err != nil {
-		return err
-	}
-
-	for _, row := range rows {
-
-		groupID, err := s.repo.GetGroupIDByName(ctx, row.Group)
-		if err != nil {
-			return err
-		}
-
-		lesson := Lesson{
-			GroupID:   groupID,
-			Date:      row.Date,
-			StartTime: row.StartTime,
-			EndTime:   row.EndTime,
-			Subject:   row.Subject,
-			TeacherID: row.TeacherID,
-			Classroom: row.Classroom,
-		}
-
+func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
+	for _, lesson := range lessons {
+		// Если нужно сопоставить group_id с именем в базе, делаем здесь
+		// Например, если group_id в JSON уже строка, и база тоже string, это не требуется
 		if err := s.repo.AddLesson(ctx, lesson); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
