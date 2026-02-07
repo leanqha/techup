@@ -167,12 +167,37 @@ func (r *Repository) DeleteGroup(ctx context.Context, id int) error {
 }
 
 func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
-	query := `
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	deleteQuery := `
+	DELETE FROM lessons
+	WHERE group_id = $1
+	  AND date = $2
+	  AND start_time < $4
+	  AND end_time > $3
+	`
+
+	_, err = tx.Exec(ctx, deleteQuery,
+		lesson.GroupID,
+		lesson.Date,
+		lesson.StartTime,
+		lesson.EndTime,
+	)
+	if err != nil {
+		return err
+	}
+
+	insertQuery := `
 	INSERT INTO lessons (group_id, date, start_time, end_time, subject, teacher_id, classroom)
 	VALUES ($1, $2, $3, $4, $5, $6, $7)
-	RETURNING id`
+	RETURNING id
+	`
 
-	err := r.db.QueryRow(ctx, query,
+	err = tx.QueryRow(ctx, insertQuery,
 		lesson.GroupID,
 		lesson.Date,
 		lesson.StartTime,
@@ -183,18 +208,10 @@ func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 	).Scan(&lesson.ID)
 
 	if err != nil {
-		logger.LogSQLError(err, query,
-			lesson.GroupID,
-			lesson.Date,
-			lesson.StartTime,
-			lesson.EndTime,
-			lesson.Subject,
-			lesson.TeacherID,
-			lesson.Classroom,
-		)
+		return err
 	}
 
-	return err
+	return tx.Commit(ctx)
 }
 
 func (r *Repository) UpdateLesson(ctx context.Context, lesson Lesson) error {
