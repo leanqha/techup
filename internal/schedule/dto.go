@@ -1,15 +1,13 @@
 package schedule
 
 type LessonDTO struct {
-	GroupID    int    `json:"group_id"`
-	DayOfWeek  string `json:"day_of_week"`
-	StartTime  string `json:"start_time"`
-	EndTime    string `json:"end_time"`
-	Subject    string `json:"subject"`
-	Teacher    string `json:"teacher"`
-	Classroom  string `json:"classroom"`
-	IsOnline   bool   `json:"is_online"`
-	IsEvenWeek bool   `json:"is_even_week"`
+	GroupID   int    `json:"group_id"`
+	Date      string `json:"date"`       // ISO string
+	StartTime string `json:"start_time"` // ISO string
+	EndTime   string `json:"end_time"`   // ISO string
+	Subject   string `json:"subject"`
+	TeacherID int    `json:"teacher_id"`
+	Classroom string `json:"classroom"`
 }
 
 type FacultyDTO struct {

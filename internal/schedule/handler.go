@@ -231,10 +231,39 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 }
 
 func (h *Handler) ImportSchedule(c *gin.Context) {
-	var lessons []Lesson
-	if err := c.ShouldBindJSON(&lessons); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
+	var dtos []LessonDTO
+	if err := c.ShouldBindJSON(&dtos); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON: " + err.Error()})
 		return
+	}
+
+	lessons := make([]Lesson, 0, len(dtos))
+	for _, dto := range dtos {
+		date, err := time.Parse("2006-01-02", dto.Date) // если фронт отправляет yyyy-MM-dd
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format: " + dto.Date})
+			return
+		}
+		startTime, err := time.Parse(time.RFC3339, dto.StartTime)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_time format: " + dto.StartTime})
+			return
+		}
+		endTime, err := time.Parse(time.RFC3339, dto.EndTime)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_time format: " + dto.EndTime})
+			return
+		}
+
+		lessons = append(lessons, Lesson{
+			GroupID:   dto.GroupID,
+			Date:      date,
+			StartTime: startTime,
+			EndTime:   endTime,
+			Subject:   dto.Subject,
+			TeacherID: dto.TeacherID,
+			Classroom: dto.Classroom,
+		})
 	}
 
 	if err := h.service.ImportSchedule(c.Request.Context(), lessons); err != nil {
