@@ -2,6 +2,7 @@ package schedule
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"techup/internal/account"
@@ -265,6 +266,8 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 			Classroom: dto.Classroom,
 		})
 	}
+
+	log.Println("LESSONS COUNT:", len(lessons))
 
 	if err := h.service.ImportSchedule(c.Request.Context(), lessons); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
