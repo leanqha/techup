@@ -28,7 +28,7 @@ type Lesson struct {
 	StartTime time.Time `json:"start_time"`
 	EndTime   time.Time `json:"end_time"`
 	Subject   string    `json:"subject"`
-	TeacherID string    `json:"teacher_id"`
+	TeacherID int       `json:"teacher_id"`
 	Classroom string    `json:"classroom"`
 	CreatedAt time.Time `json:"created_at"`
 }
