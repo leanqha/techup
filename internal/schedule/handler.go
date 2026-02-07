@@ -245,12 +245,12 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format: " + dto.Date})
 			return
 		}
-		startTime, err := time.Parse(time.RFC3339, dto.StartTime)
+		startTime, err := time.Parse("15:04", dto.StartTime)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_time format: " + dto.StartTime})
 			return
 		}
-		endTime, err := time.Parse(time.RFC3339, dto.EndTime)
+		endTime, err := time.Parse("15:04", dto.EndTime)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_time format: " + dto.EndTime})
 			return
