@@ -117,16 +117,16 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 			continue
 		}
 
-		date, err := time.Parse("2006-01-02", rec[0])
+		date, err := time.Parse("02.01.2006", rec[0])
 		if err != nil {
 			return nil, err
 		}
 
-		start, err := time.Parse("15:04:00", rec[2])
+		start, err := time.Parse("15:04", rec[2])
 		if err != nil {
 			return nil, err
 		}
-		end, err := time.Parse("15:04:00", rec[3])
+		end, err := time.Parse("15:04", rec[3])
 		if err != nil {
 			return nil, err
 		}
