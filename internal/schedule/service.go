@@ -147,7 +147,6 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 
 func (s *Service) ImportSchedule(
 	ctx context.Context,
-	userID int,
 	csvFile io.Reader,
 ) error {
 
