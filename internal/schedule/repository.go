@@ -335,10 +335,7 @@ func (r *Repository) AddLessonNote(
 	return err
 }
 
-func (r *Repository) GetGroupIDByName(
-	ctx context.Context,
-	name string,
-) (int, error) {
+func (r *Repository) GetGroupIDByName(ctx context.Context, name string) (int, error) {
 
 	var id int
 

@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
+	"strconv"
 	"techup/internal/account"
 	"time"
 )
@@ -147,12 +149,27 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 
 func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
 	for _, lesson := range lessons {
-		// Если нужно сопоставить group_id с именем в базе, делаем здесь
-		// Например, если group_id в JSON уже строка, и база тоже string, это не требуется
-		if err := s.repo.AddLesson(ctx, lesson); err != nil {
+		// Получаем ID группы
+		groupID, err := s.repo.GetGroupIDByName(ctx, strconv.Itoa(lesson.GroupID))
+		if err != nil {
+			return fmt.Errorf("group not found: %s", lesson.GroupID)
+		}
+
+		l := Lesson{
+			GroupID:   groupID,
+			Date:      lesson.Date,
+			StartTime: lesson.StartTime,
+			EndTime:   lesson.EndTime,
+			Subject:   lesson.Subject,
+			TeacherID: lesson.TeacherID, // уже int
+			Classroom: lesson.Classroom,
+		}
+
+		if err := s.repo.AddLesson(ctx, l); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
