@@ -257,13 +257,13 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 		}
 
 		lessons = append(lessons, Lesson{
-			GroupID:   dto.GroupID,
-			Date:      date,
-			StartTime: startTime,
-			EndTime:   endTime,
-			Subject:   dto.Subject,
-			TeacherID: dto.TeacherID,
-			Classroom: dto.Classroom,
+			GroupID:         dto.GroupID,
+			Date:            date,
+			StartTime:       startTime,
+			EndTime:         endTime,
+			Subject:         dto.Subject,
+			TeacherFullName: dto.TeacherFullName,
+			Classroom:       dto.Classroom,
 		})
 	}
 

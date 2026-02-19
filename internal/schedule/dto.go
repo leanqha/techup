@@ -1,13 +1,13 @@
 package schedule
 
 type LessonDTO struct {
-	GroupID   int    `json:"group_id"`
-	Date      string `json:"date"`       // ISO string
-	StartTime string `json:"start_time"` // ISO string
-	EndTime   string `json:"end_time"`   // ISO string
-	Subject   string `json:"subject"`
-	TeacherID int    `json:"teacher_id"`
-	Classroom string `json:"classroom"`
+	GroupID         int    `json:"group_id"`
+	Date            string `json:"date"`
+	StartTime       string `json:"start_time"`
+	EndTime         string `json:"end_time"`
+	Subject         string `json:"subject"`
+	TeacherFullName string `json:"teacher_full_name"`
+	Classroom       string `json:"classroom"`
 }
 
 type FacultyDTO struct {

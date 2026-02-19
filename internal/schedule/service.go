@@ -73,7 +73,7 @@ func (s *Service) GetLessons(
 	ctx context.Context,
 	groupID int,
 	fromStr, toStr string,
-) ([]Lesson, error) {
+) ([]LessonDTO, error) {
 	from, err := time.Parse("2006-01-02", fromStr)
 	if err != nil {
 		return nil, errors.New("invalid from date format")
@@ -156,13 +156,13 @@ func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
 		}
 
 		l := Lesson{
-			GroupID:   groupID,
-			Date:      lesson.Date,
-			StartTime: lesson.StartTime,
-			EndTime:   lesson.EndTime,
-			Subject:   lesson.Subject,
-			TeacherID: lesson.TeacherID, // уже int
-			Classroom: lesson.Classroom,
+			GroupID:         groupID,
+			Date:            lesson.Date,
+			StartTime:       lesson.StartTime,
+			EndTime:         lesson.EndTime,
+			Subject:         lesson.Subject,
+			TeacherFullName: lesson.TeacherFullName,
+			Classroom:       lesson.Classroom,
 		}
 
 		if err := s.repo.AddLesson(ctx, l); err != nil {

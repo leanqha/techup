@@ -22,15 +22,15 @@ type Group struct {
 
 // Lesson — конкретная пара в конкретную дату
 type Lesson struct {
-	ID        int       `json:"id"`
-	GroupID   int       `json:"group_id"`
-	Date      time.Time `json:"date"`
-	StartTime time.Time `json:"start_time"`
-	EndTime   time.Time `json:"end_time"`
-	Subject   string    `json:"subject"`
-	TeacherID int       `json:"teacher_id"`
-	Classroom string    `json:"classroom"`
-	CreatedAt time.Time `json:"created_at"`
+	ID              int       `json:"id"`
+	GroupID         int       `json:"group_id"`
+	Date            time.Time `json:"date"`
+	StartTime       time.Time `json:"start_time"`
+	EndTime         time.Time `json:"end_time"`
+	Subject         string    `json:"subject"`
+	TeacherFullName string    `json:"teacher_full_name"`
+	Classroom       string    `json:"classroom"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type LessonCSV struct {
