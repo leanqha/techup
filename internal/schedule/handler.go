@@ -1,7 +1,6 @@
 package schedule
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -43,38 +42,104 @@ func (h *Handler) GetLessons(c *gin.Context) {
 }
 
 func (h *Handler) AddLesson(c *gin.Context) {
-	var l Lesson
-	if err := c.ShouldBindJSON(&l); err != nil {
+	var req LessonRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	fmt.Println(l)
-	err := h.service.AddLesson(c.Request.Context(), l)
+	date, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format"})
+		return
+	}
+
+	startTime, err := time.Parse("15:04", req.StartTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_time format"})
+		return
+	}
+
+	endTime, err := time.Parse("15:04", req.EndTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_time format"})
+		return
+	}
+
+	lesson := Lesson{
+		GroupID:   req.GroupID,
+		TeacherID: req.TeacherID,
+		Date:      date,
+		StartTime: startTime,
+		EndTime:   endTime,
+		Subject:   req.Subject,
+		Classroom: req.Classroom,
+	}
+
+	if err := h.service.AddLesson(c.Request.Context(), lesson); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, l)
+
+	c.Status(http.StatusCreated)
 }
 
 func (h *Handler) UpdateLesson(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	var l Lesson
-	if err := c.ShouldBindJSON(&l); err != nil {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req LessonRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	l.ID = id
-	if err := h.service.UpdateLesson(c.Request.Context(), l); err != nil {
+
+	date, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format"})
+		return
+	}
+
+	startTime, err := time.Parse("15:04", req.StartTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_time format"})
+		return
+	}
+
+	endTime, err := time.Parse("15:04", req.EndTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_time format"})
+		return
+	}
+
+	lesson := Lesson{
+		ID:        id,
+		GroupID:   req.GroupID,
+		TeacherID: req.TeacherID,
+		Date:      date,
+		StartTime: startTime,
+		EndTime:   endTime,
+		Subject:   req.Subject,
+		Classroom: req.Classroom,
+	}
+
+	if err := h.service.UpdateLesson(c.Request.Context(), lesson); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, l)
+
+	c.Status(http.StatusOK)
 }
 
 func (h *Handler) DeleteLesson(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 	if err := h.service.DeleteLesson(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -232,7 +297,7 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 }
 
 func (h *Handler) ImportSchedule(c *gin.Context) {
-	var dtos []LessonDTO
+	var dtos []LessonRequest
 	if err := c.ShouldBindJSON(&dtos); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON: " + err.Error()})
 		return
@@ -257,13 +322,13 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 		}
 
 		lessons = append(lessons, Lesson{
-			GroupID:         dto.GroupID,
-			Date:            date,
-			StartTime:       startTime,
-			EndTime:         endTime,
-			Subject:         dto.Subject,
-			TeacherFullName: dto.TeacherFullName,
-			Classroom:       dto.Classroom,
+			GroupID:   dto.GroupID,
+			TeacherID: dto.TeacherID,
+			Date:      date,
+			StartTime: startTime,
+			EndTime:   endTime,
+			Subject:   dto.Subject,
+			Classroom: dto.Classroom,
 		})
 	}
 

@@ -2,6 +2,7 @@ package schedule
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"techup/internal/account"
@@ -203,7 +204,7 @@ func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 		lesson.StartTime,
 		lesson.EndTime,
 		lesson.Subject,
-		lesson.TeacherFullName,
+		lesson.TeacherID,
 		lesson.Classroom,
 	).Scan(&lesson.ID)
 
@@ -227,7 +228,7 @@ func (r *Repository) UpdateLesson(ctx context.Context, lesson Lesson) error {
 		lesson.StartTime,
 		lesson.EndTime,
 		lesson.Subject,
-		lesson.TeacherFullName,
+		lesson.TeacherID,
 		lesson.Classroom,
 		lesson.ID,
 	)
@@ -252,22 +253,24 @@ func (r *Repository) GetLessons(
 	ctx context.Context,
 	groupID int,
 	from, to time.Time,
-) ([]LessonDTO, error) {
+) ([]LessonResponse, error) {
 
 	query := `
 	SELECT 
+		l.id,
 		l.group_id,
+		g.name,
 		l.date,
 		l.start_time,
 		l.end_time,
 		l.subject,
-		TRIM(
-			COALESCE(a.last_name, '') || ' ' ||
-			COALESCE(a.first_name, '') || ' ' ||
-			COALESCE(a.middle_name, '')
-		) AS teacher_full_name,
+		l.teacher_id,
+		a.first_name,
+		a.middle_name,
+		a.last_name,
 		l.classroom
 	FROM lessons l
+	LEFT JOIN groups g ON l.group_id = g.id
 	LEFT JOIN accounts a ON l.teacher_id = a.id
 	WHERE l.group_id = $1 
 		AND l.date BETWEEN $2 AND $3
@@ -281,20 +284,53 @@ func (r *Repository) GetLessons(
 	}
 	defer rows.Close()
 
-	var lessons []LessonDTO
+	var lessons []LessonResponse
+
 	for rows.Next() {
-		var dto LessonDTO
+		var (
+			dto        LessonResponse
+			date       time.Time
+			startTime  time.Time
+			endTime    time.Time
+			firstName  *string
+			middleName *string
+			lastName   *string
+		)
+
 		if err := rows.Scan(
-			&dto.GroupID,
-			&dto.Date,
-			&dto.StartTime,
-			&dto.EndTime,
+			&dto.ID,
+			&dto.Group.ID,
+			&dto.Group.Name,
+			&date,
+			&startTime,
+			&endTime,
 			&dto.Subject,
-			&dto.TeacherFullName,
+			&dto.Teacher.ID,
+			&firstName,
+			&middleName,
+			&lastName,
 			&dto.Classroom,
 		); err != nil {
 			return nil, err
 		}
+
+		dto.Date = date.Format("2006-01-02")
+		dto.StartTime = startTime.Format("15:04")
+		dto.EndTime = endTime.Format("15:04")
+
+		var fullNameParts []string
+		if lastName != nil && *lastName != "" {
+			fullNameParts = append(fullNameParts, *lastName)
+		}
+		if firstName != nil && *firstName != "" {
+			fullNameParts = append(fullNameParts, *firstName)
+		}
+		if middleName != nil && *middleName != "" {
+			fullNameParts = append(fullNameParts, *middleName)
+		}
+
+		dto.Teacher.FullName = strings.Join(fullNameParts, " ")
+
 		lessons = append(lessons, dto)
 	}
 
@@ -315,7 +351,7 @@ func (r *Repository) GetLessonNote(
 	err := r.db.QueryRow(ctx, query, userID, lessonID).
 		Scan(&n.ID, &n.UserID, &n.LessonID, &n.Text, &n.CreatedAt, &n.UpdatedAt)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 
@@ -365,32 +401,47 @@ func (r *Repository) GetGroupIDByName(ctx context.Context, name string) (int, er
 	return id, nil
 }
 
-func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]Lesson, error) {
+func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error) {
 	query := `
-		SELECT id, date, teacher_id, group_id, classroom, subject
-		FROM lessons
+	SELECT 
+		l.id,
+		l.group_id,
+		g.name,
+		l.date,
+		l.start_time,
+		l.end_time,
+		l.subject,
+		l.teacher_id,
+		a.first_name,
+		a.middle_name,
+		a.last_name,
+		l.classroom
+	FROM lessons l
+	LEFT JOIN groups g ON l.group_id = g.id
+	LEFT JOIN accounts a ON l.teacher_id = a.id
 	`
+
 	var conditions []string
-	args := []any{}
+	var args []any
 	i := 1
 
 	if f.Date != nil {
-		conditions = append(conditions, fmt.Sprintf("date::date = $%d", i))
+		conditions = append(conditions, fmt.Sprintf("l.date = $%d", i))
 		args = append(args, *f.Date)
 		i++
 	}
 	if f.TeacherID != nil {
-		conditions = append(conditions, fmt.Sprintf("teacher_id = $%d", i))
+		conditions = append(conditions, fmt.Sprintf("l.teacher_id = $%d", i))
 		args = append(args, *f.TeacherID)
 		i++
 	}
 	if f.GroupID != nil {
-		conditions = append(conditions, fmt.Sprintf("group_id = $%d", i))
+		conditions = append(conditions, fmt.Sprintf("l.group_id = $%d", i))
 		args = append(args, *f.GroupID)
 		i++
 	}
 	if f.Classroom != nil {
-		conditions = append(conditions, fmt.Sprintf("classroom = $%d", i))
+		conditions = append(conditions, fmt.Sprintf("l.classroom = $%d", i))
 		args = append(args, *f.Classroom)
 		i++
 	}
@@ -399,29 +450,64 @@ func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) (
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
+	query += " ORDER BY l.date, l.start_time"
+
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var lessons []Lesson
+	var lessons []LessonResponse
+
 	for rows.Next() {
-		var l Lesson
+		var (
+			dto        LessonResponse
+			date       time.Time
+			startTime  time.Time
+			endTime    time.Time
+			firstName  *string
+			middleName *string
+			lastName   *string
+		)
+
 		if err := rows.Scan(
-			&l.ID,
-			&l.Date,
-			&l.TeacherFullName,
-			&l.GroupID,
-			&l.Classroom,
-			&l.Subject,
+			&dto.ID,
+			&dto.Group.ID,
+			&dto.Group.Name,
+			&date,
+			&startTime,
+			&endTime,
+			&dto.Subject,
+			&dto.Teacher.ID,
+			&firstName,
+			&middleName,
+			&lastName,
+			&dto.Classroom,
 		); err != nil {
 			return nil, err
 		}
-		lessons = append(lessons, l)
+
+		dto.Date = date.Format("2006-01-02")
+		dto.StartTime = startTime.Format("15:04")
+		dto.EndTime = endTime.Format("15:04")
+
+		var parts []string
+		if lastName != nil && *lastName != "" {
+			parts = append(parts, *lastName)
+		}
+		if firstName != nil && *firstName != "" {
+			parts = append(parts, *firstName)
+		}
+		if middleName != nil && *middleName != "" {
+			parts = append(parts, *middleName)
+		}
+		dto.Teacher.FullName = strings.Join(parts, " ")
+
+		lessons = append(lessons, dto)
 	}
 
-	return lessons, nil
+	return lessons, rows.Err()
 }
 
 func (r *Repository) GetTeachers(ctx context.Context) ([]account.Account, error) {

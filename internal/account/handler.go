@@ -403,7 +403,7 @@ func (h *Handler) DeleteAccount(c *gin.Context) {
 
 	err = h.service.DeleteAccount(c, userID)
 	if err != nil {
-		if err == errors.New("account not found") {
+		if errors.Is(err, errors.New("account not found")) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
 			return
 		}

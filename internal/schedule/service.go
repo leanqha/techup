@@ -73,7 +73,7 @@ func (s *Service) GetLessons(
 	ctx context.Context,
 	groupID int,
 	fromStr, toStr string,
-) ([]LessonDTO, error) {
+) ([]LessonResponse, error) {
 	from, err := time.Parse("2006-01-02", fromStr)
 	if err != nil {
 		return nil, errors.New("invalid from date format")
@@ -152,17 +152,17 @@ func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
 		// Получаем ID группы
 		groupID, err := s.repo.GetGroupIDByName(ctx, strconv.Itoa(lesson.GroupID))
 		if err != nil {
-			return fmt.Errorf("group not found: %s", lesson.GroupID)
+			return fmt.Errorf("group not found: %d", lesson.GroupID)
 		}
 
 		l := Lesson{
-			GroupID:         groupID,
-			Date:            lesson.Date,
-			StartTime:       lesson.StartTime,
-			EndTime:         lesson.EndTime,
-			Subject:         lesson.Subject,
-			TeacherFullName: lesson.TeacherFullName,
-			Classroom:       lesson.Classroom,
+			GroupID:   groupID,
+			Date:      lesson.Date,
+			StartTime: lesson.StartTime,
+			EndTime:   lesson.EndTime,
+			Subject:   lesson.Subject,
+			TeacherID: lesson.TeacherID,
+			Classroom: lesson.Classroom,
 		}
 
 		if err := s.repo.AddLesson(ctx, l); err != nil {
@@ -173,7 +173,7 @@ func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
 	return nil
 }
 
-func (s *Service) SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]Lesson, error) {
+func (s *Service) SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error) {
 	return s.repo.SearchLessons(ctx, f)
 }
 
