@@ -133,6 +133,11 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 			return nil, err
 		}
 
+		typeValue := rec[5]
+		if typeValue == "" {
+			return nil, fmt.Errorf("missing lesson type in row %d", i+1)
+		}
+
 		teacherID, err := strconv.Atoi(rec[6])
 		if err != nil {
 			return nil, fmt.Errorf("invalid teacher_id in row %d: %v", i+1, err)
@@ -144,7 +149,7 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 			StartTime: start,
 			EndTime:   end,
 			Subject:   rec[4],
-			Type:      rec[5],
+			Type:      typeValue,
 			TeacherID: teacherID,
 			Classroom: rec[7],
 		})
