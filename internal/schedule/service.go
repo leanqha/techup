@@ -133,6 +133,11 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 			return nil, err
 		}
 
+		teacherID, err := strconv.Atoi(rec[6])
+		if err != nil {
+			return nil, fmt.Errorf("invalid teacher_id in row %d: %v", i+1, err)
+		}
+
 		res = append(res, LessonCSV{
 			Date:      date,
 			Group:     rec[1],
@@ -140,7 +145,7 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 			EndTime:   end,
 			Subject:   rec[4],
 			Type:      rec[5],
-			TeacherID: rec[6],
+			TeacherID: teacherID,
 			Classroom: rec[7],
 		})
 	}

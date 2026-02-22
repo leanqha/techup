@@ -41,7 +41,7 @@ type LessonCSV struct {
 	EndTime   time.Time
 	Subject   string
 	Type      string
-	TeacherID string
+	TeacherID int
 	Classroom string
 }
 
