@@ -160,7 +160,6 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 
 func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
 	for _, lesson := range lessons {
-		// Получаем ID группы
 		groupID, err := s.repo.GetGroupIDByName(ctx, strconv.Itoa(lesson.GroupID))
 		if err != nil {
 			return fmt.Errorf("group not found: %d", lesson.GroupID)
@@ -181,7 +180,6 @@ func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
 			return err
 		}
 	}
-
 	return nil
 }
 

@@ -1,7 +1,6 @@
 package schedule
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"techup/internal/account"
@@ -307,7 +306,7 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 
 	lessons := make([]Lesson, 0, len(dtos))
 	for _, dto := range dtos {
-		date, err := time.Parse("2006-01-02", dto.Date) // если фронт отправляет yyyy-MM-dd
+		date, err := time.Parse("2006-01-02", dto.Date)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format: " + dto.Date})
 			return
@@ -324,7 +323,7 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 		}
 
 		lessons = append(lessons, Lesson{
-			GroupID:   dto.Group,
+			GroupID:   dto.Group, // <- исправлено
 			TeacherID: dto.TeacherID,
 			Date:      date,
 			StartTime: startTime,
@@ -334,8 +333,6 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 			Classroom: dto.Classroom,
 		})
 	}
-
-	log.Println("LESSONS COUNT:", len(lessons))
 
 	if err := h.service.ImportSchedule(c.Request.Context(), lessons); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
