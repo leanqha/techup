@@ -7,6 +7,7 @@ type LessonRequest struct {
 	StartTime string `json:"start_time" binding:"required"` // format: HH:MM
 	EndTime   string `json:"end_time" binding:"required"`   // format: HH:MM
 	Subject   string `json:"subject" binding:"required"`
+	Type      string `json:"type" binding:"required"`
 	Classroom string `json:"classroom" binding:"required"`
 }
 
@@ -17,6 +18,7 @@ type LessonResponse struct {
 	EndTime   string `json:"end_time"`
 	Subject   string `json:"subject"`
 	Classroom string `json:"classroom"`
+	Type      string `json:"type"`
 
 	Group   GroupDTO   `json:"group"`
 	Teacher TeacherDTO `json:"teacher"`

@@ -73,6 +73,7 @@ func (h *Handler) AddLesson(c *gin.Context) {
 		StartTime: startTime,
 		EndTime:   endTime,
 		Subject:   req.Subject,
+		Type:      req.Type,
 		Classroom: req.Classroom,
 	}
 
@@ -123,6 +124,7 @@ func (h *Handler) UpdateLesson(c *gin.Context) {
 		StartTime: startTime,
 		EndTime:   endTime,
 		Subject:   req.Subject,
+		Type:      req.Type,
 		Classroom: req.Classroom,
 	}
 
@@ -328,6 +330,7 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 			StartTime: startTime,
 			EndTime:   endTime,
 			Subject:   dto.Subject,
+			Type:      dto.Type,
 			Classroom: dto.Classroom,
 		})
 	}

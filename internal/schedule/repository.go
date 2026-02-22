@@ -193,8 +193,8 @@ func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 	}
 
 	insertQuery := `
-	INSERT INTO lessons (group_id, date, start_time, end_time, subject, teacher_id, classroom)
-	VALUES ($1, $2, $3, $4, $5, $6, $7)
+	INSERT INTO lessons (group_id, date, start_time, end_time, subject, type, teacher_id, classroom)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	RETURNING id
 	`
 
@@ -204,6 +204,7 @@ func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 		lesson.StartTime,
 		lesson.EndTime,
 		lesson.Subject,
+		lesson.Type,
 		lesson.TeacherID,
 		lesson.Classroom,
 	).Scan(&lesson.ID)
@@ -228,6 +229,7 @@ func (r *Repository) UpdateLesson(ctx context.Context, lesson Lesson) error {
 		lesson.StartTime,
 		lesson.EndTime,
 		lesson.Subject,
+		lesson.Type,
 		lesson.TeacherID,
 		lesson.Classroom,
 		lesson.ID,
@@ -264,6 +266,7 @@ func (r *Repository) GetLessons(
 		l.start_time,
 		l.end_time,
 		l.subject,
+		l.type,
 		l.teacher_id,
 		a.first_name,
 		a.middle_name,
@@ -305,6 +308,7 @@ func (r *Repository) GetLessons(
 			&startTime,
 			&endTime,
 			&dto.Subject,
+			&dto.Type,
 			&dto.Teacher.ID,
 			&firstName,
 			&middleName,
@@ -411,6 +415,7 @@ func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) (
 		l.start_time,
 		l.end_time,
 		l.subject,
+		l.type,
 		l.teacher_id,
 		a.first_name,
 		a.middle_name,
@@ -479,6 +484,7 @@ func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) (
 			&startTime,
 			&endTime,
 			&dto.Subject,
+			&dto.Type,
 			&dto.Teacher.ID,
 			&firstName,
 			&middleName,

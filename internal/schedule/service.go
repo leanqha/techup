@@ -139,8 +139,9 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 			StartTime: start,
 			EndTime:   end,
 			Subject:   rec[4],
-			TeacherID: rec[5],
-			Classroom: rec[6],
+			Type:      rec[5],
+			TeacherID: rec[6],
+			Classroom: rec[7],
 		})
 	}
 
@@ -161,6 +162,7 @@ func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
 			StartTime: lesson.StartTime,
 			EndTime:   lesson.EndTime,
 			Subject:   lesson.Subject,
+			Type:      lesson.Type,
 			TeacherID: lesson.TeacherID,
 			Classroom: lesson.Classroom,
 		}
