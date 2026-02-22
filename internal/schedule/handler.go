@@ -67,7 +67,7 @@ func (h *Handler) AddLesson(c *gin.Context) {
 	}
 
 	lesson := Lesson{
-		GroupID:   req.GroupID,
+		GroupID:   req.Group,
 		TeacherID: req.TeacherID,
 		Date:      date,
 		StartTime: startTime,
@@ -118,7 +118,7 @@ func (h *Handler) UpdateLesson(c *gin.Context) {
 
 	lesson := Lesson{
 		ID:        id,
-		GroupID:   req.GroupID,
+		GroupID:   req.Group,
 		TeacherID: req.TeacherID,
 		Date:      date,
 		StartTime: startTime,
@@ -324,7 +324,7 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 		}
 
 		lessons = append(lessons, Lesson{
-			GroupID:   dto.GroupID,
+			GroupID:   dto.Group,
 			TeacherID: dto.TeacherID,
 			Date:      date,
 			StartTime: startTime,

@@ -1,7 +1,7 @@
 package schedule
 
 type LessonRequest struct {
-	GroupID   int    `json:"group_id" binding:"required"`
+	Group     int    `json:"group" binding:"required"`
 	TeacherID int    `json:"teacher_id" binding:"required"`
 	Date      string `json:"date" binding:"required"`       // format: YYYY-MM-DD
 	StartTime string `json:"start_time" binding:"required"` // format: HH:MM
