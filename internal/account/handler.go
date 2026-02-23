@@ -316,35 +316,38 @@ func (h *Handler) SetRole(c *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Router /api/v1/account/refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
-	cookie, err := c.Cookie("refresh_token")
-	if err != nil || cookie == "" {
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil || refreshToken == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "refresh token not provided"})
 		return
 	}
-	refreshToken := cookie
 
-	accessToken, newRefreshToken, err := h.service.RefreshTokens(c.Request.Context(), refreshToken)
+	accessToken, newRefreshToken, err :=
+		h.service.RefreshTokens(c.Request.Context(), refreshToken)
+
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Secure = true
 	c.SetCookie(
 		"access_token",
 		accessToken,
 		config.GetAccessTokenTTLSeconds(),
 		"/",
 		config.GetDomain(),
-		false,
+		true,
 		true,
 	)
+
 	c.SetCookie(
 		"refresh_token",
 		newRefreshToken,
 		config.GetRefreshTokenTTLSeconds(),
 		"/",
 		config.GetDomain(),
-		false,
+		true,
 		true,
 	)
 
