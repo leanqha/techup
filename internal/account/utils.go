@@ -3,7 +3,6 @@ package account
 import (
 	"errors"
 	"fmt"
-	"os"
 	"techup/config"
 	"time"
 
@@ -17,6 +16,7 @@ type TokenClaims struct {
 	UserID int    `json:"user_id"`
 	Role   string `json:"role"`
 	UID    string `json:"uid"`
+	Type   string `json:"type"`
 	jwt.RegisteredClaims
 }
 
@@ -26,21 +26,24 @@ func CheckPasswordHash(password, hash string) bool {
 }
 
 func GenerateTokens(acc *Account) (string, string, error) {
-	secret := os.Getenv("JWT_SECRET")
+	secret := config.GetJWTSecret()
 	if secret == "" {
-		return "", "", errors.New("secret env variable not set")
+		return "", "", errors.New("JWT secret not set")
 	}
 
 	accessTTL := time.Duration(config.GetAccessTokenTTLSeconds()) * time.Second
 	refreshTTL := time.Duration(config.GetRefreshTokenTTLSeconds()) * time.Second
 
+	now := time.Now()
+
 	accessClaims := TokenClaims{
 		UserID: acc.ID,
 		Role:   acc.Role,
 		UID:    acc.UID,
+		Type:   "access",
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(accessTTL)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(now.Add(accessTTL)),
+			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
 
@@ -54,9 +57,10 @@ func GenerateTokens(acc *Account) (string, string, error) {
 		UserID: acc.ID,
 		Role:   acc.Role,
 		UID:    acc.UID,
+		Type:   "refresh",
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(refreshTTL)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(now.Add(refreshTTL)),
+			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
 
