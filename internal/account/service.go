@@ -169,6 +169,14 @@ func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, s
 	}
 
 	_ = s.repo.DeleteRefreshToken(ctx, oldToken)
+	err = s.repo.SaveRefreshToken(ctx, &RefreshToken{
+		AccountID: acc.ID,
+		Token:     newRefresh,
+		ExpiresAt: time.Now().Add(time.Duration(config.GetRefreshTokenTTLSeconds()) * time.Second),
+	})
+	if err != nil {
+		return "", "", err
+	}
 
 	return newAccess, newRefresh, nil
 }

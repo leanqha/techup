@@ -7,34 +7,33 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(service ServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenStr, err := c.Cookie("access_token")
-		if err != nil || tokenStr == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
+		accessToken, _ := c.Cookie("access_token")
+		var claims jwt.MapClaims
+		var err error
+
+		if accessToken != "" {
+			claims, err = ParseToken(accessToken)
+		}
+
+		if err != nil || accessToken == "" {
+			refreshToken, _ := c.Cookie("refresh_token")
+			if refreshToken != "" {
+				newAccess, _, err := service.RefreshTokens(c.Request.Context(), refreshToken)
+				if err == nil {
+					claims, _ = ParseToken(newAccess)
+				}
+			}
+		}
+
+		if claims == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
 
-		claims, err := ParseToken(tokenStr)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-			return
-		}
-
-		uidFloat, ok := claims["user_id"].(float64)
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid user_id"})
-			return
-		}
-
-		role, ok := claims["role"].(string)
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid role"})
-			return
-		}
-
-		c.Set("user_id", int(uidFloat))
-		c.Set("role", role)
+		c.Set("user_id", int(claims["user_id"].(float64)))
+		c.Set("role", claims["role"].(string))
 		c.Set("claims", claims)
 
 		c.Next()
