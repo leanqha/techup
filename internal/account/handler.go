@@ -330,26 +330,25 @@ func (h *Handler) Refresh(c *gin.Context) {
 		return
 	}
 
-	// Secure = true
-	c.SetCookie(
-		"access_token",
-		accessToken,
-		config.GetAccessTokenTTLSeconds(),
-		"/",
-		config.GetDomain(),
-		true,
-		true,
-	)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		Path:     "/",
+		MaxAge:   config.GetAccessTokenTTLSeconds(),
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	})
 
-	c.SetCookie(
-		"refresh_token",
-		newRefreshToken,
-		config.GetRefreshTokenTTLSeconds(),
-		"/",
-		config.GetDomain(),
-		true,
-		true,
-	)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    newRefreshToken,
+		Path:     "/",
+		MaxAge:   config.GetRefreshTokenTTLSeconds(),
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "tokens refreshed"})
 }
