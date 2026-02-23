@@ -96,12 +96,13 @@ func (r *Repository) UpdateAccount(ctx context.Context, acc *Account) error {
 		SET email = $1,
 		    first_name = $2,
 		    middle_name = $3,
-		    last_name = $3,
-		    password_hash = $4,
-		    role = $5,
+		    last_name = $4,
+		    password_hash = $5,
+		    role = $6,
 		    updated_at = NOW()
-		WHERE id = $6
+		WHERE id = $7
 	`
+
 	commandTag, err := r.db.Exec(ctx, query,
 		acc.Email,
 		acc.FirstName,
@@ -111,13 +112,16 @@ func (r *Repository) UpdateAccount(ctx context.Context, acc *Account) error {
 		acc.Role,
 		acc.ID,
 	)
+
 	if err != nil {
 		logger.LogSQLError(err, query, acc.Email, acc.ID)
 		return err
 	}
+
 	if commandTag.RowsAffected() != 1 {
 		return fmt.Errorf("account not found or not updated")
 	}
+
 	return nil
 }
 

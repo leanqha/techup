@@ -81,16 +81,27 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*Account, 
 }
 
 func (s *Service) Login(ctx context.Context, email, password string) (string, string, error) {
-	acc, err := s.repo.GetByEmail(ctx, email)
+	acc, err := s.repo.GetByEmail(ctx, strings.TrimSpace(email))
 	if err != nil {
 		return "", "", errors.New("invalid credentials")
 	}
 
-	if !CheckPasswordHash(password, acc.PasswordHash) {
+	if bcrypt.CompareHashAndPassword([]byte(acc.PasswordHash), []byte(password)) != nil {
 		return "", "", errors.New("invalid credentials")
 	}
 
 	accessToken, refreshToken, err := GenerateTokens(acc)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = s.repo.SaveRefreshToken(ctx, &RefreshToken{
+		AccountID: acc.ID,
+		Token:     refreshToken,
+		ExpiresAt: time.Now().Add(
+			time.Duration(config.GetRefreshTokenTTLSeconds()) * time.Second,
+		),
+	})
 	if err != nil {
 		return "", "", err
 	}
@@ -148,6 +159,16 @@ func (s *Service) SetRole(ctx context.Context, userID int, req *SetRoleRequest) 
 }
 
 func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, string, error) {
+	claims, err := ParseToken(oldToken)
+	if err != nil {
+		return "", "", errors.New("invalid refresh token")
+	}
+
+	tokenType, ok := claims["type"].(string)
+	if !ok || tokenType != "refresh" {
+		return "", "", errors.New("invalid token type")
+	}
+
 	rt, err := s.repo.GetRefreshToken(ctx, oldToken)
 	if err != nil {
 		return "", "", errors.New("invalid refresh token")
@@ -169,10 +190,13 @@ func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, s
 	}
 
 	_ = s.repo.DeleteRefreshToken(ctx, oldToken)
+
 	err = s.repo.SaveRefreshToken(ctx, &RefreshToken{
 		AccountID: acc.ID,
 		Token:     newRefresh,
-		ExpiresAt: time.Now().Add(time.Duration(config.GetRefreshTokenTTLSeconds()) * time.Second),
+		ExpiresAt: time.Now().Add(
+			time.Duration(config.GetRefreshTokenTTLSeconds()) * time.Second,
+		),
 	})
 	if err != nil {
 		return "", "", err
