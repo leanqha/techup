@@ -1,0 +1,457 @@
+package account
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/bcrypt"
+)
+
+type MockRepo struct {
+	accounts      map[string]*Account
+	refreshTokens map[string]*RefreshToken
+	saveError     error
+	getError      error
+	deleteError   error
+}
+
+func (m *MockRepo) CreateAccount(_ context.Context, acc *Account) error {
+	if m.saveError != nil {
+		return m.saveError
+	}
+	if _, exists := m.accounts[acc.Email]; exists {
+		return errors.New("email already exists")
+	}
+	acc.ID = len(m.accounts) + 1
+	m.accounts[acc.Email] = acc
+	return nil
+}
+
+func (m *MockRepo) GetByEmail(_ context.Context, email string) (*Account, error) {
+	if m.getError != nil {
+		return nil, m.getError
+	}
+	acc, ok := m.accounts[email]
+	if !ok {
+		return nil, errors.New("account not found")
+	}
+	return acc, nil
+}
+
+func (m *MockRepo) GetByID(_ context.Context, id int) (*Account, error) {
+	for _, acc := range m.accounts {
+		if acc.ID == id {
+			return acc, nil
+		}
+	}
+	return nil, errors.New("account not found")
+}
+
+func (m *MockRepo) UpdateAccount(_ context.Context, acc *Account) error {
+	for email, a := range m.accounts {
+		if email == acc.Email && a.ID != acc.ID {
+			return errors.New("email already exists")
+		}
+	}
+	for email, a := range m.accounts {
+		if a.ID == acc.ID {
+			delete(m.accounts, email)
+			break
+		}
+	}
+	m.accounts[acc.Email] = acc
+	return nil
+}
+func (m *MockRepo) SaveRefreshToken(_ context.Context, token *RefreshToken) error {
+	if m.saveError != nil {
+		return m.saveError
+	}
+	m.refreshTokens[token.Token] = token
+	return nil
+}
+func (m *MockRepo) GetRefreshToken(_ context.Context, token string) (*RefreshToken, error) {
+	t, ok := m.refreshTokens[token]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	return t, nil
+}
+
+func (m *MockRepo) DeleteRefreshToken(_ context.Context, token string) error {
+	if m.deleteError != nil {
+		return m.deleteError
+	}
+	delete(m.refreshTokens, token)
+	return nil
+}
+
+func (m *MockRepo) DeleteRefreshTokens(_ context.Context, userID int) error {
+	if m.deleteError != nil {
+		return m.deleteError
+	}
+	for token, rt := range m.refreshTokens {
+		if rt.AccountID == userID {
+			delete(m.refreshTokens, token)
+		}
+	}
+	return nil
+}
+
+func (m *MockRepo) DeleteAccount(ctx context.Context, userID int) error {
+	if m.deleteError != nil {
+		return m.deleteError
+	}
+	for token, rt := range m.refreshTokens {
+		if rt.AccountID == userID {
+			delete(m.refreshTokens, token)
+		}
+	}
+	for email, acc := range m.accounts {
+		if acc.ID == userID {
+			delete(m.accounts, email)
+			return nil
+		}
+	}
+	return errors.New("account not found")
+}
+
+func TestRegisterAndLogin(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{
+		accounts:      make(map[string]*Account),
+		refreshTokens: make(map[string]*RefreshToken),
+	}
+
+	service := NewService(repo)
+
+	acc, accessToken, refreshToken, err := service.Register(context.Background(), RegisterRequest{
+		Email:     "test@example.com",
+		Password:  "password",
+		FirstName: "John",
+		LastName:  "Doe",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "test@example.com", acc.Email)
+	assert.Equal(t, "John", acc.FirstName)
+	assert.NotEmpty(t, accessToken)
+	assert.NotEmpty(t, refreshToken)
+
+	_, _, _, err = service.Register(context.Background(), RegisterRequest{
+		Email:     "test@example.com",
+		Password:  "password",
+		FirstName: "John",
+		LastName:  "Doe",
+	})
+	assert.Error(t, err)
+
+	access, refresh, err := service.Login(context.Background(), "test@example.com", "password")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, access)
+	assert.NotEmpty(t, refresh)
+
+	_, _, err = service.Login(context.Background(), "test@example.com", "wrongpassword")
+	assert.Error(t, err)
+}
+
+func TestGetByID(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{
+		accounts: map[string]*Account{
+			"user@example.com": {ID: 1, Email: "user@example.com", FirstName: "Alice", LastName: "Smith"},
+		},
+	}
+
+	service := NewService(repo)
+
+	acc, err := service.GetByID(context.Background(), 1)
+	assert.NoError(t, err)
+	assert.Equal(t, "Alice", acc.FirstName)
+
+	acc, err = service.GetByID(context.Background(), 999)
+	assert.Error(t, err)
+}
+
+func TestRefreshTokens(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{
+		accounts:      make(map[string]*Account),
+		refreshTokens: make(map[string]*RefreshToken),
+	}
+
+	service := NewService(repo)
+	acc := &Account{ID: 1, Email: "user@example.com"}
+	repo.accounts[acc.Email] = acc
+
+	access, refresh, err := GenerateTokens(acc)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, access)
+	assert.NotEmpty(t, refresh)
+
+	err = service.repo.SaveRefreshToken(context.Background(), &RefreshToken{
+		AccountID: acc.ID,
+		Token:     refresh,
+		ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
+	})
+	assert.NoError(t, err)
+}
+
+func TestLogout(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{
+		accounts:      make(map[string]*Account),
+		refreshTokens: make(map[string]*RefreshToken),
+	}
+
+	service := NewService(repo)
+
+	acc := &Account{ID: 1, Email: "user@example.com"}
+	repo.accounts[acc.Email] = acc
+
+	refreshToken := "refresh-token-123"
+	repo.refreshTokens[refreshToken] = &RefreshToken{
+		AccountID: acc.ID,
+		Token:     refreshToken,
+		ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
+	}
+
+	err := service.Logout(context.Background(), acc.ID)
+	assert.NoError(t, err)
+
+	_, exists := repo.refreshTokens[refreshToken]
+	assert.False(t, exists)
+}
+
+func TestUpdateProfile(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{
+		accounts: make(map[string]*Account),
+	}
+
+	service := NewService(repo)
+
+	acc := &Account{ID: 1, Email: "user@example.com", FirstName: "John", LastName: "Doe"}
+	repo.accounts[acc.Email] = acc
+
+	req := UpdateProfileRequest{
+		Email:     "new@example.com",
+		FirstName: "Jane",
+		LastName:  "Smith",
+	}
+	updatedAcc, err := service.UpdateProfile(context.Background(), acc.ID, &req)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "new@example.com", updatedAcc.Email)
+	assert.Equal(t, "Jane", updatedAcc.FirstName)
+	assert.Equal(t, "Smith", updatedAcc.LastName)
+
+	_, err = service.UpdateProfile(context.Background(), 999, &req)
+	assert.Error(t, err)
+}
+
+func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{
+		accounts:      make(map[string]*Account),
+		refreshTokens: make(map[string]*RefreshToken),
+	}
+
+	service := NewService(repo)
+
+	hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+	acc := &Account{
+		ID:           1,
+		Email:        "user@example.com",
+		FirstName:    "Alice",
+		LastName:     "Smith",
+		Role:         "student",
+		PasswordHash: string(hash),
+	}
+	repo.accounts[acc.Email] = acc
+
+	access, refresh, err := service.Login(context.Background(), acc.Email, "password")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, access)
+	assert.NotEmpty(t, refresh)
+
+	_, _, err = service.Login(context.Background(), acc.Email, "wrongpassword")
+	assert.Error(t, err)
+
+	_, _, err = service.Login(context.Background(), "missing@example.com", "password")
+	assert.Error(t, err)
+
+	err = repo.SaveRefreshToken(context.Background(), &RefreshToken{
+		AccountID: acc.ID,
+		Token:     refresh,
+		ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
+	})
+	assert.NoError(t, err)
+
+	_, _, err = service.RefreshTokens(context.Background(), "invalid-token")
+	assert.Error(t, err)
+
+	newAccess, newRefresh, err := service.RefreshTokens(context.Background(), refresh)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, newAccess)
+	assert.NotEmpty(t, newRefresh)
+
+	err = service.Logout(context.Background(), acc.ID)
+	assert.NoError(t, err)
+	for _, rt := range repo.refreshTokens {
+		assert.NotEqual(t, acc.ID, rt.AccountID)
+	}
+
+	err = service.Logout(context.Background(), 999)
+	assert.NoError(t, err) // не должно падать, просто ничего не удаляет
+}
+
+func TestRegisterValidation(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
+	service := NewService(repo)
+
+	_, _, _, err := service.Register(context.Background(), RegisterRequest{
+		Email: "", Password: "password", FirstName: "A", LastName: "B",
+	})
+	assert.Error(t, err)
+
+	_, _, _, err = service.Register(context.Background(), RegisterRequest{
+		Email: "a@b.c", Password: "123", FirstName: "A", LastName: "B",
+	})
+	assert.Error(t, err)
+
+	_, _, _, err = service.Register(context.Background(), RegisterRequest{
+		Email: "a@b.c", Password: "password", FirstName: "", LastName: "B",
+	})
+	assert.Error(t, err)
+
+	_, _, _, err = service.Register(context.Background(), RegisterRequest{
+		Email: "a@b.c", Password: "password", FirstName: "A", LastName: "",
+	})
+	assert.Error(t, err)
+}
+
+func TestPasswordHashing(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
+	service := NewService(repo)
+
+	acc, _, _, err := service.Register(context.Background(), RegisterRequest{
+		Email: "hash@test.com", Password: "password", FirstName: "A", LastName: "B",
+	})
+	assert.NoError(t, err)
+	assert.NotEqual(t, "password", acc.PasswordHash)
+	assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(acc.PasswordHash), []byte("password")))
+}
+
+func TestRefreshTokenExpired(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
+	service := NewService(repo)
+	acc := &Account{ID: 1, Email: gofakeit.Email()}
+	repo.accounts[acc.Email] = acc
+
+	refresh := "expired-token"
+	repo.refreshTokens[refresh] = &RefreshToken{
+		AccountID: acc.ID,
+		Token:     refresh,
+		ExpiresAt: time.Now().Add(-1 * time.Hour),
+	}
+
+	_, _, err := service.RefreshTokens(context.Background(), refresh)
+	assert.Error(t, err)
+}
+
+func TestRefreshTokenWrongUser(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
+	service := NewService(repo)
+
+	acc := &Account{ID: 1, Email: gofakeit.Email()}
+	repo.accounts[acc.Email] = acc
+
+	refresh := "wrong-user-token"
+	repo.refreshTokens[refresh] = &RefreshToken{
+		AccountID: 999,
+		Token:     refresh,
+		ExpiresAt: time.Now().Add(1 * time.Hour),
+	}
+
+	_, _, err := service.RefreshTokens(context.Background(), refresh)
+	assert.Error(t, err)
+}
+
+func TestLogoutRepoError(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{
+		accounts: make(map[string]*Account),
+		refreshTokens: map[string]*RefreshToken{
+			"t": {AccountID: 1, Token: "t"},
+		},
+		deleteError: errors.New("db err"),
+	}
+	service := NewService(repo)
+	err := service.Logout(context.Background(), 1)
+	assert.Error(t, err)
+}
+
+func TestLoginInvalidHash(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{
+		accounts: map[string]*Account{
+			gofakeit.Email(): {ID: 1, Email: gofakeit.Email(), PasswordHash: "not-a-valid-hash"},
+		},
+		refreshTokens: make(map[string]*RefreshToken),
+	}
+	service := NewService(repo)
+	var email string
+	for k := range repo.accounts {
+		email = k
+		break
+	}
+	_, _, err := service.Login(context.Background(), email, gofakeit.Password(true, true, true, false, false, 12))
+	assert.Error(t, err)
+}
+
+func TestRegisterSavesRefreshToken(t *testing.T) {
+	gofakeit.Seed(0)
+	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
+	service := NewService(repo)
+	email := gofakeit.Email()
+	password := gofakeit.Password(true, true, true, false, false, 12)
+	firstName := gofakeit.FirstName()
+	lastName := gofakeit.LastName()
+	_, _, refreshToken, err := service.Register(context.Background(), RegisterRequest{
+		Email:     email,
+		Password:  password,
+		FirstName: firstName,
+		LastName:  lastName,
+	})
+	assert.NoError(t, err)
+	assert.NotEmpty(t, repo.refreshTokens)
+	assert.NotNil(t, repo.refreshTokens[refreshToken])
+}
+
+func TestUpdateProfileEmailConflict(t *testing.T) {
+	gofakeit.Seed(0)
+	emailA := gofakeit.Email()
+	emailB := gofakeit.Email()
+	repo := &MockRepo{
+		accounts: map[string]*Account{
+			emailA: {ID: 1, Email: emailA},
+			emailB: {ID: 2, Email: emailB},
+		},
+		refreshTokens: make(map[string]*RefreshToken),
+	}
+	service := NewService(repo)
+
+	_, err := service.UpdateProfile(context.Background(), 1, &UpdateProfileRequest{
+		Email:     emailB,
+		FirstName: gofakeit.FirstName(),
+		LastName:  gofakeit.LastName(),
+	})
+	assert.Error(t, err)
+}
