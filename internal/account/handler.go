@@ -45,16 +45,15 @@ func NewHandler(s ServiceInterface) *Handler {
 }
 
 // Register godoc
-// @Summary Register a new user
-// @Description Creates a new user account with role "student"
-// @Tags account
-// @Accept json
-// @Produce json
-// @Param request body RegisterRequest true "User registration info"
-// @Success 200 {object} map[string]interface{} "Successfully created"
-// @Failure 400 {object} map[string]string "Invalid input"
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /api/v1/account/register [post]
+// @Summary      Register a new user account
+// @Description  Create a new account with email/password and profile details. Sets HTTP-only cookies (access_token, refresh_token).
+// @Tags         Account
+// @Accept       json
+// @Produce      json
+// @Param        register body RegisterRequest true "Registration details"
+// @Success      200 {object} map[string]interface{} "Message plus user profile"
+// @Failure      400 {object} ErrorResponse "Invalid input or registration error"
+// @Router       /account/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -88,7 +87,6 @@ func (h *Handler) Register(c *gin.Context) {
 		SameSite: http.SameSiteNoneMode,
 	})
 
-	// Response
 	c.JSON(http.StatusOK, gin.H{
 		"message": "registration successful",
 		"user": ProfileResponse{
@@ -103,16 +101,16 @@ func (h *Handler) Register(c *gin.Context) {
 }
 
 // Login godoc
-// @Summary User login
-// @Description Authenticates user and returns JWT tokens. Sets access and refresh tokens in HTTP-only cookies.
-// @Tags account
-// @Accept json
-// @Produce json
-// @Param request body LoginRequest true "User login info"
-// @Success 200 {object} map[string]string "Login successful message"
-// @Failure 400 {object} map[string]string "Invalid input"
-// @Failure 401 {object} map[string]string "Invalid credentials"
-// @Router /api/v1/account/login [post]
+// @Summary      Authenticate user
+// @Description  Verify credentials and set HTTP-only cookies (access_token, refresh_token). Returns a confirmation message.
+// @Tags         Account
+// @Accept       json
+// @Produce      json
+// @Param        login body LoginRequest true "Login credentials"
+// @Success      200 {object} map[string]string "Login confirmation message"
+// @Failure      400 {object} ErrorResponse "Invalid input"
+// @Failure      401 {object} ErrorResponse "Invalid credentials"
+// @Router       /account/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -154,14 +152,15 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 // Profile godoc
-// @Summary Get user profile
-// @Description Returns current user info based on JWT token passed in Authorization header as Bearer token.
-// @Tags account
-// @Produce json
-// @Security cookieAuth
-// @Success 200 {object} ProfileResponse "User profile"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Router /api/v1/account/secure/profile [get]
+// @Summary      Get current user profile
+// @Description  Return profile data for the authenticated user.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200 {object} ProfileResponse "User profile"
+// @Failure      401 {object} ErrorResponse "Unauthorized"
+// @Failure      404 {object} ErrorResponse "User not found"
+// @Router       /account/secure/profile [get]
 func (h *Handler) Profile(c *gin.Context) {
 	userID := c.GetInt("user_id")
 
@@ -184,137 +183,15 @@ func (h *Handler) Profile(c *gin.Context) {
 	})
 }
 
-// ChangePassword godoc
-// @Summary Change user password
-// @Description Allows a logged-in user to change their password. Authentication required via Bearer token.
-// @Tags account
-// @Accept json
-// @Produce json
-// @Param request body ChangePasswordRequest true "Old and new password"
-// @Success 200 {object} map[string]string "Password changed successfully"
-// @Failure 400 {object} map[string]string "Invalid input"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Security cookieAuth
-// @Router /api/v1/account/secure/change-password [post]
-func (h *Handler) ChangePassword(c *gin.Context) {
-	claims, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
-		return
-	}
-	userClaims := claims.(jwt.MapClaims)
-	userID := int(userClaims["user_id"].(float64))
-
-	var req ChangePasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
-		return
-	}
-
-	err := h.service.ChangePassword(c, userID, &req)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
-}
-
-// UpdateProfile godoc
-// @Summary Update user profile
-// @Description Allows a logged-in user to update profile information. Authentication required via Bearer token.
-// @Tags account
-// @Accept json
-// @Produce json
-// @Param request body UpdateProfileRequest true "Profile update info"
-// @Success 200 {object} ProfileResponse "Updated profile"
-// @Failure 400 {object} map[string]string "Invalid input"
-// @Failure 409 {object} map[string]string "Email already exists"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Security cookieAuth
-// @Router /api/v1/account/secure/update [put]
-func (h *Handler) UpdateProfile(c *gin.Context) {
-	claims, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
-		return
-	}
-	userClaims := claims.(jwt.MapClaims)
-	userID := int(userClaims["user_id"].(float64))
-
-	var req UpdateProfileRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
-		return
-	}
-
-	acc, err := h.service.UpdateProfile(c, userID, &req)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, ProfileResponse{
-		ID:        acc.ID,
-		Email:     acc.Email,
-		FirstName: acc.FirstName,
-		LastName:  acc.LastName,
-		Role:      acc.Role,
-	})
-}
-
-// SetRole godoc
-// @Summary Set user role
-// @Description Allows admin to set the role of another user. Authentication required via Bearer token.
-// @Tags account
-// @Accept json
-// @Produce json
-// @Param request body SetRoleRequest true "User ID and new role"
-// @Success 200 {object} map[string]string "Role updated successfully"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 400 {object} map[string]string "Invalid input"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Security cookieAuth
-// @Router /api/v1/account/set-role [post]
-func (h *Handler) SetRole(c *gin.Context) {
-	claims, exists := c.Get("claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
-		return
-	}
-	userClaims := claims.(jwt.MapClaims)
-	userID := int(userClaims["user_id"].(float64))
-
-	var req SetRoleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
-		return
-	}
-
-	err := h.service.SetRole(c, userID, &req)
-	if err != nil {
-		if err.Error() == "forbidden" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
-			return
-		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "role updated successfully"})
-}
-
 // Refresh godoc
-// @Summary Refresh JWT tokens
-// @Description Refreshes access and refresh tokens using a valid refresh token sent in request body.
-// @Tags account
-// @Accept json
-// @Produce json
-// @Param request body RefreshRequest true "Refresh token"
-// @Success 200 {object} LoginResponse "New tokens"
-// @Failure 400 {object} map[string]string "Invalid request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Router /api/v1/account/refresh [post]
+// @Summary      Refresh authentication tokens
+// @Description  Issue new access and refresh tokens using the refresh_token cookie; sets new HTTP-only cookies.
+// @Tags         Account
+// @Produce      json
+// @Success      200 {object} map[string]string "Refresh confirmation message"
+// @Failure      400 {object} ErrorResponse "Refresh token not provided"
+// @Failure      401 {object} ErrorResponse "Invalid or expired refresh token"
+// @Router       /account/refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
@@ -353,13 +230,135 @@ func (h *Handler) Refresh(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "tokens refreshed"})
 }
 
+// ChangePassword godoc
+// @Summary      Change user password
+// @Description  Change the password for the authenticated user. Requires current and new passwords.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        change body ChangePasswordRequest true "Password change payload"
+// @Success      200 {object} map[string]string "Password change confirmation message"
+// @Failure      400 {object} ErrorResponse "Invalid input or password change error"
+// @Failure      401 {object} ErrorResponse "Unauthorized"
+// @Router       /account/secure/change-password [post]
+func (h *Handler) ChangePassword(c *gin.Context) {
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
+		return
+	}
+	userClaims := claims.(jwt.MapClaims)
+	userID := int(userClaims["user_id"].(float64))
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	err := h.service.ChangePassword(c, userID, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
+}
+
+// UpdateProfile godoc
+// @Summary      Update current user profile
+// @Description  Update profile fields for the authenticated user and return the updated profile.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        update body UpdateProfileRequest true "Profile update payload"
+// @Success      200 {object} ProfileResponse "Updated user profile"
+// @Failure      400 {object} ErrorResponse "Invalid input or update error"
+// @Failure      401 {object} ErrorResponse "Unauthorized"
+// @Router       /account/secure/update [put]
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
+		return
+	}
+	userClaims := claims.(jwt.MapClaims)
+	userID := int(userClaims["user_id"].(float64))
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	acc, err := h.service.UpdateProfile(c, userID, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, ProfileResponse{
+		ID:        acc.ID,
+		Email:     acc.Email,
+		FirstName: acc.FirstName,
+		LastName:  acc.LastName,
+		Role:      acc.Role,
+	})
+}
+
+// SetRole godoc
+// @Summary      Set user role (admin only)
+// @Description  Change a user's role. Requires admin privileges.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        role body SetRoleRequest true "Role update payload"
+// @Success      200 {object} map[string]string "Role update confirmation message"
+// @Failure      400 {object} ErrorResponse "Invalid input or update error"
+// @Failure      401 {object} ErrorResponse "Unauthorized"
+// @Failure      403 {object} ErrorResponse "Forbidden"
+// @Router       /admin/set-role [post]
+func (h *Handler) SetRole(c *gin.Context) {
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
+		return
+	}
+	userClaims := claims.(jwt.MapClaims)
+	userID := int(userClaims["user_id"].(float64))
+
+	var req SetRoleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	err := h.service.SetRole(c, userID, &req)
+	if err != nil {
+		if err.Error() == "forbidden" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "role updated successfully"})
+}
+
 // Logout godoc
-// @Summary Logout user
-// @Description Clears access and refresh tokens (HTTP-only cookies)
-// @Tags account
-// @Produce json
-// @Success 200 {object} map[string]string "Logout successful"
-// @Router /api/v1/account/logout [post]
+// @Summary      Logout user
+// @Description  Revoke refresh tokens, clear auth cookies, and return a confirmation message.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200 {object} map[string]string "Logout confirmation message"
+// @Failure      401 {object} ErrorResponse "Unauthorized"
+// @Failure      500 {object} ErrorResponse "Logout error"
+// @Router       /account/secure/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	claimsRaw, exists := c.Get("claims")
 	if !exists {
@@ -381,6 +380,20 @@ func (h *Handler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "logout successful"})
 }
 
+// DeleteAccount godoc
+// @Summary      Delete a user account
+// @Description  Delete an account by ID. Admins can delete any account; users can delete their own.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path int true "User ID"
+// @Success      200 {object} map[string]string "Deletion confirmation message"
+// @Failure      400 {object} ErrorResponse "Invalid user ID"
+// @Failure      401 {object} ErrorResponse "Unauthorized"
+// @Failure      403 {object} ErrorResponse "Forbidden"
+// @Failure      404 {object} ErrorResponse "Account not found"
+// @Failure      500 {object} ErrorResponse "Deletion error"
+// @Router       /admin/account/{id} [delete]
 func (h *Handler) DeleteAccount(c *gin.Context) {
 	idParam := c.Param("id")
 	userID, err := strconv.Atoi(idParam)

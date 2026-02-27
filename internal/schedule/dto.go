@@ -1,5 +1,6 @@
 package schedule
 
+// LessonRequest describes payload for creating or updating a lesson.
 type LessonRequest struct {
 	Group     int    `json:"group" binding:"required"`
 	TeacherID int    `json:"teacher_id"`
@@ -11,6 +12,7 @@ type LessonRequest struct {
 	Classroom string `json:"classroom" binding:"required"`
 }
 
+// LessonResponse represents a scheduled lesson with related group and teacher info.
 type LessonResponse struct {
 	ID        int    `json:"id"`
 	Date      string `json:"date"`
@@ -24,11 +26,13 @@ type LessonResponse struct {
 	Teacher TeacherDTO `json:"teacher"`
 }
 
+// FacultyDTO represents a faculty summary.
 type FacultyDTO struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
 
+// GroupDTO represents a student group summary.
 type GroupDTO struct {
 	ID             int    `json:"id"`
 	FacultyID      int    `json:"faculty_id"`
@@ -40,6 +44,7 @@ type GroupDTO struct {
 	IsActive       bool   `json:"is_active"`
 }
 
+// TeacherDTO represents a teacher summary.
 type TeacherDTO struct {
 	ID         int    `json:"id"`
 	FirstName  string `json:"first_name"`

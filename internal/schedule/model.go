@@ -32,6 +32,7 @@ type Lesson struct {
 	TeacherID int       `json:"teacher_id"`
 	Classroom string    `json:"classroom"`
 	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type LessonCSV struct {

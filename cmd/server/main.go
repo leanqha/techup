@@ -1,9 +1,9 @@
 // @title TechUp API
 // @version 1.0
 // @description Backend API for the TechUp university application.
-// @host localhost:8080
 // @BasePath /api/v1
-// @schemes http
+// @schemes http https
+// @license.name MIT
 
 package main
 

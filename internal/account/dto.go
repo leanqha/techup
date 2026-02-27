@@ -1,6 +1,6 @@
 package account
 
-// RegisterRequest - payload for user registration
+// RegisterRequest describes payload for account registration.
 type RegisterRequest struct {
 	Email     string `json:"email" binding:"required,email"`
 	Password  string `json:"password" binding:"required,min=8"`
@@ -8,20 +8,19 @@ type RegisterRequest struct {
 	LastName  string `json:"last_name" binding:"required"`
 }
 
-// LoginRequest - payload for user login
+// LoginRequest describes payload for account authentication.
 type LoginRequest struct {
 	Email    string `json:"email" example:"user@example.com"`
 	Password string `json:"password" example:"strongpassword"`
 }
 
-// LoginResponse - payload returned by /login
-
+// LoginResponse represents token payloads (when returned in JSON).
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
 
-// ProfileResponse - payload returned by /profile
+// ProfileResponse represents the authenticated user's profile.
 type ProfileResponse struct {
 	ID         int    `json:"id" example:"1"`
 	UID        string `json:"uid" example:"123456"`
@@ -34,25 +33,26 @@ type ProfileResponse struct {
 	Role       string `json:"role" example:"student"`
 }
 
-// ChangePasswordRequest - payload for changing password
+// ChangePasswordRequest describes payload for password change.
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password" example:"currentpass"`
 	NewPassword string `json:"new_password" example:"newpass123"`
 }
 
-// UpdateProfileRequest - payload for updating profile
+// UpdateProfileRequest describes payload for profile updates.
 type UpdateProfileRequest struct {
 	Email     string `json:"email" example:"newemail@example.com"`
 	FirstName string `json:"first_name" example:"John"`
 	LastName  string `json:"last_name" example:"Doe"`
 }
 
-// SetRoleRequest - payload for admin to set user role
+// SetRoleRequest describes payload for assigning a role to a user.
 type SetRoleRequest struct {
 	UserID int    `json:"user_id" example:"7"`
 	Role   string `json:"role" example:"teacher"`
 }
 
+// RefreshRequest describes payload for manual refresh token submission.
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
