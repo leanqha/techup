@@ -11,11 +11,32 @@ import (
 	"time"
 )
 
-type Service struct {
-	repo *Repository
+type RepositoryInterface interface {
+	AddFaculty(ctx context.Context, faculty Faculty) error
+	ListFaculties(ctx context.Context) ([]Faculty, error)
+	UpdateFaculty(ctx context.Context, faculty Faculty) error
+	DeleteFaculty(ctx context.Context, id int) error
+	AddGroup(ctx context.Context, g Group) error
+	ListGroups(ctx context.Context) ([]Group, error)
+	UpdateGroup(ctx context.Context, g Group) error
+	DeleteGroup(ctx context.Context, id int) error
+	AddLesson(ctx context.Context, lesson Lesson) error
+	UpdateLesson(ctx context.Context, lesson Lesson) error
+	DeleteLesson(ctx context.Context, id int) error
+	GetLessons(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
+	GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
+	AddLessonNote(ctx context.Context, userID, lessonID int, text string) error
+	GetGroupIDByName(ctx context.Context, name string) (int, error)
+	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
+	GetTeachers(ctx context.Context) ([]account.Account, error)
+	GetClassrooms(ctx context.Context) ([]string, error)
 }
 
-func NewService(repo *Repository) *Service {
+type Service struct {
+	repo RepositoryInterface
+}
+
+func NewService(repo RepositoryInterface) *Service {
 	return &Service{repo: repo}
 }
 

@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"techup/internal/account"
@@ -9,11 +10,32 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Handler struct {
-	service *Service
+type ServiceInterface interface {
+	GetLessons(ctx context.Context, groupID int, fromStr, toStr string) ([]LessonResponse, error)
+	AddLesson(ctx context.Context, lesson Lesson) error
+	UpdateLesson(ctx context.Context, lesson Lesson) error
+	DeleteLesson(ctx context.Context, id int) error
+	ListFaculties(ctx context.Context) ([]Faculty, error)
+	AddFaculty(ctx context.Context, faculty Faculty) error
+	UpdateFaculty(ctx context.Context, faculty Faculty) error
+	DeleteFaculty(ctx context.Context, id int) error
+	ListGroups(ctx context.Context) ([]Group, error)
+	AddGroup(ctx context.Context, g Group) error
+	UpdateGroup(ctx context.Context, g Group) error
+	DeleteGroup(ctx context.Context, id int) error
+	GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
+	AddLessonNote(ctx context.Context, userID, lessonID int, text string) error
+	ImportSchedule(ctx context.Context, lessons []Lesson) error
+	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
+	GetTeachers(ctx context.Context) ([]account.Account, error)
+	GetClassrooms(ctx context.Context) ([]string, error)
 }
 
-func NewHandler(service *Service) *Handler {
+type Handler struct {
+	service ServiceInterface
+}
+
+func NewHandler(service ServiceInterface) *Handler {
 	return &Handler{service: service}
 }
 

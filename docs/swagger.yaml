@@ -1,0 +1,125 @@
+basePath: /api/v1
+definitions:
+  maps.Building:
+    properties:
+      address:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  maps.GetPathResponse:
+    properties:
+      dist:
+        type: number
+      path:
+        items:
+          type: string
+        type: array
+    type: object
+  maps.Room:
+    properties:
+      building_id:
+        type: integer
+      floor:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend API for the TechUp university application.
+  title: TechUp API
+  version: "1.0"
+paths:
+  /api/v1/map/search:
+    get:
+      description: Returns rooms filtered by building_id and/or floor
+      parameters:
+      - description: Building ID
+        in: query
+        name: building_id
+        type: integer
+      - description: Floor number
+        in: query
+        name: floor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/maps.Room'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Search rooms
+      tags:
+      - map
+  /buildings:
+    get:
+      description: Returns a list of all buildings
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/maps.Building'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get all buildings
+      tags:
+      - map
+  /shortest-path:
+    get:
+      description: Calculates path between start_room_id and end_room_id
+      parameters:
+      - description: Start Room ID
+        in: query
+        name: start_room_id
+        required: true
+        type: integer
+      - description: End Room ID
+        in: query
+        name: end_room_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/maps.GetPathResponse'
+        "400":
+          description: Bad Request
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get path between two rooms
+      tags:
+      - map
+schemes:
+- http
+swagger: "2.0"
