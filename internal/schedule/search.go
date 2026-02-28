@@ -7,4 +7,5 @@ type SearchLessonsFilter struct {
 	TeacherID *int
 	GroupID   *int
 	Classroom *string
+	Subject   *string
 }
