@@ -114,7 +114,7 @@ func (m *mockService) SearchLessons(ctx context.Context, f SearchLessonsFilter) 
 	return nil, nil
 }
 
-func (m *mockService) GetTeachers(ctx context.Context) ([]account.Account, error) {
+func (m *mockService) GetTeachers(ctx context.Context) ([]account.ProfileResponse, error) {
 	return nil, nil
 }
 

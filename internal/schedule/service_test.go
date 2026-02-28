@@ -284,7 +284,7 @@ func TestServiceSearchLessons(t *testing.T) {
 func TestServiceGetTeachersAndClassrooms(t *testing.T) {
 	repo := &mockRepo{
 		getTeachersFn: func(ctx context.Context) ([]account.Account, error) {
-			return []account.Account{{ID: 1, Email: "t@example.com"}}, nil
+			return []account.Account{{ID: 1, Email: "t@example.com", Role: "teacher"}}, nil
 		},
 		getClassroomsFn: func(ctx context.Context) ([]string, error) {
 			return []string{"101", "102"}, nil
@@ -294,7 +294,11 @@ func TestServiceGetTeachersAndClassrooms(t *testing.T) {
 
 	teachers, err := service.GetTeachers(context.Background())
 	assert.NoError(t, err)
-	assert.Len(t, teachers, 1)
+	if assert.Len(t, teachers, 1) {
+		assert.Equal(t, 1, teachers[0].ID)
+		assert.Equal(t, "t@example.com", teachers[0].Email)
+		assert.Equal(t, "teacher", teachers[0].Role)
+	}
 
 	rooms, err := service.GetClassrooms(context.Background())
 	assert.NoError(t, err)

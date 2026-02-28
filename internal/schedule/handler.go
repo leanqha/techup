@@ -28,7 +28,7 @@ type ServiceInterface interface {
 	AddLessonNote(ctx context.Context, userID, lessonID int, text string) error
 	ImportSchedule(ctx context.Context, lessons []Lesson) error
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
-	GetTeachers(ctx context.Context) ([]account.Account, error)
+	GetTeachers(ctx context.Context) ([]account.ProfileResponse, error)
 	GetClassrooms(ctx context.Context) ([]string, error)
 }
 
@@ -616,7 +616,7 @@ func (h *Handler) SearchLessons(c *gin.Context) {
 // @Description  Return all teachers.
 // @Tags         Schedule
 // @Produce      json
-// @Success      200 {array} account.Account "Teachers list"
+// @Success      200 {array} account.ProfileResponse "Teachers list"
 // @Failure      500 {object} map[string]string "Failed to load teachers"
 // @Router       /schedule/teachers [get]
 func (h *Handler) GetTeachers(c *gin.Context) {

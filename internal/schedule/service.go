@@ -228,8 +228,28 @@ func (s *Service) SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]L
 	return s.repo.SearchLessons(ctx, f)
 }
 
-func (s *Service) GetTeachers(ctx context.Context) ([]account.Account, error) {
-	return s.repo.GetTeachers(ctx)
+func (s *Service) GetTeachers(ctx context.Context) ([]account.ProfileResponse, error) {
+	teachers, err := s.repo.GetTeachers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]account.ProfileResponse, 0, len(teachers))
+	for _, acc := range teachers {
+		res = append(res, account.ProfileResponse{
+			ID:         acc.ID,
+			UID:        acc.UID,
+			Email:      acc.Email,
+			FirstName:  acc.FirstName,
+			MiddleName: acc.MiddleName,
+			LastName:   acc.LastName,
+			GroupID:    acc.GroupID,
+			GroupName:  acc.GroupName,
+			Role:       acc.Role,
+		})
+	}
+
+	return res, nil
 }
 
 func (s *Service) GetClassrooms(ctx context.Context) ([]string, error) {
