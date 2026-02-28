@@ -2,6 +2,7 @@ package schedule
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"techup/internal/account"
@@ -424,10 +425,18 @@ func (h *Handler) GetLessonNote(c *gin.Context) {
 		return
 	}
 
-	lessonID, _ := strconv.Atoi(c.Param("id"))
+	lessonID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 
 	note, err := h.service.GetLessonNote(c.Request.Context(), userID, lessonID)
 	if err != nil {
+		if errors.Is(err, ErrLessonNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -461,7 +470,11 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 		return
 	}
 
-	lessonID, _ := strconv.Atoi(c.Param("id"))
+	lessonID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 
 	var req struct {
 		Text string `json:"text" binding:"required"`
@@ -473,6 +486,14 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 	}
 
 	if err := h.service.AddLessonNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
+		if errors.Is(err, ErrNoteTooLong) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, ErrLessonNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -546,6 +567,7 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 // @Param        teacher_id query int false "Teacher ID"
 // @Param        group_id   query int false "Group ID"
 // @Param        classroom  query string false "Classroom"
+// @Param        subject    query string false "Subject"
 // @Success      200 {array} LessonResponse "Lessons list"
 // @Failure      400 {object} map[string]string "Invalid filter value"
 // @Failure      500 {object} map[string]string "Failed to search lessons"
@@ -574,6 +596,10 @@ func (h *Handler) SearchLessons(c *gin.Context) {
 
 	if v := c.Query("classroom"); v != "" {
 		f.Classroom = &v
+	}
+
+	if v := c.Query("subject"); v != "" {
+		f.Subject = &v
 	}
 
 	lessons, err := h.service.SearchLessons(c.Request.Context(), f)

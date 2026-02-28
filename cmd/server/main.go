@@ -95,11 +95,16 @@ func main() {
 		scheduleGroup.GET("/lessons", scheduleHandler.GetLessons)
 		scheduleGroup.GET("/groups", scheduleHandler.ListGroups)
 		scheduleGroup.GET("/faculties", scheduleHandler.ListFaculties)
-		scheduleGroup.GET("/lessons/:id/note", scheduleHandler.GetLessonNote)
-		scheduleGroup.POST("/lessons/:id/note", scheduleHandler.AddLessonNote)
 		scheduleGroup.GET("/search", scheduleHandler.SearchLessons)
 		scheduleGroup.GET("/teachers", scheduleHandler.GetTeachers)
 		scheduleGroup.GET("/classrooms", scheduleHandler.GetClassrooms)
+	}
+
+	lessonNotes := scheduleGroup.Group("/lessons/:id")
+	lessonNotes.Use(account.AuthMiddleware())
+	{
+		lessonNotes.GET("/note", scheduleHandler.GetLessonNote)
+		lessonNotes.POST("/note", scheduleHandler.AddLessonNote)
 	}
 
 	mapGroup := api.Group("/map")

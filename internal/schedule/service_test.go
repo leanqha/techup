@@ -17,6 +17,7 @@ type mockRepo struct {
 	updateLessonFn     func(ctx context.Context, lesson Lesson) error
 	getLessonsFn       func(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
 	addLessonNoteFn    func(ctx context.Context, userID, lessonID int, text string) error
+	lessonExistsFn     func(ctx context.Context, lessonID int) (bool, error)
 	getGroupIDByNameFn func(ctx context.Context, name string) (int, error)
 	searchLessonsFn    func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	getTeachersFn      func(ctx context.Context) ([]account.Account, error)
@@ -78,6 +79,13 @@ func (m *mockRepo) GetLessons(ctx context.Context, groupID int, from, to time.Ti
 		return m.getLessonsFn(ctx, groupID, from, to)
 	}
 	return nil, nil
+}
+
+func (m *mockRepo) LessonExists(ctx context.Context, lessonID int) (bool, error) {
+	if m.lessonExistsFn != nil {
+		return m.lessonExistsFn(ctx, lessonID)
+	}
+	return true, nil
 }
 
 func (m *mockRepo) GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {

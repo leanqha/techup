@@ -341,6 +341,17 @@ func (r *Repository) GetLessons(
 	return lessons, rows.Err()
 }
 
+func (r *Repository) LessonExists(ctx context.Context, lessonID int) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM lessons WHERE id=$1)`
+	err := r.db.QueryRow(ctx, query, lessonID).Scan(&exists)
+	if err != nil {
+		logger.LogSQLError(err, query, lessonID)
+		return false, err
+	}
+	return exists, nil
+}
+
 func (r *Repository) GetLessonNote(
 	ctx context.Context,
 	userID, lessonID int,
@@ -448,6 +459,11 @@ func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) (
 	if f.Classroom != nil {
 		conditions = append(conditions, fmt.Sprintf("l.classroom = $%d", i))
 		args = append(args, *f.Classroom)
+		i++
+	}
+	if f.Subject != nil {
+		conditions = append(conditions, fmt.Sprintf("l.subject ILIKE $%d", i))
+		args = append(args, "%"+*f.Subject+"%")
 		i++
 	}
 

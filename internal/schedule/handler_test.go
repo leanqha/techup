@@ -337,6 +337,17 @@ func TestLessonNoteHandlers(t *testing.T) {
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, saveOK)
 	assert.Equal(t, http.StatusOK, w.Code)
+
+	invalidIDReq := httptest.NewRequest(http.MethodGet, "/schedule/lessons/abc/note", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, invalidIDReq)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	invalidPostID := httptest.NewRequest(http.MethodPost, "/schedule/lessons/abc/note", bytes.NewBufferString("{}"))
+	invalidPostID.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, invalidPostID)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestImportScheduleHandler(t *testing.T) {
