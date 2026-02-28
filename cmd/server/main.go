@@ -117,6 +117,8 @@ func main() {
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(account.AuthMiddleware(), account.RequireRole("admin"))
 	{
+		adminGroup.GET("/accounts", accountHandler.AdminListAccounts)
+		adminGroup.PUT("/account/:id", accountHandler.AdminUpdateAccount)
 		adminGroup.DELETE("/account/:id", accountHandler.DeleteAccount)
 		adminGroup.POST("/set-role", accountHandler.SetRole)
 

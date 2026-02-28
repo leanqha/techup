@@ -15,6 +15,7 @@ type RepositoryInterface interface {
 	GetByEmail(ctx context.Context, email string) (*Account, error)
 	GetByID(ctx context.Context, id int) (*Account, error)
 	UpdateAccount(ctx context.Context, acc *Account) error
+	ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error)
 
 	SaveRefreshToken(ctx context.Context, token *RefreshToken) error
 	GetRefreshToken(ctx context.Context, token string) (*RefreshToken, error)
@@ -140,6 +141,53 @@ func (s *Service) UpdateProfile(ctx context.Context, userID int, req *UpdateProf
 		return nil, err
 	}
 	return acc, nil
+}
+
+func (s *Service) UpdateAccountAdmin(ctx context.Context, userID int, req *AdminUpdateAccountRequest) (*Account, error) {
+	acc, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Email != nil {
+		email := strings.TrimSpace(*req.Email)
+		if email == "" {
+			return nil, errors.New("email is required")
+		}
+		acc.Email = email
+	}
+	if req.FirstName != nil {
+		acc.FirstName = *req.FirstName
+	}
+	if req.MiddleName != nil {
+		acc.MiddleName = *req.MiddleName
+	}
+	if req.LastName != nil {
+		acc.LastName = *req.LastName
+	}
+	if req.Role != nil {
+		role := strings.TrimSpace(*req.Role)
+		if role == "" {
+			return nil, errors.New("role is required")
+		}
+		acc.Role = role
+	}
+	if req.GroupID != nil {
+		acc.GroupID = *req.GroupID
+	}
+	if req.IsVerified != nil {
+		acc.IsVerified = *req.IsVerified
+	}
+
+	if err := s.repo.UpdateAccount(ctx, acc); err != nil {
+		return nil, err
+	}
+
+	return acc, nil
+}
+
+func (s *Service) ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error) {
+	return s.repo.ListAccounts(ctx, f)
 }
 
 func (s *Service) SetRole(ctx context.Context, userID int, req *SetRoleRequest) error {

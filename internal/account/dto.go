@@ -56,3 +56,38 @@ type SetRoleRequest struct {
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
+
+// AdminAccountsFilter describes filters for admin account listing.
+type AdminAccountsFilter struct {
+	Role       *string
+	GroupID    *int
+	Email      *string
+	Name       *string
+	UID        *string
+	IsVerified *bool
+}
+
+// AdminUpdateAccountRequest describes payload for admin account updates.
+type AdminUpdateAccountRequest struct {
+	Email      *string `json:"email"`
+	FirstName  *string `json:"first_name"`
+	MiddleName *string `json:"middle_name"`
+	LastName   *string `json:"last_name"`
+	Role       *string `json:"role"`
+	GroupID    *int    `json:"group_id"`
+	IsVerified *bool   `json:"is_verified"`
+}
+
+// AdminAccountResponse represents an account payload for admin tools.
+type AdminAccountResponse struct {
+	ID         int    `json:"id"`
+	UID        string `json:"uid"`
+	Email      string `json:"email"`
+	FirstName  string `json:"first_name"`
+	MiddleName string `json:"middle_name"`
+	LastName   string `json:"last_name"`
+	Role       string `json:"role"`
+	IsVerified bool   `json:"is_verified"`
+	GroupID    int    `json:"group_id"`
+	GroupName  string `json:"group_name"`
+}

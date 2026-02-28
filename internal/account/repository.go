@@ -8,6 +8,7 @@ import (
 	"strings"
 	"techup/internal/logger"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -64,7 +65,7 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	var groupName sql.NullString
 
 	query := `
-		SELECT a.id, a.uid, a.email, a.password_hash, a.first_name, a.middle_name, a.last_name, a.role, g.name, a.group_id
+		SELECT a.id, a.uid, a.email, a.password_hash, a.first_name, a.middle_name, a.last_name, a.role, a.is_verified, g.name, a.group_id
 		FROM accounts a
 		LEFT JOIN groups g ON a.group_id = g.id
 		WHERE a.id = $1
@@ -73,9 +74,12 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&acc.ID, &acc.UID, &acc.Email, &acc.PasswordHash,
 		&acc.FirstName, &middleName, &acc.LastName, &acc.Role,
-		&groupName, &acc.GroupID,
+		&acc.IsVerified, &groupName, &acc.GroupID,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("account not found")
+		}
 		logger.LogSQLError(err, query, id)
 		return nil, err
 	}
@@ -99,8 +103,10 @@ func (r *Repository) UpdateAccount(ctx context.Context, acc *Account) error {
 		    last_name = $4,
 		    password_hash = $5,
 		    role = $6,
+		    group_id = $7,
+		    is_verified = $8,
 		    updated_at = NOW()
-		WHERE id = $7
+		WHERE id = $9
 	`
 
 	commandTag, err := r.db.Exec(ctx, query,
@@ -110,6 +116,8 @@ func (r *Repository) UpdateAccount(ctx context.Context, acc *Account) error {
 		acc.LastName,
 		acc.PasswordHash,
 		acc.Role,
+		acc.GroupID,
+		acc.IsVerified,
 		acc.ID,
 	)
 
@@ -187,4 +195,96 @@ func (r *Repository) DeleteAccount(ctx context.Context, id int) error {
 		return errors.New("account not found")
 	}
 	return nil
+}
+
+func (r *Repository) ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error) {
+	query := `
+		SELECT a.id, a.uid, a.email, a.first_name, a.middle_name, a.last_name, a.role, a.is_verified, a.group_id, g.name
+		FROM accounts a
+		LEFT JOIN groups g ON a.group_id = g.id
+	`
+
+	var conditions []string
+	var args []any
+	i := 1
+
+	if f.Role != nil {
+		conditions = append(conditions, fmt.Sprintf("a.role = $%d", i))
+		args = append(args, *f.Role)
+		i++
+	}
+	if f.GroupID != nil {
+		conditions = append(conditions, fmt.Sprintf("a.group_id = $%d", i))
+		args = append(args, *f.GroupID)
+		i++
+	}
+	if f.IsVerified != nil {
+		conditions = append(conditions, fmt.Sprintf("a.is_verified = $%d", i))
+		args = append(args, *f.IsVerified)
+		i++
+	}
+	if f.Email != nil {
+		conditions = append(conditions, fmt.Sprintf("a.email ILIKE $%d", i))
+		args = append(args, "%"+*f.Email+"%")
+		i++
+	}
+	if f.UID != nil {
+		conditions = append(conditions, fmt.Sprintf("a.uid ILIKE $%d", i))
+		args = append(args, "%"+*f.UID+"%")
+		i++
+	}
+	if f.Name != nil {
+		conditions = append(conditions, fmt.Sprintf("(a.first_name ILIKE $%d OR a.middle_name ILIKE $%d OR a.last_name ILIKE $%d)", i, i, i))
+		args = append(args, "%"+*f.Name+"%")
+		i++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query += " ORDER BY a.id"
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var accounts []Account
+	for rows.Next() {
+		var acc Account
+		var middleName sql.NullString
+		var groupName sql.NullString
+
+		if err := rows.Scan(
+			&acc.ID,
+			&acc.UID,
+			&acc.Email,
+			&acc.FirstName,
+			&middleName,
+			&acc.LastName,
+			&acc.Role,
+			&acc.IsVerified,
+			&acc.GroupID,
+			&groupName,
+		); err != nil {
+			return nil, err
+		}
+
+		if middleName.Valid {
+			acc.MiddleName = middleName.String
+		}
+		if groupName.Valid {
+			acc.GroupName = groupName.String
+		}
+
+		accounts = append(accounts, acc)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return accounts, nil
 }

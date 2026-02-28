@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"techup/config"
 	"techup/internal/logger"
 
@@ -22,6 +23,8 @@ type ServiceInterface interface {
 	RefreshTokens(ctx context.Context, refreshToken string) (string, string, error)
 	Logout(ctx context.Context, userID int) error
 	DeleteAccount(ctx context.Context, userID int) error
+	UpdateAccountAdmin(ctx context.Context, userID int, req *AdminUpdateAccountRequest) (*Account, error)
+	ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error)
 }
 
 type HandlerInterface interface {
@@ -34,6 +37,8 @@ type HandlerInterface interface {
 	Refresh(c *gin.Context)
 	Logout(c *gin.Context)
 	DeleteAccount(c *gin.Context)
+	AdminListAccounts(c *gin.Context)
+	AdminUpdateAccount(c *gin.Context)
 }
 
 type Handler struct {
@@ -427,4 +432,134 @@ func (h *Handler) DeleteAccount(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "account deleted"})
+}
+
+// AdminListAccounts godoc
+// @Summary      List accounts (admin only)
+// @Description  Return accounts filtered by optional criteria.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        role        query string false "Role"
+// @Param        group_id    query int    false "Group ID"
+// @Param        email       query string false "Email (partial match)"
+// @Param        uid         query string false "UID (partial match)"
+// @Param        name        query string false "Name (partial match)"
+// @Param        is_verified query bool   false "Verification status"
+// @Success      200 {array} AdminAccountResponse "Accounts list"
+// @Failure      400 {object} ErrorResponse "Invalid filter value"
+// @Failure      500 {object} ErrorResponse "Failed to load accounts"
+// @Router       /admin/accounts [get]
+func (h *Handler) AdminListAccounts(c *gin.Context) {
+	var f AdminAccountsFilter
+
+	if v := strings.TrimSpace(c.Query("role")); v != "" {
+		f.Role = &v
+	}
+	if v := strings.TrimSpace(c.Query("group_id")); v != "" {
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group_id"})
+			return
+		}
+		f.GroupID = &id
+	}
+	if v := strings.TrimSpace(c.Query("email")); v != "" {
+		f.Email = &v
+	}
+	if v := strings.TrimSpace(c.Query("uid")); v != "" {
+		f.UID = &v
+	}
+	if v := strings.TrimSpace(c.Query("name")); v != "" {
+		f.Name = &v
+	}
+	if v := strings.TrimSpace(c.Query("is_verified")); v != "" {
+		val, err := strconv.ParseBool(v)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid is_verified"})
+			return
+		}
+		f.IsVerified = &val
+	}
+
+	accounts, err := h.service.ListAccounts(c.Request.Context(), f)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp := make([]AdminAccountResponse, 0, len(accounts))
+	for _, acc := range accounts {
+		resp = append(resp, AdminAccountResponse{
+			ID:         acc.ID,
+			UID:        acc.UID,
+			Email:      acc.Email,
+			FirstName:  acc.FirstName,
+			MiddleName: acc.MiddleName,
+			LastName:   acc.LastName,
+			Role:       acc.Role,
+			IsVerified: acc.IsVerified,
+			GroupID:    acc.GroupID,
+			GroupName:  acc.GroupName,
+		})
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// AdminUpdateAccount godoc
+// @Summary      Update account info (admin only)
+// @Description  Update account fields by ID.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id   path int true "User ID"
+// @Param        body body AdminUpdateAccountRequest true "Account update payload"
+// @Success      200 {object} AdminAccountResponse "Updated account"
+// @Failure      400 {object} ErrorResponse "Invalid input"
+// @Failure      404 {object} ErrorResponse "Account not found"
+// @Failure      500 {object} ErrorResponse "Failed to update account"
+// @Router       /admin/account/{id} [put]
+func (h *Handler) AdminUpdateAccount(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	var req AdminUpdateAccountRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	if req.Email == nil && req.FirstName == nil && req.MiddleName == nil && req.LastName == nil &&
+		req.Role == nil && req.GroupID == nil && req.IsVerified == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no fields to update"})
+		return
+	}
+
+	acc, err := h.service.UpdateAccountAdmin(c.Request.Context(), id, &req)
+	if err != nil {
+		if err.Error() == "account not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, AdminAccountResponse{
+		ID:         acc.ID,
+		UID:        acc.UID,
+		Email:      acc.Email,
+		FirstName:  acc.FirstName,
+		MiddleName: acc.MiddleName,
+		LastName:   acc.LastName,
+		Role:       acc.Role,
+		IsVerified: acc.IsVerified,
+		GroupID:    acc.GroupID,
+		GroupName:  acc.GroupName,
+	})
 }

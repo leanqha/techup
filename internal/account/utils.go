@@ -1,6 +1,8 @@
 package account
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"techup/config"
@@ -25,6 +27,14 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
+func randomTokenID() (string, error) {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
+}
+
 func GenerateTokens(acc *Account) (string, string, error) {
 	secret := config.GetJWTSecret()
 	if secret == "" {
@@ -36,12 +46,22 @@ func GenerateTokens(acc *Account) (string, string, error) {
 
 	now := time.Now()
 
+	accessID, err := randomTokenID()
+	if err != nil {
+		return "", "", err
+	}
+	refreshID, err := randomTokenID()
+	if err != nil {
+		return "", "", err
+	}
+
 	accessClaims := TokenClaims{
 		UserID: acc.ID,
 		Role:   acc.Role,
 		UID:    acc.UID,
 		Type:   "access",
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        accessID,
 			ExpiresAt: jwt.NewNumericDate(now.Add(accessTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
@@ -59,6 +79,7 @@ func GenerateTokens(acc *Account) (string, string, error) {
 		UID:    acc.UID,
 		Type:   "refresh",
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        refreshID,
 			ExpiresAt: jwt.NewNumericDate(now.Add(refreshTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},

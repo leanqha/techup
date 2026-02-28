@@ -25,6 +25,8 @@ type MockService struct {
 	refreshErr  error
 	logoutErr   error
 	deleteErr   error
+	listErr     error
+	adminErr    error
 }
 
 func (m *MockService) Register(_ context.Context, req RegisterRequest) (*Account, string, string, error) {
@@ -130,6 +132,42 @@ func (m *MockService) DeleteAccount(ctx context.Context, userID int) error {
 		return errors.New("account not found")
 	}
 	return nil
+}
+
+func (m *MockService) UpdateAccountAdmin(ctx context.Context, userID int, req *AdminUpdateAccountRequest) (*Account, error) {
+	if m.adminErr != nil {
+		return nil, m.adminErr
+	}
+	if userID == 0 {
+		return nil, errors.New("account not found")
+	}
+	acc := &Account{ID: userID, UID: "uid1", Email: "admin@example.com", FirstName: "Admin", LastName: "User", Role: "student"}
+	if req.Email != nil {
+		acc.Email = *req.Email
+	}
+	if req.FirstName != nil {
+		acc.FirstName = *req.FirstName
+	}
+	if req.LastName != nil {
+		acc.LastName = *req.LastName
+	}
+	if req.Role != nil {
+		acc.Role = *req.Role
+	}
+	if req.GroupID != nil {
+		acc.GroupID = *req.GroupID
+	}
+	if req.IsVerified != nil {
+		acc.IsVerified = *req.IsVerified
+	}
+	return acc, nil
+}
+
+func (m *MockService) ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error) {
+	if m.listErr != nil {
+		return nil, m.listErr
+	}
+	return []Account{{ID: 1, UID: "uid1", Email: "one@example.com", FirstName: "One", LastName: "User", Role: "student"}}, nil
 }
 
 func setupRouter() (*gin.Engine, *Handler) {

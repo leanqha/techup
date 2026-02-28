@@ -71,6 +71,15 @@ func (m *MockRepo) UpdateAccount(_ context.Context, acc *Account) error {
 	m.accounts[acc.Email] = acc
 	return nil
 }
+
+func (m *MockRepo) ListAccounts(_ context.Context, _ AdminAccountsFilter) ([]Account, error) {
+	result := make([]Account, 0, len(m.accounts))
+	for _, acc := range m.accounts {
+		result = append(result, *acc)
+	}
+	return result, nil
+}
+
 func (m *MockRepo) SaveRefreshToken(_ context.Context, token *RefreshToken) error {
 	if m.saveRefreshErr != nil {
 		return m.saveRefreshErr
