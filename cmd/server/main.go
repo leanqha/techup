@@ -38,7 +38,8 @@ func main() {
 	logger.Log.Info().Msg("database connected")
 
 	accountRepo := account.NewRepository(db)
-	accountNotifier := account.NewLogPasswordResetNotifier(config.GetAppBaseURL())
+	var accountNotifier account.PasswordResetNotifier
+	accountNotifier = account.NewLogPasswordResetNotifier(config.GetAppBaseURL())
 	if config.GetSMTPHost() != "" && config.GetSMTPFrom() != "" {
 		accountNotifier = account.NewSMTPPasswordResetNotifier(account.SMTPConfig{
 			Host:       config.GetSMTPHost(),
