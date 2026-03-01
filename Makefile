@@ -24,16 +24,16 @@ restart:
 migrate: migrate-up
 
 migrate-up:
-	docker compose -f docker-compose.yml exec -w /app app goose -dir $(MIGRATIONS_DIR) $${GOOSE_DRIVER} "$${GOOSE_DBSTRING}" up
+	docker compose -f docker-compose.yml exec -w /app app sh -c 'goose -dir "$$GOOSE_MIGRATION_DIR" "$$GOOSE_DRIVER" "$$GOOSE_DBSTRING" up'
 
 migrate-down:
-	docker compose -f docker-compose.yml exec -w /app app goose -dir $(MIGRATIONS_DIR) $${GOOSE_DRIVER} "$${GOOSE_DBSTRING}" down
+	docker compose -f docker-compose.yml exec -w /app app sh -c 'goose -dir "$$GOOSE_MIGRATION_DIR" "$$GOOSE_DRIVER" "$$GOOSE_DBSTRING" down'
 
 migrate-status:
-	docker compose -f docker-compose.yml exec -w /app app goose -dir $(MIGRATIONS_DIR) $${GOOSE_DRIVER} "$${GOOSE_DBSTRING}" status
+	docker compose -f docker-compose.yml exec -w /app app sh -c 'goose -dir "$$GOOSE_MIGRATION_DIR" "$$GOOSE_DRIVER" "$$GOOSE_DBSTRING" status'
 
 migrate-version:
-	docker compose -f docker-compose.yml exec -w /app app goose -dir $(MIGRATIONS_DIR) $${GOOSE_DRIVER} "$${GOOSE_DBSTRING}" version
+	docker compose -f docker-compose.yml exec -w /app app sh -c 'goose -dir "$$GOOSE_MIGRATION_DIR" "$$GOOSE_DRIVER" "$$GOOSE_DBSTRING" version'
 
 psql:
 	docker compose -f docker-compose.yml exec db psql -U $${DB_USER} -d $${DB_NAME}
