@@ -382,10 +382,22 @@ func (h *Handler) Logout(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("access_token", "", -1, "/", config.GetDomain(), false, true)
-	c.SetCookie("refresh_token", "", -1, "/", config.GetDomain(), false, true)
+	clearAuthCookie(c, "access_token")
+	clearAuthCookie(c, "refresh_token")
 
 	c.JSON(http.StatusOK, gin.H{"message": "logout successful"})
+}
+
+func clearAuthCookie(c *gin.Context, name string) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     name,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	})
 }
 
 // ForgotPassword godoc
