@@ -24,16 +24,16 @@ restart:
 migrate: migrate-up
 
 migrate-up:
-	docker compose -f docker-compose.yml exec -w /app app sh -c 'goose -dir "$$GOOSE_MIGRATION_DIR" "$$GOOSE_DRIVER" "$$GOOSE_DBSTRING" up'
+	sh -c 'set -a; . ./.env; set +a; goose -dir "${GOOSE_MIGRATION_DIR:-./migrations}" "$$GOOSE_DRIVER" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" up'
 
 migrate-down:
-	docker compose -f docker-compose.yml exec -w /app app sh -c 'goose -dir "$$GOOSE_MIGRATION_DIR" "$$GOOSE_DRIVER" "$$GOOSE_DBSTRING" down'
+	sh -c 'set -a; . ./.env; set +a; goose -dir "${GOOSE_MIGRATION_DIR:-./migrations}" "$$GOOSE_DRIVER" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" down'
 
 migrate-status:
-	docker compose -f docker-compose.yml exec -w /app app sh -c 'goose -dir "$$GOOSE_MIGRATION_DIR" "$$GOOSE_DRIVER" "$$GOOSE_DBSTRING" status'
+	sh -c 'set -a; . ./.env; set +a; goose -dir "${GOOSE_MIGRATION_DIR:-./migrations}" "$$GOOSE_DRIVER" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" status'
 
 migrate-version:
-	docker compose -f docker-compose.yml exec -w /app app sh -c 'goose -dir "$$GOOSE_MIGRATION_DIR" "$$GOOSE_DRIVER" "$$GOOSE_DBSTRING" version'
+	sh -c 'set -a; . ./.env; set +a; goose -dir "${GOOSE_MIGRATION_DIR:-./migrations}" "$$GOOSE_DRIVER" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" version'
 
 psql:
 	docker compose -f docker-compose.yml exec db psql -U $${DB_USER} -d $${DB_NAME}
