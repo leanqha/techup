@@ -22,7 +22,7 @@ type mockService struct {
 	deleteLessonFn   func(ctx context.Context, id int) error
 	getLessonNoteFn  func(ctx context.Context, userID, lessonID int) (*LessonNote, error)
 	addLessonNoteFn  func(ctx context.Context, userID, lessonID int, text string) error
-	importScheduleFn func(ctx context.Context, lessons []Lesson) error
+	importScheduleFn func(ctx context.Context, lessons []LessonImport) error
 	searchLessonsFn  func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 }
 
@@ -100,7 +100,7 @@ func (m *mockService) AddLessonNote(ctx context.Context, userID, lessonID int, t
 	return nil
 }
 
-func (m *mockService) ImportSchedule(ctx context.Context, lessons []Lesson) error {
+func (m *mockService) ImportSchedule(ctx context.Context, lessons []LessonImport) error {
 	if m.importScheduleFn != nil {
 		return m.importScheduleFn(ctx, lessons)
 	}
@@ -360,8 +360,8 @@ func TestImportScheduleHandler(t *testing.T) {
 	r.ServeHTTP(w, invalidJSON)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	payload := []LessonRequest{{
-		Group:     1,
+	payload := []LessonImportRequest{{
+		Group:     "G-1",
 		Date:      "2026-02-30",
 		StartTime: "08:00",
 		EndTime:   "09:00",
@@ -376,7 +376,7 @@ func TestImportScheduleHandler(t *testing.T) {
 	r.ServeHTTP(w, invalidDate)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	svc.importScheduleFn = func(ctx context.Context, lessons []Lesson) error {
+	svc.importScheduleFn = func(ctx context.Context, lessons []LessonImport) error {
 		return errors.New("import failed")
 	}
 	payload[0].Date = "2026-02-01"

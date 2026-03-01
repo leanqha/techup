@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"techup/internal/account"
 	"time"
 )
@@ -199,11 +200,16 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 	return res, nil
 }
 
-func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
+func (s *Service) ImportSchedule(ctx context.Context, lessons []LessonImport) error {
 	for _, lesson := range lessons {
-		groupID, err := s.repo.GetGroupIDByName(ctx, strconv.Itoa(lesson.GroupID))
+		groupName := strings.TrimSpace(lesson.GroupName)
+		if groupName == "" {
+			return errors.New("group name is required")
+		}
+
+		groupID, err := s.repo.GetGroupIDByName(ctx, groupName)
 		if err != nil {
-			return fmt.Errorf("group not found: %d", lesson.GroupID)
+			return fmt.Errorf("group not found: %s", groupName)
 		}
 
 		l := Lesson{

@@ -26,7 +26,7 @@ type ServiceInterface interface {
 	DeleteGroup(ctx context.Context, id int) error
 	GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
 	AddLessonNote(ctx context.Context, userID, lessonID int, text string) error
-	ImportSchedule(ctx context.Context, lessons []Lesson) error
+	ImportSchedule(ctx context.Context, lessons []LessonImport) error
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	GetTeachers(ctx context.Context) ([]account.ProfileResponse, error)
 	GetClassrooms(ctx context.Context) ([]string, error)
@@ -508,19 +508,19 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 // @Security     ApiKeyAuth
 // @Accept       json
 // @Produce      json
-// @Param        lessons body []LessonRequest true "Lessons payload"
+// @Param        lessons body []LessonImportRequest true "Lessons payload"
 // @Success      201 {string} string "Created"
 // @Failure      400 {object} map[string]string "Invalid input"
 // @Failure      500 {object} map[string]string "Failed to import schedule"
 // @Router       /admin/schedule/import [post]
 func (h *Handler) ImportSchedule(c *gin.Context) {
-	var dtos []LessonRequest
+	var dtos []LessonImportRequest
 	if err := c.ShouldBindJSON(&dtos); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
-	lessons := make([]Lesson, 0, len(dtos))
+	lessons := make([]LessonImport, 0, len(dtos))
 	for _, dto := range dtos {
 		date, err := time.Parse("2006-01-02", dto.Date)
 		if err != nil {
@@ -538,8 +538,8 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 			return
 		}
 
-		lessons = append(lessons, Lesson{
-			GroupID:   dto.Group,
+		lessons = append(lessons, LessonImport{
+			GroupName: dto.Group,
 			TeacherID: dto.TeacherID,
 			Date:      date,
 			StartTime: startTime,

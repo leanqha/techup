@@ -207,7 +207,7 @@ func TestServiceImportSchedule(t *testing.T) {
 	var captured Lesson
 	repo := &mockRepo{
 		getGroupIDByNameFn: func(ctx context.Context, name string) (int, error) {
-			if name != "1" {
+			if name != "G-1" {
 				return 0, errors.New("not found")
 			}
 			return 42, nil
@@ -221,8 +221,8 @@ func TestServiceImportSchedule(t *testing.T) {
 
 	start := time.Date(2026, 2, 27, 9, 0, 0, 0, time.UTC)
 	end := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
-	lessons := []Lesson{{
-		GroupID:   1,
+	lessons := []LessonImport{{
+		GroupName: "G-1",
 		Date:      start,
 		StartTime: start,
 		EndTime:   end,

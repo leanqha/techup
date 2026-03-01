@@ -55,3 +55,14 @@ type LessonNote struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+type LessonImport struct {
+	GroupName string
+	Date      time.Time
+	StartTime time.Time
+	EndTime   time.Time
+	Subject   string
+	Type      string
+	TeacherID int
+	Classroom string
+}
