@@ -14,6 +14,9 @@ import (
 type MockRepo struct {
 	accounts       map[string]*Account
 	refreshTokens  map[string]*RefreshToken
+	resetByHash    map[string]*PasswordResetToken
+	resetByID      map[int]*PasswordResetToken
+	nextResetID    int
 	createErr      error
 	saveError      error
 	saveRefreshErr error
@@ -134,6 +137,52 @@ func (m *MockRepo) DeleteAccount(ctx context.Context, userID int) error {
 		}
 	}
 	return errors.New("account not found")
+}
+
+func (m *MockRepo) CreatePasswordResetToken(_ context.Context, token *PasswordResetToken) error {
+	if m.saveError != nil {
+		return m.saveError
+	}
+	if m.resetByHash == nil {
+		m.resetByHash = make(map[string]*PasswordResetToken)
+	}
+	if m.resetByID == nil {
+		m.resetByID = make(map[int]*PasswordResetToken)
+	}
+	m.nextResetID++
+	token.ID = m.nextResetID
+	token.CreatedAt = time.Now()
+	m.resetByHash[token.TokenHash] = token
+	m.resetByID[token.ID] = token
+	return nil
+}
+
+func (m *MockRepo) GetPasswordResetTokenByHash(_ context.Context, tokenHash string) (*PasswordResetToken, error) {
+	t, ok := m.resetByHash[tokenHash]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	return t, nil
+}
+
+func (m *MockRepo) MarkPasswordResetTokenUsed(_ context.Context, tokenID int) error {
+	t, ok := m.resetByID[tokenID]
+	if !ok {
+		return errors.New("not found")
+	}
+	now := time.Now()
+	t.UsedAt = &now
+	return nil
+}
+
+func (m *MockRepo) DeletePasswordResetTokens(_ context.Context, accountID int) error {
+	for hash, token := range m.resetByHash {
+		if token.AccountID == accountID {
+			delete(m.resetByHash, hash)
+			delete(m.resetByID, token.ID)
+		}
+	}
+	return nil
 }
 
 func TestRegisterAndLogin(t *testing.T) {

@@ -25,6 +25,8 @@ type ServiceInterface interface {
 	DeleteAccount(ctx context.Context, userID int) error
 	UpdateAccountAdmin(ctx context.Context, userID int, req *AdminUpdateAccountRequest) (*Account, error)
 	ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error)
+	RequestPasswordReset(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, token, newPassword string) error
 }
 
 type HandlerInterface interface {
@@ -39,6 +41,8 @@ type HandlerInterface interface {
 	DeleteAccount(c *gin.Context)
 	AdminListAccounts(c *gin.Context)
 	AdminUpdateAccount(c *gin.Context)
+	ForgotPassword(c *gin.Context)
+	ResetPassword(c *gin.Context)
 }
 
 type Handler struct {
@@ -562,4 +566,56 @@ func (h *Handler) AdminUpdateAccount(c *gin.Context) {
 		GroupID:    acc.GroupID,
 		GroupName:  acc.GroupName,
 	})
+}
+
+// ForgotPassword godoc
+// @Summary      Request a password reset
+// @Description  Send a password reset link if the account exists.
+// @Tags         Account
+// @Accept       json
+// @Produce      json
+// @Param        body body ForgotPasswordRequest true "Password reset request"
+// @Success      200 {object} map[string]string "Request confirmation message"
+// @Failure      400 {object} ErrorResponse "Invalid input"
+// @Failure      500 {object} ErrorResponse "Failed to request reset"
+// @Router       /account/forgot-password [post]
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	if err := h.service.RequestPasswordReset(c.Request.Context(), req.Email); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "if the account exists, a reset link has been sent"})
+}
+
+// ResetPassword godoc
+// @Summary      Reset password by token
+// @Description  Validate the reset token and set a new password.
+// @Tags         Account
+// @Accept       json
+// @Produce      json
+// @Param        body body ResetPasswordRequest true "Reset password payload"
+// @Success      200 {object} map[string]string "Reset confirmation message"
+// @Failure      400 {object} ErrorResponse "Invalid input or token"
+// @Failure      500 {object} ErrorResponse "Failed to reset password"
+// @Router       /account/reset-password [post]
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	if err := h.service.ResetPassword(c.Request.Context(), req.Token, req.NewPassword); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password reset successfully"})
 }

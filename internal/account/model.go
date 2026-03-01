@@ -25,3 +25,12 @@ type RefreshToken struct {
 	ExpiresAt time.Time `db:"expires_at"`
 	CreatedAt time.Time `db:"created_at"`
 }
+
+type PasswordResetToken struct {
+	ID        int
+	AccountID int
+	TokenHash string
+	ExpiresAt time.Time
+	UsedAt    *time.Time
+	CreatedAt time.Time
+}

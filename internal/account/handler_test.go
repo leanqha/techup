@@ -27,6 +27,8 @@ type MockService struct {
 	deleteErr   error
 	listErr     error
 	adminErr    error
+	resetReqErr error
+	resetErr    error
 }
 
 func (m *MockService) Register(_ context.Context, req RegisterRequest) (*Account, string, string, error) {
@@ -168,6 +170,29 @@ func (m *MockService) ListAccounts(ctx context.Context, f AdminAccountsFilter) (
 		return nil, m.listErr
 	}
 	return []Account{{ID: 1, UID: "uid1", Email: "one@example.com", FirstName: "One", LastName: "User", Role: "student"}}, nil
+}
+
+func (m *MockService) RequestPasswordReset(ctx context.Context, email string) error {
+	if m.resetReqErr != nil {
+		return m.resetReqErr
+	}
+	if email == "fail@example.com" {
+		return errors.New("reset request failed")
+	}
+	return nil
+}
+
+func (m *MockService) ResetPassword(ctx context.Context, token, newPassword string) error {
+	if m.resetErr != nil {
+		return m.resetErr
+	}
+	if token == "invalid" {
+		return errors.New("invalid token")
+	}
+	if newPassword == "" {
+		return errors.New("invalid password")
+	}
+	return nil
 }
 
 func setupRouter() (*gin.Engine, *Handler) {

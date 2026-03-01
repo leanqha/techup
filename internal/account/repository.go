@@ -197,6 +197,67 @@ func (r *Repository) DeleteAccount(ctx context.Context, id int) error {
 	return nil
 }
 
+func (r *Repository) CreatePasswordResetToken(ctx context.Context, token *PasswordResetToken) error {
+	query := `
+		INSERT INTO password_reset_tokens (account_id, token_hash, expires_at)
+		VALUES ($1, $2, $3)
+		RETURNING id, created_at
+	`
+	err := r.db.QueryRow(ctx, query, token.AccountID, token.TokenHash, token.ExpiresAt).
+		Scan(&token.ID, &token.CreatedAt)
+	if err != nil {
+		logger.LogSQLError(err, query, token.AccountID)
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) GetPasswordResetTokenByHash(ctx context.Context, tokenHash string) (*PasswordResetToken, error) {
+	query := `
+		SELECT id, account_id, token_hash, expires_at, used_at, created_at
+		FROM password_reset_tokens
+		WHERE token_hash = $1
+	`
+	row := r.db.QueryRow(ctx, query, tokenHash)
+	var t PasswordResetToken
+	var usedAt sql.NullTime
+	if err := row.Scan(&t.ID, &t.AccountID, &t.TokenHash, &t.ExpiresAt, &usedAt, &t.CreatedAt); err != nil {
+		logger.LogSQLError(err, query, tokenHash)
+		return nil, err
+	}
+	if usedAt.Valid {
+		t.UsedAt = &usedAt.Time
+	}
+	return &t, nil
+}
+
+func (r *Repository) MarkPasswordResetTokenUsed(ctx context.Context, tokenID int) error {
+	query := `
+		UPDATE password_reset_tokens
+		SET used_at = NOW()
+		WHERE id = $1 AND used_at IS NULL
+	`
+	ct, err := r.db.Exec(ctx, query, tokenID)
+	if err != nil {
+		logger.LogSQLError(err, query, tokenID)
+		return err
+	}
+	if ct.RowsAffected() != 1 {
+		return fmt.Errorf("password reset token not found")
+	}
+	return nil
+}
+
+func (r *Repository) DeletePasswordResetTokens(ctx context.Context, accountID int) error {
+	query := `DELETE FROM password_reset_tokens WHERE account_id = $1`
+	_, err := r.db.Exec(ctx, query, accountID)
+	if err != nil {
+		logger.LogSQLError(err, query, accountID)
+		return err
+	}
+	return nil
+}
+
 func (r *Repository) ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error) {
 	query := `
 		SELECT a.id, a.uid, a.email, a.first_name, a.middle_name, a.last_name, a.role, a.is_verified, a.group_id, g.name

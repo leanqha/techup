@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 	defer db.Close()
 
 	repo = account.NewRepository(db)
-	svc = account.NewService(repo)
+	svc = account.NewService(repo, account.NewNoopPasswordResetNotifier())
 
 	os.Exit(m.Run())
 }

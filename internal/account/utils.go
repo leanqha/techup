@@ -8,8 +8,6 @@ import (
 	"techup/config"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -20,11 +18,6 @@ type TokenClaims struct {
 	UID    string `json:"uid"`
 	Type   string `json:"type"`
 	jwt.RegisteredClaims
-}
-
-func CheckPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
 }
 
 func randomTokenID() (string, error) {

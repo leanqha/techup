@@ -2,6 +2,10 @@ package account
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"strings"
 	"techup/config"
@@ -22,14 +26,24 @@ type RepositoryInterface interface {
 	DeleteRefreshToken(ctx context.Context, token string) error
 	DeleteRefreshTokens(ctx context.Context, userID int) error
 	DeleteAccount(ctx context.Context, userID int) error
+
+	CreatePasswordResetToken(ctx context.Context, token *PasswordResetToken) error
+	GetPasswordResetTokenByHash(ctx context.Context, tokenHash string) (*PasswordResetToken, error)
+	MarkPasswordResetTokenUsed(ctx context.Context, tokenID int) error
+	DeletePasswordResetTokens(ctx context.Context, accountID int) error
 }
 
 type Service struct {
-	repo RepositoryInterface
+	repo     RepositoryInterface
+	notifier PasswordResetNotifier
 }
 
-func NewService(repo RepositoryInterface) *Service {
-	return &Service{repo: repo}
+func NewService(repo RepositoryInterface, notifier ...PasswordResetNotifier) *Service {
+	var n PasswordResetNotifier
+	if len(notifier) > 0 {
+		n = notifier[0]
+	}
+	return &Service{repo: repo, notifier: n}
 }
 
 func (s *Service) GetByID(ctx context.Context, id int) (*Account, error) {
@@ -263,4 +277,101 @@ func (s *Service) Logout(ctx context.Context, userID int) error {
 
 func (s *Service) DeleteAccount(ctx context.Context, userID int) error {
 	return s.repo.DeleteAccount(ctx, userID)
+}
+
+func (s *Service) RequestPasswordReset(ctx context.Context, email string) error {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return errors.New("email is required")
+	}
+
+	acc, err := s.repo.GetByEmail(ctx, email)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			return nil
+		}
+		return err
+	}
+
+	resetToken, err := generateResetToken()
+	if err != nil {
+		return err
+	}
+
+	tokenHash := hashResetToken(resetToken)
+	expiresAt := time.Now().Add(time.Duration(config.GetPasswordResetTokenTTLSeconds()) * time.Second)
+
+	if err := s.repo.DeletePasswordResetTokens(ctx, acc.ID); err != nil {
+		return err
+	}
+
+	if err := s.repo.CreatePasswordResetToken(ctx, &PasswordResetToken{
+		AccountID: acc.ID,
+		TokenHash: tokenHash,
+		ExpiresAt: expiresAt,
+	}); err != nil {
+		return err
+	}
+
+	if s.notifier != nil {
+		if err := s.notifier.SendPasswordReset(ctx, acc.Email, resetToken); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) error {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return errors.New("token is required")
+	}
+	if len(newPassword) < 8 {
+		return errors.New("new password must be at least 8 characters")
+	}
+
+	resetToken, err := s.repo.GetPasswordResetTokenByHash(ctx, hashResetToken(token))
+	if err != nil {
+		return errors.New("invalid or expired token")
+	}
+	if resetToken.UsedAt != nil || time.Now().After(resetToken.ExpiresAt) {
+		return errors.New("invalid or expired token")
+	}
+
+	acc, err := s.repo.GetByID(ctx, resetToken.AccountID)
+	if err != nil {
+		return err
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	acc.PasswordHash = string(hashed)
+	if err := s.repo.UpdateAccount(ctx, acc); err != nil {
+		return err
+	}
+
+	if err := s.repo.MarkPasswordResetTokenUsed(ctx, resetToken.ID); err != nil {
+		return err
+	}
+
+	_ = s.repo.DeleteRefreshTokens(ctx, acc.ID)
+	_ = s.repo.DeletePasswordResetTokens(ctx, acc.ID)
+	return nil
+}
+
+func generateResetToken() (string, error) {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+func hashResetToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }

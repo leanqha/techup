@@ -91,3 +91,14 @@ type AdminAccountResponse struct {
 	GroupID    int    `json:"group_id"`
 	GroupName  string `json:"group_name"`
 }
+
+// ForgotPasswordRequest describes payload for initiating a password reset.
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// ResetPasswordRequest describes payload for completing a password reset.
+type ResetPasswordRequest struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}

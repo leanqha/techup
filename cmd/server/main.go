@@ -38,7 +38,20 @@ func main() {
 	logger.Log.Info().Msg("database connected")
 
 	accountRepo := account.NewRepository(db)
-	accountSvc := account.NewService(accountRepo)
+	accountNotifier := account.NewLogPasswordResetNotifier(config.GetAppBaseURL())
+	if config.GetSMTPHost() != "" && config.GetSMTPFrom() != "" {
+		accountNotifier = account.NewSMTPPasswordResetNotifier(account.SMTPConfig{
+			Host:       config.GetSMTPHost(),
+			Port:       config.GetSMTPPort(),
+			Username:   config.GetSMTPUser(),
+			Password:   config.GetSMTPPassword(),
+			From:       config.GetSMTPFrom(),
+			UseTLS:     config.GetSMTPUseTLS(),
+			SkipVerify: config.GetSMTPSkipVerify(),
+			BaseURL:    config.GetAppBaseURL(),
+		}, nil)
+	}
+	accountSvc := account.NewService(accountRepo, accountNotifier)
 	accountHandler := account.NewHandler(accountSvc)
 
 	scheduleRepo := schedule.NewRepository(db)
@@ -80,6 +93,8 @@ func main() {
 	accountGroup.POST("/register", accountHandler.Register)
 	accountGroup.POST("/login", accountHandler.Login)
 	accountGroup.POST("/refresh", accountHandler.Refresh)
+	accountGroup.POST("/forgot-password", accountHandler.ForgotPassword)
+	accountGroup.POST("/reset-password", accountHandler.ResetPassword)
 
 	secureAccount := accountGroup.Group("/secure")
 	secureAccount.Use(account.AuthMiddleware())
