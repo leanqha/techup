@@ -1,7 +1,5 @@
 .PHONY: build up down logs restart migrate migrate-up migrate-down migrate-status migrate-version psql test cover tidy
 
-MIGRATIONS_DIR ?= /app/migrations
-
 build:
 	docker compose -f docker-compose.yml build
 
