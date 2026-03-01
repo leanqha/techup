@@ -21,7 +21,7 @@ type ServiceInterface interface {
 	ChangePassword(ctx context.Context, userID int, req *ChangePasswordRequest) error
 	SetRole(ctx context.Context, adminID int, req *SetRoleRequest) error
 	RefreshTokens(ctx context.Context, refreshToken string) (string, string, error)
-	Logout(ctx context.Context, userID int) error
+	Logout(ctx context.Context, userID int, refreshToken string) error
 	DeleteAccount(ctx context.Context, userID int) error
 	UpdateAccountAdmin(ctx context.Context, userID int, req *AdminUpdateAccountRequest) (*Account, error)
 	ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error)
@@ -369,16 +369,15 @@ func (h *Handler) SetRole(c *gin.Context) {
 // @Failure      500 {object} ErrorResponse "Logout error"
 // @Router       /account/secure/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
-	claimsRaw, exists := c.Get("claims")
-	if !exists {
+	userID, err := GetUserIDFromContext(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "not logged in"})
 		return
 	}
 
-	claims := claimsRaw.(jwt.MapClaims)
-	userID := int(claims["user_id"].(float64))
+	refreshToken, _ := c.Cookie("refresh_token")
 
-	if err := h.service.Logout(c.Request.Context(), userID); err != nil {
+	if err := h.service.Logout(c.Request.Context(), userID, refreshToken); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -387,6 +386,58 @@ func (h *Handler) Logout(c *gin.Context) {
 	c.SetCookie("refresh_token", "", -1, "/", config.GetDomain(), false, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "logout successful"})
+}
+
+// ForgotPassword godoc
+// @Summary      Request password reset
+// @Description  Send a password reset link/token to the user's email.
+// @Tags         Account
+// @Accept       json
+// @Produce      json
+// @Param        body body ForgotPasswordRequest true "Password reset request"
+// @Success      200 {object} map[string]string "Reset request accepted"
+// @Failure      400 {object} ErrorResponse "Invalid input"
+// @Failure      500 {object} ErrorResponse "Reset request error"
+// @Router       /account/forgot-password [post]
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	if err := h.service.RequestPasswordReset(c.Request.Context(), req.Email); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "reset request accepted"})
+}
+
+// ResetPassword godoc
+// @Summary      Reset password
+// @Description  Reset the user's password using a valid reset token.
+// @Tags         Account
+// @Accept       json
+// @Produce      json
+// @Param        body body ResetPasswordRequest true "Password reset payload"
+// @Success      200 {object} map[string]string "Password reset confirmation"
+// @Failure      400 {object} ErrorResponse "Invalid input or token"
+// @Failure      500 {object} ErrorResponse "Reset error"
+// @Router       /account/reset-password [post]
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	if err := h.service.ResetPassword(c.Request.Context(), req.Token, req.NewPassword); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password reset successful"})
 }
 
 // DeleteAccount godoc
@@ -546,11 +597,11 @@ func (h *Handler) AdminUpdateAccount(c *gin.Context) {
 
 	acc, err := h.service.UpdateAccountAdmin(c.Request.Context(), id, &req)
 	if err != nil {
-		if err.Error() == "account not found" {
+		if errors.Is(err, errors.New("account not found")) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
 			return
 		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -566,56 +617,4 @@ func (h *Handler) AdminUpdateAccount(c *gin.Context) {
 		GroupID:    acc.GroupID,
 		GroupName:  acc.GroupName,
 	})
-}
-
-// ForgotPassword godoc
-// @Summary      Request a password reset
-// @Description  Send a password reset link if the account exists.
-// @Tags         Account
-// @Accept       json
-// @Produce      json
-// @Param        body body ForgotPasswordRequest true "Password reset request"
-// @Success      200 {object} map[string]string "Request confirmation message"
-// @Failure      400 {object} ErrorResponse "Invalid input"
-// @Failure      500 {object} ErrorResponse "Failed to request reset"
-// @Router       /account/forgot-password [post]
-func (h *Handler) ForgotPassword(c *gin.Context) {
-	var req ForgotPasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
-		return
-	}
-
-	if err := h.service.RequestPasswordReset(c.Request.Context(), req.Email); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "if the account exists, a reset link has been sent"})
-}
-
-// ResetPassword godoc
-// @Summary      Reset password by token
-// @Description  Validate the reset token and set a new password.
-// @Tags         Account
-// @Accept       json
-// @Produce      json
-// @Param        body body ResetPasswordRequest true "Reset password payload"
-// @Success      200 {object} map[string]string "Reset confirmation message"
-// @Failure      400 {object} ErrorResponse "Invalid input or token"
-// @Failure      500 {object} ErrorResponse "Failed to reset password"
-// @Router       /account/reset-password [post]
-func (h *Handler) ResetPassword(c *gin.Context) {
-	var req ResetPasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
-		return
-	}
-
-	if err := h.service.ResetPassword(c.Request.Context(), req.Token, req.NewPassword); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "password reset successfully"})
 }

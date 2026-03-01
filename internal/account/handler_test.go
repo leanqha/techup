@@ -119,7 +119,7 @@ func (m *MockService) RefreshTokens(ctx context.Context, refreshToken string) (s
 	return "new-access", "new-refresh", nil
 }
 
-func (m *MockService) Logout(ctx context.Context, userID int) error {
+func (m *MockService) Logout(ctx context.Context, userID int, refreshToken string) error {
 	if m.logoutErr != nil {
 		return m.logoutErr
 	}
@@ -526,7 +526,7 @@ func TestLogoutServiceError(t *testing.T) {
 	mockSvc := &MockService{logoutErr: errors.New("logout failed")}
 	r, h := setupRouterWithService(mockSvc)
 	r.POST("/logout", func(c *gin.Context) {
-		c.Set("claims", jwt.MapClaims{"user_id": float64(1)})
+		c.Set("user_id", 1)
 		h.Logout(c)
 	})
 

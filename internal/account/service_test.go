@@ -284,7 +284,7 @@ func TestLogout(t *testing.T) {
 		ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
 	}
 
-	err := service.Logout(context.Background(), acc.ID)
+	err := service.Logout(context.Background(), acc.ID, refreshToken)
 	assert.NoError(t, err)
 
 	_, exists := repo.refreshTokens[refreshToken]
@@ -364,13 +364,13 @@ func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
 	assert.NotEmpty(t, newAccess)
 	assert.NotEmpty(t, newRefresh)
 
-	err = service.Logout(context.Background(), acc.ID)
+	err = service.Logout(context.Background(), acc.ID, refresh)
 	assert.NoError(t, err)
 	for _, rt := range repo.refreshTokens {
 		assert.NotEqual(t, acc.ID, rt.AccountID)
 	}
 
-	err = service.Logout(context.Background(), 999)
+	err = service.Logout(context.Background(), 999, "")
 	assert.NoError(t, err) // не должно падать, просто ничего не удаляет
 }
 
@@ -460,7 +460,7 @@ func TestLogoutRepoError(t *testing.T) {
 		deleteError: errors.New("db err"),
 	}
 	service := NewService(repo)
-	err := service.Logout(context.Background(), 1)
+	err := service.Logout(context.Background(), 1, "")
 	assert.Error(t, err)
 }
 

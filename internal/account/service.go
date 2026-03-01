@@ -220,8 +220,8 @@ func (s *Service) SetRole(ctx context.Context, userID int, req *SetRoleRequest) 
 	return s.repo.UpdateAccount(ctx, acc)
 }
 
-func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, string, error) {
-	claims, err := ParseToken(oldToken)
+func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (string, string, error) {
+	claims, err := ParseToken(refreshToken)
 	if err != nil {
 		return "", "", errors.New("invalid refresh token")
 	}
@@ -231,13 +231,13 @@ func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, s
 		return "", "", errors.New("invalid token type")
 	}
 
-	rt, err := s.repo.GetRefreshToken(ctx, oldToken)
+	rt, err := s.repo.GetRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return "", "", errors.New("invalid refresh token")
 	}
 
 	if time.Now().After(rt.ExpiresAt) {
-		_ = s.repo.DeleteRefreshToken(ctx, oldToken)
+		_ = s.repo.DeleteRefreshToken(ctx, refreshToken)
 		return "", "", errors.New("refresh token expired")
 	}
 
@@ -251,7 +251,7 @@ func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, s
 		return "", "", err
 	}
 
-	_ = s.repo.DeleteRefreshToken(ctx, oldToken)
+	_ = s.repo.DeleteRefreshToken(ctx, refreshToken)
 
 	err = s.repo.SaveRefreshToken(ctx, &RefreshToken{
 		AccountID: acc.ID,
@@ -268,9 +268,19 @@ func (s *Service) RefreshTokens(ctx context.Context, oldToken string) (string, s
 }
 
 // Logout clears all sessions
-func (s *Service) Logout(ctx context.Context, userID int) error {
-	if err := s.repo.DeleteRefreshTokens(ctx, userID); err != nil {
-		return err
+func (s *Service) Logout(ctx context.Context, userID int, refreshToken string) error {
+	if refreshToken != "" {
+		if err := s.repo.DeleteRefreshToken(ctx, refreshToken); err != nil {
+			return err
+		}
+	}
+	if userID > 0 {
+		if err := s.repo.DeleteRefreshTokens(ctx, userID); err != nil {
+			return err
+		}
+	}
+	if userID <= 0 && refreshToken == "" {
+		return errors.New("logout requires user ID or refresh token")
 	}
 	return nil
 }
