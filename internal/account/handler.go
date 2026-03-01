@@ -181,14 +181,15 @@ func (h *Handler) Profile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, ProfileResponse{
-		ID:        acc.ID,
-		UID:       acc.UID,
-		Email:     acc.Email,
-		FirstName: acc.FirstName,
-		LastName:  acc.LastName,
-		GroupID:   acc.GroupID,
-		GroupName: acc.GroupName,
-		Role:      acc.Role,
+		ID:         acc.ID,
+		UID:        acc.UID,
+		Email:      acc.Email,
+		FirstName:  acc.FirstName,
+		MiddleName: acc.MiddleName,
+		LastName:   acc.LastName,
+		GroupID:    acc.GroupID,
+		GroupName:  acc.GroupName,
+		Role:       acc.Role,
 	})
 }
 
