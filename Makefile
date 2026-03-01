@@ -1,5 +1,7 @@
 .PHONY: build up down logs restart migrate migrate-up migrate-down migrate-status migrate-version psql test cover tidy
 
+ENV_FILE ?= ./.env
+
 build:
 	docker compose -f docker-compose.yml build
 
@@ -22,16 +24,16 @@ restart:
 migrate: migrate-up
 
 migrate-up:
-	sh -c 'set -a; . ./.env; set +a; goose -dir "${GOOSE_MIGRATION_DIR:-./migrations}" "$$GOOSE_DRIVER" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" up'
+	sh -c 'export $$(grep -E "^[A-Za-z_][A-Za-z0-9_]*=" $(ENV_FILE) | sed -E "s/[[:space:]]+#.*$$//" | xargs); goose -dir "$${GOOSE_MIGRATION_DIR:-./migrations}" "$${GOOSE_DRIVER:-postgres}" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" up'
 
 migrate-down:
-	sh -c 'set -a; . ./.env; set +a; goose -dir "${GOOSE_MIGRATION_DIR:-./migrations}" "$$GOOSE_DRIVER" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" down'
+	sh -c 'export $$(grep -E "^[A-Za-z_][A-Za-z0-9_]*=" $(ENV_FILE) | sed -E "s/[[:space:]]+#.*$$//" | xargs); goose -dir "$${GOOSE_MIGRATION_DIR:-./migrations}" "$${GOOSE_DRIVER:-postgres}" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" down'
 
 migrate-status:
-	sh -c 'set -a; . ./.env; set +a; goose -dir "${GOOSE_MIGRATION_DIR:-./migrations}" "$$GOOSE_DRIVER" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" status'
+	sh -c 'export $$(grep -E "^[A-Za-z_][A-Za-z0-9_]*=" $(ENV_FILE) | sed -E "s/[[:space:]]+#.*$$//" | xargs); goose -dir "$${GOOSE_MIGRATION_DIR:-./migrations}" "$${GOOSE_DRIVER:-postgres}" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" status'
 
 migrate-version:
-	sh -c 'set -a; . ./.env; set +a; goose -dir "${GOOSE_MIGRATION_DIR:-./migrations}" "$$GOOSE_DRIVER" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" version'
+	sh -c 'export $$(grep -E "^[A-Za-z_][A-Za-z0-9_]*=" $(ENV_FILE) | sed -E "s/[[:space:]]+#.*$$//" | xargs); goose -dir "$${GOOSE_MIGRATION_DIR:-./migrations}" "$${GOOSE_DRIVER:-postgres}" "user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" version'
 
 psql:
 	docker compose -f docker-compose.yml exec db psql -U $${DB_USER} -d $${DB_NAME}
