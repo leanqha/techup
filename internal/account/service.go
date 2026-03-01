@@ -192,6 +192,13 @@ func (s *Service) UpdateAccountAdmin(ctx context.Context, userID int, req *Admin
 	if req.IsVerified != nil {
 		acc.IsVerified = *req.IsVerified
 	}
+	if req.UID != nil {
+		uid := strings.TrimSpace(*req.UID)
+		if uid == "" {
+			return nil, errors.New("uid is required")
+		}
+		acc.UID = uid
+	}
 
 	if err := s.repo.UpdateAccount(ctx, acc); err != nil {
 		return nil, err

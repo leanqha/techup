@@ -147,6 +147,9 @@ func (m *MockService) UpdateAccountAdmin(ctx context.Context, userID int, req *A
 	if req.Email != nil {
 		acc.Email = *req.Email
 	}
+	if req.UID != nil {
+		acc.UID = *req.UID
+	}
 	if req.FirstName != nil {
 		acc.FirstName = *req.FirstName
 	}

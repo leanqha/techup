@@ -69,6 +69,7 @@ type AdminAccountsFilter struct {
 
 // AdminUpdateAccountRequest describes payload for admin account updates.
 type AdminUpdateAccountRequest struct {
+	UID        *string `json:"uid"`
 	Email      *string `json:"email"`
 	FirstName  *string `json:"first_name"`
 	MiddleName *string `json:"middle_name"`

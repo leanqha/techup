@@ -57,8 +57,8 @@ func NewHandler(s ServiceInterface) *Handler {
 // @Summary      Register a new user account
 // @Description  Create a new account with email/password and profile details. Sets HTTP-only cookies (access_token, refresh_token).
 // @Tags         Account
-// @Accept       json
-// @Produce      json
+// @Accept       JSON
+// @Produce      JSON
 // @Param        register body RegisterRequest true "Registration details"
 // @Success      200 {object} map[string]interface{} "Message plus user profile"
 // @Failure      400 {object} ErrorResponse "Invalid input or registration error"
@@ -113,8 +113,8 @@ func (h *Handler) Register(c *gin.Context) {
 // @Summary      Authenticate user
 // @Description  Verify credentials and set HTTP-only cookies (access_token, refresh_token). Returns a confirmation message.
 // @Tags         Account
-// @Accept       json
-// @Produce      json
+// @Accept       JSON
+// @Produce      JSON
 // @Param        login body LoginRequest true "Login credentials"
 // @Success      200 {object} map[string]string "Login confirmation message"
 // @Failure      400 {object} ErrorResponse "Invalid input"
@@ -165,7 +165,7 @@ func (h *Handler) Login(c *gin.Context) {
 // @Description  Return profile data for the authenticated user.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Produce      json
+// @Produce      JSON
 // @Success      200 {object} ProfileResponse "User profile"
 // @Failure      401 {object} ErrorResponse "Unauthorized"
 // @Failure      404 {object} ErrorResponse "User not found"
@@ -197,7 +197,7 @@ func (h *Handler) Profile(c *gin.Context) {
 // @Summary      Refresh authentication tokens
 // @Description  Issue new access and refresh tokens using the refresh_token cookie; sets new HTTP-only cookies.
 // @Tags         Account
-// @Produce      json
+// @Produce      JSON
 // @Success      200 {object} map[string]string "Refresh confirmation message"
 // @Failure      400 {object} ErrorResponse "Refresh token not provided"
 // @Failure      401 {object} ErrorResponse "Invalid or expired refresh token"
@@ -245,8 +245,8 @@ func (h *Handler) Refresh(c *gin.Context) {
 // @Description  Change the password for the authenticated user. Requires current and new passwords.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Accept       json
-// @Produce      json
+// @Accept       JSON
+// @Produce      JSON
 // @Param        change body ChangePasswordRequest true "Password change payload"
 // @Success      200 {object} map[string]string "Password change confirmation message"
 // @Failure      400 {object} ErrorResponse "Invalid input or password change error"
@@ -324,7 +324,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 // @Tags         Account
 // @Security     ApiKeyAuth
 // @Accept       json
-// @Produce      json
+// @Produce      JSON
 // @Param        role body SetRoleRequest true "Role update payload"
 // @Success      200 {object} map[string]string "Role update confirmation message"
 // @Failure      400 {object} ErrorResponse "Invalid input or update error"
@@ -603,7 +603,7 @@ func (h *Handler) AdminUpdateAccount(c *gin.Context) {
 	}
 
 	if req.Email == nil && req.FirstName == nil && req.MiddleName == nil && req.LastName == nil &&
-		req.Role == nil && req.GroupID == nil && req.IsVerified == nil {
+		req.UID == nil && req.Role == nil && req.GroupID == nil && req.IsVerified == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no fields to update"})
 		return
 	}

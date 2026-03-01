@@ -97,19 +97,21 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 func (r *Repository) UpdateAccount(ctx context.Context, acc *Account) error {
 	query := `
 		UPDATE accounts
-		SET email = $1,
-		    first_name = $2,
-		    middle_name = $3,
-		    last_name = $4,
-		    password_hash = $5,
-		    role = $6,
-		    group_id = $7,
-		    is_verified = $8,
+		SET uid = $1,
+		    email = $2,
+		    first_name = $3,
+		    middle_name = $4,
+		    last_name = $5,
+		    password_hash = $6,
+		    role = $7,
+		    group_id = $8,
+		    is_verified = $9,
 		    updated_at = NOW()
-		WHERE id = $9
+		WHERE id = $10
 	`
 
 	commandTag, err := r.db.Exec(ctx, query,
+		acc.UID,
 		acc.Email,
 		acc.FirstName,
 		acc.MiddleName,
