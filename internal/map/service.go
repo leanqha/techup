@@ -5,11 +5,23 @@ import (
 	"fmt"
 )
 
-type Service struct {
-	repo *Repository
+type RepositoryInterface interface {
+	GetAllBuildings(ctx context.Context) ([]Building, error)
+	SearchRooms(ctx context.Context, room *Room, hasBuildingID, hasFloor bool) ([]Room, error)
+	GetConnections(ctx context.Context) ([]Connection, error)
+	AddRoom(ctx context.Context, room *Room) error
+	UpdateRoom(ctx context.Context, room *Room) error
+	DeleteRoom(ctx context.Context, id int) error
+	AddConnection(ctx context.Context, conn *Connection) error
+	UpdateConnection(ctx context.Context, conn *Connection) error
+	DeleteConnection(ctx context.Context, id int) error
 }
 
-func NewService(repo *Repository) *Service {
+type Service struct {
+	repo RepositoryInterface
+}
+
+func NewService(repo RepositoryInterface) *Service {
 	return &Service{repo: repo}
 }
 

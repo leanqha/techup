@@ -1,6 +1,7 @@
 package maps
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -8,13 +9,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type ServiceInterface interface {
+	GetAllBuildings(ctx context.Context) ([]Building, error)
+	FindPath(ctx context.Context, startRoom, endRoom string) ([]string, float64, error)
+	SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error)
+	AddRoom(ctx context.Context, name string, buildingID int, floor int) error
+	UpdateRoom(ctx context.Context, room Room) error
+	DeleteRoom(ctx context.Context, id int) error
+	AddConnection(ctx context.Context, connection Connection) error
+	UpdateConnection(ctx context.Context, connection Connection) error
+	DeleteConnection(ctx context.Context, id int) error
+}
+
 // Handler handles HTTP requests for the map module.
 type Handler struct {
-	service *Service
+	service ServiceInterface
 }
 
 // NewHandler creates a new Handler with the given Service.
-func NewHandler(service *Service) *Handler {
+func NewHandler(service ServiceInterface) *Handler {
 	return &Handler{service: service}
 }
 
@@ -22,7 +35,7 @@ func NewHandler(service *Service) *Handler {
 // @Summary Get all buildings
 // @Description Returns a list of all buildings
 // @Tags map
-// @Produce json
+// @Produce JSON
 // @Success 200 {array} Building
 // @Failure 500 {object} error
 // @Router /buildings [get]
@@ -39,7 +52,7 @@ func (h *Handler) GetBuildings(c *gin.Context) {
 // @Summary Get path between two rooms
 // @Description Calculates path between start_room_id and end_room_id
 // @Tags map
-// @Produce json
+// @Produce JSON
 // @Param start_room_id query int true "Start Room ID"
 // @Param end_room_id query int true "End Room ID"
 // @Success 200 {object} GetPathResponse
@@ -122,7 +135,7 @@ func (h *Handler) DeleteRoom(c *gin.Context) {
 // @Summary Search rooms
 // @Description Returns rooms filtered by building_id and/or floor
 // @Tags map
-// @Produce json
+// @Produce JSON
 // @Param building_id query int false "Building ID"
 // @Param floor query int false "Floor number"
 // @Success 200 {array} Room
