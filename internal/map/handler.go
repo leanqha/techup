@@ -3,6 +3,7 @@ package maps
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -73,7 +74,48 @@ func (h *Handler) AddRoom(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "room added"})
+	c.Status(http.StatusCreated)
+}
+
+func (h *Handler) UpdateRoom(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req AddRoomRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.UpdateRoom(c.Request.Context(), Room{
+		ID:         id,
+		Name:       req.Name,
+		BuildingID: req.BuildingID,
+		Floor:      req.Floor,
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (h *Handler) DeleteRoom(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := h.service.DeleteRoom(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 // SearchRooms godoc
@@ -120,11 +162,64 @@ func (h *Handler) SearchRooms(c *gin.Context) {
 	c.JSON(http.StatusOK, rooms)
 }
 
-func (h *Handler) AddConnections(c *gin.Context) {
+func (h *Handler) AddConnection(c *gin.Context) {
 	var req AddConnectionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "room added"})
+
+	if err := h.service.AddConnection(c.Request.Context(), Connection{
+		RoomFrom: req.RoomFrom,
+		RoomTo:   req.RoomTo,
+		Distance: req.Distance,
+		Type:     req.Type,
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusCreated)
+}
+
+func (h *Handler) UpdateConnection(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req AddConnectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.UpdateConnection(c.Request.Context(), Connection{
+		ID:       id,
+		RoomFrom: req.RoomFrom,
+		RoomTo:   req.RoomTo,
+		Distance: req.Distance,
+		Type:     req.Type,
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (h *Handler) DeleteConnection(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := h.service.DeleteConnection(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
