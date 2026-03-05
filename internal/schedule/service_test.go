@@ -9,6 +9,7 @@ import (
 
 	"techup/internal/account"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +17,9 @@ type mockRepo struct {
 	addLessonFn        func(ctx context.Context, lesson Lesson) error
 	updateLessonFn     func(ctx context.Context, lesson Lesson) error
 	getLessonsFn       func(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
-	addLessonNoteFn    func(ctx context.Context, userID, lessonID int, text string) error
+	addNoteFn          func(ctx context.Context, userID, lessonID int, text string) error
+	updateNoteFn       func(ctx context.Context, userID, lessonID int, text string) error
+	deleteNoteFn       func(ctx context.Context, userID, lessonID int) error
 	lessonExistsFn     func(ctx context.Context, lessonID int) (bool, error)
 	getGroupIDByNameFn func(ctx context.Context, name string) (int, error)
 	searchLessonsFn    func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
@@ -88,13 +91,27 @@ func (m *mockRepo) LessonExists(ctx context.Context, lessonID int) (bool, error)
 	return true, nil
 }
 
-func (m *mockRepo) GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+func (m *mockRepo) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
 	return nil, nil
 }
 
-func (m *mockRepo) AddLessonNote(ctx context.Context, userID, lessonID int, text string) error {
-	if m.addLessonNoteFn != nil {
-		return m.addLessonNoteFn(ctx, userID, lessonID, text)
+func (m *mockRepo) AddNote(ctx context.Context, userID, lessonID int, text string) error {
+	if m.addNoteFn != nil {
+		return m.addNoteFn(ctx, userID, lessonID, text)
+	}
+	return nil
+}
+
+func (m *mockRepo) UpdateNote(ctx context.Context, userID, lessonID int, text string) error {
+	if m.updateNoteFn != nil {
+		return m.updateNoteFn(ctx, userID, lessonID, text)
+	}
+	return nil
+}
+
+func (m *mockRepo) DeleteNote(ctx context.Context, userID, lessonID int) error {
+	if m.deleteNoteFn != nil {
+		return m.deleteNoteFn(ctx, userID, lessonID)
 	}
 	return nil
 }
@@ -190,7 +207,7 @@ func TestServiceGetLessonsDateValidation(t *testing.T) {
 func TestServiceAddLessonNoteValidation(t *testing.T) {
 	called := false
 	repo := &mockRepo{
-		addLessonNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
+		addNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
 			called = true
 			return nil
 		},
@@ -198,16 +215,50 @@ func TestServiceAddLessonNoteValidation(t *testing.T) {
 	service := NewService(repo)
 
 	text := strings.Repeat("a", 5001)
-	err := service.AddLessonNote(context.Background(), 1, 2, text)
+	err := service.AddNote(context.Background(), 1, 2, text)
 	assert.Error(t, err)
 	assert.False(t, called)
+}
+
+func TestServiceUpdateNoteValidationAndNotFound(t *testing.T) {
+	called := false
+	repo := &mockRepo{
+		updateNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
+			called = true
+			return nil
+		},
+	}
+	service := NewService(repo)
+
+	text := strings.Repeat("a", 5001)
+	err := service.UpdateNote(context.Background(), 1, 2, text)
+	assert.ErrorIs(t, err, ErrNoteTooLong)
+	assert.False(t, called)
+
+	repo.updateNoteFn = func(ctx context.Context, userID, lessonID int, text string) error {
+		return pgx.ErrNoRows
+	}
+	err = service.UpdateNote(context.Background(), 1, 2, "ok")
+	assert.ErrorIs(t, err, ErrNoteNotFound)
+}
+
+func TestServiceDeleteNoteNotFound(t *testing.T) {
+	repo := &mockRepo{
+		deleteNoteFn: func(ctx context.Context, userID, lessonID int) error {
+			return pgx.ErrNoRows
+		},
+	}
+	service := NewService(repo)
+
+	err := service.DeleteNote(context.Background(), 1, 2)
+	assert.ErrorIs(t, err, ErrNoteNotFound)
 }
 
 func TestServiceImportSchedule(t *testing.T) {
 	var captured Lesson
 	repo := &mockRepo{
 		getGroupIDByNameFn: func(ctx context.Context, name string) (int, error) {
-			if name != "1" {
+			if name != "G-1" {
 				return 0, errors.New("not found")
 			}
 			return 42, nil
@@ -221,8 +272,8 @@ func TestServiceImportSchedule(t *testing.T) {
 
 	start := time.Date(2026, 2, 27, 9, 0, 0, 0, time.UTC)
 	end := time.Date(2026, 2, 27, 10, 0, 0, 0, time.UTC)
-	lessons := []Lesson{{
-		GroupID:   1,
+	lessons := []LessonImport{{
+		GroupName: "G-1",
 		Date:      start,
 		StartTime: start,
 		EndTime:   end,
@@ -284,7 +335,7 @@ func TestServiceSearchLessons(t *testing.T) {
 func TestServiceGetTeachersAndClassrooms(t *testing.T) {
 	repo := &mockRepo{
 		getTeachersFn: func(ctx context.Context) ([]account.Account, error) {
-			return []account.Account{{ID: 1, Email: "t@example.com"}}, nil
+			return []account.Account{{ID: 1, Email: "t@example.com", Role: "teacher"}}, nil
 		},
 		getClassroomsFn: func(ctx context.Context) ([]string, error) {
 			return []string{"101", "102"}, nil
@@ -294,7 +345,11 @@ func TestServiceGetTeachersAndClassrooms(t *testing.T) {
 
 	teachers, err := service.GetTeachers(context.Background())
 	assert.NoError(t, err)
-	assert.Len(t, teachers, 1)
+	if assert.Len(t, teachers, 1) {
+		assert.Equal(t, 1, teachers[0].ID)
+		assert.Equal(t, "t@example.com", teachers[0].Email)
+		assert.Equal(t, "teacher", teachers[0].Role)
+	}
 
 	rooms, err := service.GetClassrooms(context.Background())
 	assert.NoError(t, err)

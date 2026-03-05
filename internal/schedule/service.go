@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"techup/internal/account"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type RepositoryInterface interface {
@@ -24,8 +27,10 @@ type RepositoryInterface interface {
 	UpdateLesson(ctx context.Context, lesson Lesson) error
 	DeleteLesson(ctx context.Context, id int) error
 	GetLessons(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
-	GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
-	AddLessonNote(ctx context.Context, userID, lessonID int, text string) error
+	GetNote(ctx context.Context, userID, lessonID int) (*Note, error)
+	AddNote(ctx context.Context, userID, lessonID int, text string) error
+	UpdateNote(ctx context.Context, userID, lessonID int, text string) error
+	DeleteNote(ctx context.Context, userID, lessonID int) error
 	LessonExists(ctx context.Context, lessonID int) (bool, error)
 	GetGroupIDByName(ctx context.Context, name string) (int, error)
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
@@ -115,8 +120,9 @@ func (s *Service) GetLessons(
 
 var ErrNoteTooLong = errors.New("note is too long")
 var ErrLessonNotFound = errors.New("lesson not found")
+var ErrNoteNotFound = errors.New("note not found")
 
-func (s *Service) GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+func (s *Service) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
 	exists, err := s.repo.LessonExists(ctx, lessonID)
 	if err != nil {
 		return nil, err
@@ -125,10 +131,10 @@ func (s *Service) GetLessonNote(ctx context.Context, userID, lessonID int) (*Les
 		return nil, ErrLessonNotFound
 	}
 
-	return s.repo.GetLessonNote(ctx, userID, lessonID)
+	return s.repo.GetNote(ctx, userID, lessonID)
 }
 
-func (s *Service) AddLessonNote(ctx context.Context, userID, lessonID int, text string) error {
+func (s *Service) AddNote(ctx context.Context, userID, lessonID int, text string) error {
 	if len(text) > 5000 {
 		return ErrNoteTooLong
 	}
@@ -141,7 +147,43 @@ func (s *Service) AddLessonNote(ctx context.Context, userID, lessonID int, text 
 		return ErrLessonNotFound
 	}
 
-	return s.repo.AddLessonNote(ctx, userID, lessonID, text)
+	return s.repo.AddNote(ctx, userID, lessonID, text)
+}
+
+func (s *Service) UpdateNote(ctx context.Context, userID, lessonID int, text string) error {
+	if len(text) > 5000 {
+		return ErrNoteTooLong
+	}
+
+	exists, err := s.repo.LessonExists(ctx, lessonID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrLessonNotFound
+	}
+
+	err = s.repo.UpdateNote(ctx, userID, lessonID, text)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNoteNotFound
+	}
+	return err
+}
+
+func (s *Service) DeleteNote(ctx context.Context, userID, lessonID int) error {
+	exists, err := s.repo.LessonExists(ctx, lessonID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrLessonNotFound
+	}
+
+	err = s.repo.DeleteNote(ctx, userID, lessonID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNoteNotFound
+	}
+	return err
 }
 
 func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
@@ -199,11 +241,16 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 	return res, nil
 }
 
-func (s *Service) ImportSchedule(ctx context.Context, lessons []Lesson) error {
+func (s *Service) ImportSchedule(ctx context.Context, lessons []LessonImport) error {
 	for _, lesson := range lessons {
-		groupID, err := s.repo.GetGroupIDByName(ctx, strconv.Itoa(lesson.GroupID))
+		groupName := strings.TrimSpace(lesson.GroupName)
+		if groupName == "" {
+			return errors.New("group name is required")
+		}
+
+		groupID, err := s.repo.GetGroupIDByName(ctx, groupName)
 		if err != nil {
-			return fmt.Errorf("group not found: %d", lesson.GroupID)
+			return fmt.Errorf("group not found: %s", groupName)
 		}
 
 		l := Lesson{
@@ -228,8 +275,28 @@ func (s *Service) SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]L
 	return s.repo.SearchLessons(ctx, f)
 }
 
-func (s *Service) GetTeachers(ctx context.Context) ([]account.Account, error) {
-	return s.repo.GetTeachers(ctx)
+func (s *Service) GetTeachers(ctx context.Context) ([]account.ProfileResponse, error) {
+	teachers, err := s.repo.GetTeachers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]account.ProfileResponse, 0, len(teachers))
+	for _, acc := range teachers {
+		res = append(res, account.ProfileResponse{
+			ID:         acc.ID,
+			UID:        acc.UID,
+			Email:      acc.Email,
+			FirstName:  acc.FirstName,
+			MiddleName: acc.MiddleName,
+			LastName:   acc.LastName,
+			GroupID:    acc.GroupID,
+			GroupName:  acc.GroupName,
+			Role:       acc.Role,
+		})
+	}
+
+	return res, nil
 }
 
 func (s *Service) GetClassrooms(ctx context.Context) ([]string, error) {

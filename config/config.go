@@ -4,15 +4,30 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 )
 
 func LoadEnv() error {
-	if err := godotenv.Load(); err != nil {
-		return fmt.Errorf("failed to load .env: %w", err)
+	envFile := strings.TrimSpace(os.Getenv("ENV_FILE"))
+	if envFile == "" {
+		envFile = ".env"
 	}
+
+	if _, err := os.Stat(envFile); err != nil {
+		if os.IsNotExist(err) {
+			// In CI/prod we rely on process environment variables.
+			return nil
+		}
+		return fmt.Errorf("failed to access env file %q: %w", envFile, err)
+	}
+
+	if err := godotenv.Overload(envFile); err != nil {
+		return fmt.Errorf("failed to load env file %q: %w", envFile, err)
+	}
+
 	return nil
 }
 
@@ -58,4 +73,50 @@ func GetRefreshTokenTTLSeconds() int {
 		minutes = 10080
 	}
 	return minutes * int(time.Minute/time.Second)
+}
+
+func GetAppBaseURL() string {
+	return os.Getenv("APP_BASE_URL")
+}
+
+func GetPasswordResetTokenTTLSeconds() int {
+	minutes, _ := strconv.Atoi(os.Getenv("PASSWORD_RESET_TTL_MINUTES"))
+	if minutes == 0 {
+		minutes = 30
+	}
+	return minutes * int(time.Minute/time.Second)
+}
+
+func GetSMTPHost() string {
+	return os.Getenv("SMTP_HOST")
+}
+
+func GetSMTPPort() int {
+	port, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+	if port == 0 {
+		port = 587
+	}
+	return port
+}
+
+func GetSMTPUser() string {
+	return os.Getenv("SMTP_USER")
+}
+
+func GetSMTPPassword() string {
+	return os.Getenv("SMTP_PASS")
+}
+
+func GetSMTPFrom() string {
+	return os.Getenv("SMTP_FROM")
+}
+
+func GetSMTPUseTLS() bool {
+	val, _ := strconv.ParseBool(os.Getenv("SMTP_USE_TLS"))
+	return val
+}
+
+func GetSMTPSkipVerify() bool {
+	val, _ := strconv.ParseBool(os.Getenv("SMTP_SKIP_VERIFY"))
+	return val
 }

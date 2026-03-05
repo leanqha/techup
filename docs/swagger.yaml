@@ -1,5 +1,156 @@
 basePath: /api/v1
 definitions:
+  account.AdminAccountResponse:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      group_id:
+        type: integer
+      group_name:
+        type: string
+      id:
+        type: integer
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      role:
+        type: string
+      uid:
+        type: string
+    type: object
+  account.AdminUpdateAccountRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      group_id:
+        type: integer
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      role:
+        type: string
+      uid:
+        type: string
+    type: object
+  account.ChangePasswordRequest:
+    properties:
+      new_password:
+        example: newpass123
+        type: string
+      old_password:
+        example: currentpass
+        type: string
+    type: object
+  account.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  account.ForgotPasswordRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  account.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: strongpassword
+        type: string
+    type: object
+  account.ProfileResponse:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      first_name:
+        example: John
+        type: string
+      group_id:
+        example: 1
+        type: integer
+      group_name:
+        example: Group 1234
+        type: string
+      id:
+        example: 1
+        type: integer
+      last_name:
+        example: Doe
+        type: string
+      middle_name:
+        example: Jane
+        type: string
+      role:
+        example: student
+        type: string
+      uid:
+        example: "123456"
+        type: string
+    type: object
+  account.RegisterRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    type: object
+  account.ResetPasswordRequest:
+    properties:
+      new_password:
+        minLength: 8
+        type: string
+      token:
+        type: string
+    required:
+    - new_password
+    - token
+    type: object
+  account.SetRoleRequest:
+    properties:
+      role:
+        example: teacher
+        type: string
+      user_id:
+        example: 7
+        type: integer
+    type: object
+  account.UpdateProfileRequest:
+    properties:
+      email:
+        example: newemail@example.com
+        type: string
+      first_name:
+        example: John
+        type: string
+      last_name:
+        example: Doe
+        type: string
+    type: object
   maps.Building:
     properties:
       address:
@@ -29,13 +180,958 @@ definitions:
       name:
         type: string
     type: object
-host: localhost:8080
+  schedule.Faculty:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  schedule.Group:
+    properties:
+      course:
+        type: integer
+      degree:
+        description: бакалавриат / магистратура
+        type: string
+      facultyID:
+        type: integer
+      id:
+        type: integer
+      isActive:
+        type: boolean
+      name:
+        type: string
+      specialization:
+        type: string
+      yearStart:
+        type: integer
+    type: object
+  schedule.GroupDTO:
+    properties:
+      course:
+        type: integer
+      degree:
+        type: string
+      faculty_id:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      specialization:
+        type: string
+      year_start:
+        type: integer
+    type: object
+  schedule.LessonImportRequest:
+    properties:
+      classroom:
+        type: string
+      date:
+        description: 'format: YYYY-MM-DD'
+        type: string
+      end_time:
+        description: 'format: HH:MM'
+        type: string
+      group:
+        type: string
+      start_time:
+        description: 'format: HH:MM'
+        type: string
+      subject:
+        type: string
+      teacher_id:
+        type: integer
+      type:
+        type: string
+    required:
+    - classroom
+    - date
+    - end_time
+    - group
+    - start_time
+    - subject
+    - type
+    type: object
+  schedule.LessonRequest:
+    properties:
+      classroom:
+        type: string
+      date:
+        description: 'format: YYYY-MM-DD'
+        type: string
+      end_time:
+        description: 'format: HH:MM'
+        type: string
+      group:
+        type: integer
+      start_time:
+        description: 'format: HH:MM'
+        type: string
+      subject:
+        type: string
+      teacher_id:
+        type: integer
+      type:
+        type: string
+    required:
+    - classroom
+    - date
+    - end_time
+    - group
+    - start_time
+    - subject
+    - type
+    type: object
+  schedule.LessonResponse:
+    properties:
+      classroom:
+        type: string
+      date:
+        type: string
+      end_time:
+        type: string
+      group:
+        $ref: '#/definitions/schedule.GroupDTO'
+      id:
+        type: integer
+      start_time:
+        type: string
+      subject:
+        type: string
+      teacher:
+        $ref: '#/definitions/schedule.TeacherDTO'
+      type:
+        type: string
+    type: object
+  schedule.Note:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      lesson_id:
+        type: integer
+      text:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  schedule.TeacherDTO:
+    properties:
+      first_name:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      middle_name:
+        type: string
+    type: object
 info:
   contact: {}
   description: Backend API for the TechUp university application.
+  license:
+    name: MIT
   title: TechUp API
   version: "1.0"
 paths:
+  /account/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Send a password reset link/token to the user's email.
+      parameters:
+      - description: Password reset request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reset request accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "500":
+          description: Reset request error
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - Account
+  /account/login:
+    post:
+      consumes:
+      - application/json
+      description: Verify credentials and set HTTP-only cookies (access_token, refresh_token).
+        Returns a confirmation message.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/account.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login confirmation message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      summary: Authenticate user
+      tags:
+      - Account
+  /account/refresh:
+    post:
+      description: Issue new access and refresh tokens using the refresh_token cookie;
+        sets new HTTP-only cookies.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Refresh confirmation message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Refresh token not provided
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      summary: Refresh authentication tokens
+      tags:
+      - Account
+  /account/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new account with email/password and profile details. Sets
+        HTTP-only cookies (access_token, refresh_token).
+      parameters:
+      - description: Registration details
+        in: body
+        name: register
+        required: true
+        schema:
+          $ref: '#/definitions/account.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message plus user profile
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input or registration error
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      summary: Register a new user account
+      tags:
+      - Account
+  /account/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset the user's password using a valid reset token.
+      parameters:
+      - description: Password reset payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset confirmation
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input or token
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "500":
+          description: Reset error
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      summary: Reset password
+      tags:
+      - Account
+  /account/secure/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change the password for the authenticated user. Requires current
+        and new passwords.
+      parameters:
+      - description: Password change payload
+        in: body
+        name: change
+        required: true
+        schema:
+          $ref: '#/definitions/account.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password change confirmation message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input or password change error
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Change user password
+      tags:
+      - Account
+  /account/secure/logout:
+    post:
+      description: Revoke refresh tokens, clear auth cookies, and return a confirmation
+        message.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout confirmation message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "500":
+          description: Logout error
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Logout user
+      tags:
+      - Account
+  /account/secure/profile:
+    get:
+      description: Return profile data for the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile
+          schema:
+            $ref: '#/definitions/account.ProfileResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get current user profile
+      tags:
+      - Account
+  /account/secure/update:
+    put:
+      consumes:
+      - application/json
+      description: Update profile fields for the authenticated user and return the
+        updated profile.
+      parameters:
+      - description: Profile update payload
+        in: body
+        name: update
+        required: true
+        schema:
+          $ref: '#/definitions/account.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated user profile
+          schema:
+            $ref: '#/definitions/account.ProfileResponse'
+        "400":
+          description: Invalid input or update error
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update current user profile
+      tags:
+      - Account
+  /admin/account/{id}:
+    delete:
+      description: Delete an account by ID. Admins can delete any account; users can
+        delete their own.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deletion confirmation message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid user ID
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "404":
+          description: Account not found
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "500":
+          description: Deletion error
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete a user account
+      tags:
+      - Account
+    put:
+      consumes:
+      - application/json
+      description: Update account fields by ID.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Account update payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account.AdminUpdateAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated account
+          schema:
+            $ref: '#/definitions/account.AdminAccountResponse'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "404":
+          description: Account not found
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "500":
+          description: Failed to update account
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update account info (admin only)
+      tags:
+      - Account
+  /admin/accounts:
+    get:
+      description: Return accounts filtered by optional criteria.
+      parameters:
+      - description: Role
+        in: query
+        name: role
+        type: string
+      - description: Group ID
+        in: query
+        name: group_id
+        type: integer
+      - description: Email (partial match)
+        in: query
+        name: email
+        type: string
+      - description: UID (partial match)
+        in: query
+        name: uid
+        type: string
+      - description: Name (partial match)
+        in: query
+        name: name
+        type: string
+      - description: Verification status
+        in: query
+        name: is_verified
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Accounts list
+          schema:
+            items:
+              $ref: '#/definitions/account.AdminAccountResponse'
+            type: array
+        "400":
+          description: Invalid filter value
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "500":
+          description: Failed to load accounts
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List accounts (admin only)
+      tags:
+      - Account
+  /admin/faculty:
+    post:
+      consumes:
+      - application/json
+      description: Add a new faculty.
+      parameters:
+      - description: Faculty payload
+        in: body
+        name: faculty
+        required: true
+        schema:
+          $ref: '#/definitions/schedule.Faculty'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Created faculty
+          schema:
+            $ref: '#/definitions/schedule.Faculty'
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create faculty
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create a faculty (admin only)
+      tags:
+      - Schedule
+  /admin/faculty/{id}:
+    delete:
+      description: Delete a faculty by ID.
+      parameters:
+      - description: Faculty ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "500":
+          description: Failed to delete faculty
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Delete a faculty (admin only)
+      tags:
+      - Schedule
+    put:
+      consumes:
+      - application/json
+      description: Update a faculty by ID.
+      parameters:
+      - description: Faculty ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated faculty payload
+        in: body
+        name: faculty
+        required: true
+        schema:
+          $ref: '#/definitions/schedule.Faculty'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated faculty
+          schema:
+            $ref: '#/definitions/schedule.Faculty'
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update faculty
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update a faculty (admin only)
+      tags:
+      - Schedule
+  /admin/group:
+    post:
+      consumes:
+      - application/json
+      description: Add a new group.
+      parameters:
+      - description: Group payload
+        in: body
+        name: group
+        required: true
+        schema:
+          $ref: '#/definitions/schedule.Group'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Created group
+          schema:
+            $ref: '#/definitions/schedule.Group'
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create group
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create a group (admin only)
+      tags:
+      - Schedule
+  /admin/group/{id}:
+    delete:
+      description: Delete a group by ID.
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "500":
+          description: Failed to delete group
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Delete a group (admin only)
+      tags:
+      - Schedule
+    put:
+      consumes:
+      - application/json
+      description: Update group fields. Group name is required.
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated group payload
+        in: body
+        name: group
+        required: true
+        schema:
+          $ref: '#/definitions/schedule.Group'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated group ID
+          schema:
+            type: integer
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update group
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update a group (admin only)
+      tags:
+      - Schedule
+  /admin/lesson:
+    post:
+      consumes:
+      - application/json
+      description: Add a lesson for a group on a specific date/time.
+      parameters:
+      - description: Lesson payload
+        in: body
+        name: lesson
+        required: true
+        schema:
+          $ref: '#/definitions/schedule.LessonRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: string
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create lesson
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create a lesson (admin only)
+      tags:
+      - Schedule
+  /admin/lesson/{id}:
+    delete:
+      description: Delete a lesson by ID.
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to delete lesson
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Delete a lesson (admin only)
+      tags:
+      - Schedule
+    put:
+      consumes:
+      - application/json
+      description: Update lesson fields by ID.
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated lesson payload
+        in: body
+        name: lesson
+        required: true
+        schema:
+          $ref: '#/definitions/schedule.LessonRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update lesson
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update a lesson (admin only)
+      tags:
+      - Schedule
+  /admin/schedule/import:
+    post:
+      consumes:
+      - application/json
+      description: Import multiple lessons in bulk.
+      parameters:
+      - description: Lessons payload
+        in: body
+        name: lessons
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/schedule.LessonImportRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: string
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to import schedule
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Import schedule (admin only)
+      tags:
+      - Schedule
+  /admin/set-role:
+    post:
+      consumes:
+      - application/json
+      description: Change a user's role. Requires admin privileges.
+      parameters:
+      - description: Role update payload
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/account.SetRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role update confirmation message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input or update error
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/account.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Set user role (admin only)
+      tags:
+      - Account
   /api/v1/map/search:
     get:
       description: Returns rooms filtered by building_id and/or floor
@@ -90,6 +1186,365 @@ paths:
       summary: Get all buildings
       tags:
       - map
+  /schedule/classrooms:
+    get:
+      description: Return all available classrooms.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Classrooms list
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Failed to load classrooms
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List classrooms
+      tags:
+      - Schedule
+  /schedule/faculties:
+    get:
+      description: Return all faculties.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Faculties list
+          schema:
+            items:
+              $ref: '#/definitions/schedule.Faculty'
+            type: array
+        "500":
+          description: Failed to load faculties
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List faculties
+      tags:
+      - Schedule
+  /schedule/groups:
+    get:
+      description: Return all groups.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Groups list
+          schema:
+            items:
+              $ref: '#/definitions/schedule.Group'
+            type: array
+        "500":
+          description: Failed to load groups
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List groups
+      tags:
+      - Schedule
+  /schedule/lessons:
+    get:
+      description: Return lessons for a group between the provided dates (inclusive).
+      parameters:
+      - description: Group ID
+        in: query
+        name: group_id
+        required: true
+        type: integer
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lessons list
+          schema:
+            items:
+              $ref: '#/definitions/schedule.LessonResponse'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to load lessons
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List lessons for a group and date range
+      tags:
+      - Schedule
+  /schedule/lessons/{id}/note:
+    delete:
+      description: Delete the current user's note for a lesson.
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Lesson or note not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to delete note
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Delete lesson note
+      tags:
+      - Schedule
+    get:
+      description: Return the current user's note for a lesson. Returns 204 if no
+        note exists.
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lesson note
+          schema:
+            $ref: '#/definitions/schedule.Note'
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to load note
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get lesson note
+      tags:
+      - Schedule
+    post:
+      consumes:
+      - application/json
+      description: Add or replace the current user's note for a lesson.
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Note payload (text)
+        in: body
+        name: note
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to save note
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Add lesson note
+      tags:
+      - Schedule
+    put:
+      consumes:
+      - application/json
+      description: Update an existing note for the current user and lesson.
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Note payload (text)
+        in: body
+        name: note
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Lesson or note not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update note
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update lesson note
+      tags:
+      - Schedule
+  /schedule/search:
+    get:
+      description: Search lessons by optional filters.
+      parameters:
+      - description: Date (YYYY-MM-DD)
+        in: query
+        name: date
+        type: string
+      - description: Teacher ID
+        in: query
+        name: teacher_id
+        type: integer
+      - description: Group ID
+        in: query
+        name: group_id
+        type: integer
+      - description: Classroom
+        in: query
+        name: classroom
+        type: string
+      - description: Subject
+        in: query
+        name: subject
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lessons list
+          schema:
+            items:
+              $ref: '#/definitions/schedule.LessonResponse'
+            type: array
+        "400":
+          description: Invalid filter value
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to search lessons
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Search lessons
+      tags:
+      - Schedule
+  /schedule/teachers:
+    get:
+      description: Return all teachers.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Teachers list
+          schema:
+            items:
+              $ref: '#/definitions/account.ProfileResponse'
+            type: array
+        "500":
+          description: Failed to load teachers
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List teachers
+      tags:
+      - Schedule
   /shortest-path:
     get:
       description: Calculates path between start_room_id and end_room_id
@@ -122,4 +1577,5 @@ paths:
       - map
 schemes:
 - http
+- https
 swagger: "2.0"

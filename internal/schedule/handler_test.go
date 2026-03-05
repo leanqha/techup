@@ -20,9 +20,11 @@ type mockService struct {
 	addLessonFn      func(ctx context.Context, lesson Lesson) error
 	updateLessonFn   func(ctx context.Context, lesson Lesson) error
 	deleteLessonFn   func(ctx context.Context, id int) error
-	getLessonNoteFn  func(ctx context.Context, userID, lessonID int) (*LessonNote, error)
-	addLessonNoteFn  func(ctx context.Context, userID, lessonID int, text string) error
-	importScheduleFn func(ctx context.Context, lessons []Lesson) error
+	getNoteFn        func(ctx context.Context, userID, lessonID int) (*Note, error)
+	addNoteFn        func(ctx context.Context, userID, lessonID int, text string) error
+	updateNoteFn     func(ctx context.Context, userID, lessonID int, text string) error
+	deleteNoteFn     func(ctx context.Context, userID, lessonID int) error
+	importScheduleFn func(ctx context.Context, lessons []LessonImport) error
 	searchLessonsFn  func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 }
 
@@ -86,21 +88,35 @@ func (m *mockService) DeleteGroup(ctx context.Context, id int) error {
 	return nil
 }
 
-func (m *mockService) GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
-	if m.getLessonNoteFn != nil {
-		return m.getLessonNoteFn(ctx, userID, lessonID)
+func (m *mockService) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
+	if m.getNoteFn != nil {
+		return m.getNoteFn(ctx, userID, lessonID)
 	}
 	return nil, nil
 }
 
-func (m *mockService) AddLessonNote(ctx context.Context, userID, lessonID int, text string) error {
-	if m.addLessonNoteFn != nil {
-		return m.addLessonNoteFn(ctx, userID, lessonID, text)
+func (m *mockService) AddNote(ctx context.Context, userID, lessonID int, text string) error {
+	if m.addNoteFn != nil {
+		return m.addNoteFn(ctx, userID, lessonID, text)
 	}
 	return nil
 }
 
-func (m *mockService) ImportSchedule(ctx context.Context, lessons []Lesson) error {
+func (m *mockService) UpdateNote(ctx context.Context, userID, lessonID int, text string) error {
+	if m.updateNoteFn != nil {
+		return m.updateNoteFn(ctx, userID, lessonID, text)
+	}
+	return nil
+}
+
+func (m *mockService) DeleteNote(ctx context.Context, userID, lessonID int) error {
+	if m.deleteNoteFn != nil {
+		return m.deleteNoteFn(ctx, userID, lessonID)
+	}
+	return nil
+}
+
+func (m *mockService) ImportSchedule(ctx context.Context, lessons []LessonImport) error {
 	if m.importScheduleFn != nil {
 		return m.importScheduleFn(ctx, lessons)
 	}
@@ -114,7 +130,7 @@ func (m *mockService) SearchLessons(ctx context.Context, f SearchLessonsFilter) 
 	return nil, nil
 }
 
-func (m *mockService) GetTeachers(ctx context.Context) ([]account.Account, error) {
+func (m *mockService) GetTeachers(ctx context.Context) ([]account.ProfileResponse, error) {
 	return nil, nil
 }
 
@@ -136,8 +152,10 @@ func setupRouterWithService(svc ServiceInterface, withUser bool) *gin.Engine {
 	r.POST("/admin/lesson", h.AddLesson)
 	r.PUT("/admin/lesson/:id", h.UpdateLesson)
 	r.DELETE("/admin/lesson/:id", h.DeleteLesson)
-	r.GET("/schedule/lessons/:id/note", h.GetLessonNote)
-	r.POST("/schedule/lessons/:id/note", h.AddLessonNote)
+	r.GET("/schedule/lessons/:id/note", h.GetNote)
+	r.POST("/schedule/lessons/:id/note", h.AddNote)
+	r.PUT("/schedule/lessons/:id/note", h.UpdateNote)
+	r.DELETE("/schedule/lessons/:id/note", h.DeleteNote)
 	r.POST("/admin/schedule/import", h.ImportSchedule)
 	r.GET("/schedule/search", h.SearchLessons)
 	return r
@@ -293,12 +311,30 @@ func TestDeleteLessonHandler(t *testing.T) {
 
 func TestLessonNoteHandlers(t *testing.T) {
 	svc := &mockService{
-		getLessonNoteFn: func(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+		getNoteFn: func(ctx context.Context, userID, lessonID int) (*Note, error) {
 			return nil, nil
 		},
-		addLessonNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
+		addNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
 			if text == "fail" {
 				return errors.New("save failed")
+			}
+			return nil
+		},
+		updateNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
+			if text == "missing" {
+				return ErrNoteNotFound
+			}
+			if text == "bad" {
+				return errors.New("update failed")
+			}
+			return nil
+		},
+		deleteNoteFn: func(ctx context.Context, userID, lessonID int) error {
+			if lessonID == 99 {
+				return ErrNoteNotFound
+			}
+			if lessonID == 98 {
+				return errors.New("delete failed")
 			}
 			return nil
 		},
@@ -338,6 +374,43 @@ func TestLessonNoteHandlers(t *testing.T) {
 	r.ServeHTTP(w, saveOK)
 	assert.Equal(t, http.StatusOK, w.Code)
 
+	updateInvalid := httptest.NewRequest(http.MethodPut, "/schedule/lessons/1/note", bytes.NewBufferString("{}"))
+	updateInvalid.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, updateInvalid)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	payload["text"] = "missing"
+	body, _ = json.Marshal(payload)
+	updateMissing := httptest.NewRequest(http.MethodPut, "/schedule/lessons/1/note", bytes.NewBuffer(body))
+	updateMissing.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, updateMissing)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	payload["text"] = "ok"
+	body, _ = json.Marshal(payload)
+	updateOK := httptest.NewRequest(http.MethodPut, "/schedule/lessons/1/note", bytes.NewBuffer(body))
+	updateOK.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, updateOK)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	deleteMissing := httptest.NewRequest(http.MethodDelete, "/schedule/lessons/99/note", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, deleteMissing)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	deleteFail := httptest.NewRequest(http.MethodDelete, "/schedule/lessons/98/note", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, deleteFail)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	deleteOK := httptest.NewRequest(http.MethodDelete, "/schedule/lessons/1/note", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, deleteOK)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
 	invalidIDReq := httptest.NewRequest(http.MethodGet, "/schedule/lessons/abc/note", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, invalidIDReq)
@@ -360,8 +433,8 @@ func TestImportScheduleHandler(t *testing.T) {
 	r.ServeHTTP(w, invalidJSON)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	payload := []LessonRequest{{
-		Group:     1,
+	payload := []LessonImportRequest{{
+		Group:     "G-1",
 		Date:      "2026-02-30",
 		StartTime: "08:00",
 		EndTime:   "09:00",
@@ -376,7 +449,7 @@ func TestImportScheduleHandler(t *testing.T) {
 	r.ServeHTTP(w, invalidDate)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	svc.importScheduleFn = func(ctx context.Context, lessons []Lesson) error {
+	svc.importScheduleFn = func(ctx context.Context, lessons []LessonImport) error {
 		return errors.New("import failed")
 	}
 	payload[0].Date = "2026-02-01"

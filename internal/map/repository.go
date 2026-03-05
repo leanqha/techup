@@ -38,18 +38,18 @@ func (r *Repository) GetAllBuildings(ctx context.Context) ([]Building, error) {
 }
 
 // SearchRooms позволяет искать комнаты по building_id и/или floor
-func (r *Repository) SearchRooms(ctx context.Context, room *Room) ([]Room, error) {
+func (r *Repository) SearchRooms(ctx context.Context, room *Room, hasBuildingID, hasFloor bool) ([]Room, error) {
 	query := `SELECT id, building_id, floor, name FROM rooms WHERE 1=1`
 	var args []interface{}
 	argIndex := 1
 
-	if &room.BuildingID != nil {
+	if hasBuildingID {
 		query += fmt.Sprintf(" AND building_id=$%d", argIndex)
 		args = append(args, room.BuildingID)
 		argIndex++
 	}
 
-	if &room.Floor != nil {
+	if hasFloor {
 		query += fmt.Sprintf(" AND floor=$%d", argIndex)
 		args = append(args, room.Floor)
 		argIndex++
@@ -101,9 +101,22 @@ func (r *Repository) AddRoom(ctx context.Context, room *Room) error {
 		INSERT INTO rooms (building_id, floor, name)
 		VALUES ($1, $2, $3)
 	`
-	_, err := r.db.Exec(ctx, query, room.BuildingID, room.Name, room.Floor)
+	_, err := r.db.Exec(ctx, query, room.BuildingID, room.Floor, room.Name)
 	if err != nil {
-		logger.LogSQLError(err, query, room.BuildingID, room.Name)
+		logger.LogSQLError(err, query, room.BuildingID, room.Floor, room.Name)
+	}
+	return err
+}
+
+func (r *Repository) UpdateRoom(ctx context.Context, room *Room) error {
+	query := `
+		UPDATE rooms
+		SET building_id = $1, floor = $2, name = $3, updated_at = NOW()
+		WHERE id = $4
+	`
+	_, err := r.db.Exec(ctx, query, room.BuildingID, room.Floor, room.Name, room.ID)
+	if err != nil {
+		logger.LogSQLError(err, query, room.BuildingID, room.Floor, room.Name, room.ID)
 	}
 	return err
 }
@@ -117,6 +130,19 @@ func (r *Repository) AddConnection(ctx context.Context, conn *Connection) error 
 	_, err := r.db.Exec(ctx, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type)
 	if err != nil {
 		logger.LogSQLError(err, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type)
+	}
+	return err
+}
+
+func (r *Repository) UpdateConnection(ctx context.Context, conn *Connection) error {
+	query := `
+		UPDATE connections
+		SET room_from = $1, room_to = $2, distance = $3, type = $4, updated_at = NOW()
+		WHERE id = $5
+	`
+	_, err := r.db.Exec(ctx, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type, conn.ID)
+	if err != nil {
+		logger.LogSQLError(err, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type, conn.ID)
 	}
 	return err
 }

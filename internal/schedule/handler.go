@@ -24,11 +24,13 @@ type ServiceInterface interface {
 	AddGroup(ctx context.Context, g Group) error
 	UpdateGroup(ctx context.Context, g Group) error
 	DeleteGroup(ctx context.Context, id int) error
-	GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
-	AddLessonNote(ctx context.Context, userID, lessonID int, text string) error
-	ImportSchedule(ctx context.Context, lessons []Lesson) error
+	GetNote(ctx context.Context, userID, lessonID int) (*Note, error)
+	AddNote(ctx context.Context, userID, lessonID int, text string) error
+	UpdateNote(ctx context.Context, userID, lessonID int, text string) error
+	DeleteNote(ctx context.Context, userID, lessonID int) error
+	ImportSchedule(ctx context.Context, lessons []LessonImport) error
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
-	GetTeachers(ctx context.Context) ([]account.Account, error)
+	GetTeachers(ctx context.Context) ([]account.ProfileResponse, error)
 	GetClassrooms(ctx context.Context) ([]string, error)
 }
 
@@ -406,19 +408,19 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// GetLessonNote godoc
+// GetNote godoc
 // @Summary      Get lesson note
 // @Description  Return the current user's note for a lesson. Returns 204 if no note exists.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
 // @Produce      json
 // @Param        id path int true "Lesson ID"
-// @Success      200 {object} LessonNote "Lesson note"
+// @Success      200 {object} Note "Lesson note"
 // @Success      204 {string} string "No Content"
 // @Failure      401 {object} map[string]string "Unauthorized"
 // @Failure      500 {object} map[string]string "Failed to load note"
 // @Router       /schedule/lessons/{id}/note [get]
-func (h *Handler) GetLessonNote(c *gin.Context) {
+func (h *Handler) GetNote(c *gin.Context) {
 	userID, err := account.GetUserIDFromContext(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -431,7 +433,7 @@ func (h *Handler) GetLessonNote(c *gin.Context) {
 		return
 	}
 
-	note, err := h.service.GetLessonNote(c.Request.Context(), userID, lessonID)
+	note, err := h.service.GetNote(c.Request.Context(), userID, lessonID)
 	if err != nil {
 		if errors.Is(err, ErrLessonNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -449,7 +451,7 @@ func (h *Handler) GetLessonNote(c *gin.Context) {
 	c.JSON(http.StatusOK, note)
 }
 
-// AddLessonNote godoc
+// AddNote godoc
 // @Summary      Add lesson note
 // @Description  Add or replace the current user's note for a lesson.
 // @Tags         Schedule
@@ -463,7 +465,7 @@ func (h *Handler) GetLessonNote(c *gin.Context) {
 // @Failure      401 {object} map[string]string "Unauthorized"
 // @Failure      500 {object} map[string]string "Failed to save note"
 // @Router       /schedule/lessons/{id}/note [post]
-func (h *Handler) AddLessonNote(c *gin.Context) {
+func (h *Handler) AddNote(c *gin.Context) {
 	userID, err := account.GetUserIDFromContext(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -485,7 +487,7 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.AddLessonNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
+	if err := h.service.AddNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
 		if errors.Is(err, ErrNoteTooLong) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -501,6 +503,97 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// UpdateNote godoc
+// @Summary      Update lesson note
+// @Description  Update an existing note for the current user and lesson.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id   path int true "Lesson ID"
+// @Param        note body map[string]string true "Note payload (text)"
+// @Success      200 {string} string "OK"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      401 {object} map[string]string "Unauthorized"
+// @Failure      404 {object} map[string]string "Lesson or note not found"
+// @Failure      500 {object} map[string]string "Failed to update note"
+// @Router       /schedule/lessons/{id}/note [put]
+func (h *Handler) UpdateNote(c *gin.Context) {
+	userID, err := account.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	lessonID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req struct {
+		Text string `json:"text" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.UpdateNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
+		if errors.Is(err, ErrNoteTooLong) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, ErrLessonNotFound) || errors.Is(err, ErrNoteNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// DeleteNote godoc
+// @Summary      Delete lesson note
+// @Description  Delete the current user's note for a lesson.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path int true "Lesson ID"
+// @Success      204 {string} string "No Content"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      401 {object} map[string]string "Unauthorized"
+// @Failure      404 {object} map[string]string "Lesson or note not found"
+// @Failure      500 {object} map[string]string "Failed to delete note"
+// @Router       /schedule/lessons/{id}/note [delete]
+func (h *Handler) DeleteNote(c *gin.Context) {
+	userID, err := account.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	lessonID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := h.service.DeleteNote(c.Request.Context(), userID, lessonID); err != nil {
+		if errors.Is(err, ErrLessonNotFound) || errors.Is(err, ErrNoteNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 // ImportSchedule godoc
 // @Summary      Import schedule (admin only)
 // @Description  Import multiple lessons in bulk.
@@ -508,19 +601,19 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 // @Security     ApiKeyAuth
 // @Accept       json
 // @Produce      json
-// @Param        lessons body []LessonRequest true "Lessons payload"
+// @Param        lessons body []LessonImportRequest true "Lessons payload"
 // @Success      201 {string} string "Created"
 // @Failure      400 {object} map[string]string "Invalid input"
 // @Failure      500 {object} map[string]string "Failed to import schedule"
 // @Router       /admin/schedule/import [post]
 func (h *Handler) ImportSchedule(c *gin.Context) {
-	var dtos []LessonRequest
+	var dtos []LessonImportRequest
 	if err := c.ShouldBindJSON(&dtos); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json: " + err.Error()})
 		return
 	}
 
-	lessons := make([]Lesson, 0, len(dtos))
+	lessons := make([]LessonImport, 0, len(dtos))
 	for _, dto := range dtos {
 		date, err := time.Parse("2006-01-02", dto.Date)
 		if err != nil {
@@ -538,8 +631,8 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 			return
 		}
 
-		lessons = append(lessons, Lesson{
-			GroupID:   dto.Group,
+		lessons = append(lessons, LessonImport{
+			GroupName: dto.Group,
 			TeacherID: dto.TeacherID,
 			Date:      date,
 			StartTime: startTime,
@@ -616,7 +709,7 @@ func (h *Handler) SearchLessons(c *gin.Context) {
 // @Description  Return all teachers.
 // @Tags         Schedule
 // @Produce      json
-// @Success      200 {array} account.Account "Teachers list"
+// @Success      200 {array} account.ProfileResponse "Teachers list"
 // @Failure      500 {object} map[string]string "Failed to load teachers"
 // @Router       /schedule/teachers [get]
 func (h *Handler) GetTeachers(c *gin.Context) {

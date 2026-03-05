@@ -52,3 +52,15 @@ type TeacherDTO struct {
 	MiddleName string `json:"middle_name"`
 	FullName   string `json:"full_name"`
 }
+
+// LessonImportRequest describes payload for importing lessons by group name.
+type LessonImportRequest struct {
+	Group     string `json:"group" binding:"required"`
+	TeacherID int    `json:"teacher_id"`
+	Date      string `json:"date" binding:"required"`       // format: YYYY-MM-DD
+	StartTime string `json:"start_time" binding:"required"` // format: HH:MM
+	EndTime   string `json:"end_time" binding:"required"`   // format: HH:MM
+	Subject   string `json:"subject" binding:"required"`
+	Type      string `json:"type" binding:"required"`
+	Classroom string `json:"classroom" binding:"required"`
+}

@@ -25,6 +25,10 @@ type MockService struct {
 	refreshErr  error
 	logoutErr   error
 	deleteErr   error
+	listErr     error
+	adminErr    error
+	resetReqErr error
+	resetErr    error
 }
 
 func (m *MockService) Register(_ context.Context, req RegisterRequest) (*Account, string, string, error) {
@@ -115,7 +119,7 @@ func (m *MockService) RefreshTokens(ctx context.Context, refreshToken string) (s
 	return "new-access", "new-refresh", nil
 }
 
-func (m *MockService) Logout(ctx context.Context, userID int) error {
+func (m *MockService) Logout(ctx context.Context, userID int, refreshToken string) error {
 	if m.logoutErr != nil {
 		return m.logoutErr
 	}
@@ -128,6 +132,68 @@ func (m *MockService) DeleteAccount(ctx context.Context, userID int) error {
 	}
 	if userID == 999 {
 		return errors.New("account not found")
+	}
+	return nil
+}
+
+func (m *MockService) UpdateAccountAdmin(ctx context.Context, userID int, req *AdminUpdateAccountRequest) (*Account, error) {
+	if m.adminErr != nil {
+		return nil, m.adminErr
+	}
+	if userID == 0 {
+		return nil, errors.New("account not found")
+	}
+	acc := &Account{ID: userID, UID: "uid1", Email: "admin@example.com", FirstName: "Admin", LastName: "User", Role: "student"}
+	if req.Email != nil {
+		acc.Email = *req.Email
+	}
+	if req.UID != nil {
+		acc.UID = *req.UID
+	}
+	if req.FirstName != nil {
+		acc.FirstName = *req.FirstName
+	}
+	if req.LastName != nil {
+		acc.LastName = *req.LastName
+	}
+	if req.Role != nil {
+		acc.Role = *req.Role
+	}
+	if req.GroupID != nil {
+		acc.GroupID = *req.GroupID
+	}
+	if req.IsVerified != nil {
+		acc.IsVerified = *req.IsVerified
+	}
+	return acc, nil
+}
+
+func (m *MockService) ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error) {
+	if m.listErr != nil {
+		return nil, m.listErr
+	}
+	return []Account{{ID: 1, UID: "uid1", Email: "one@example.com", FirstName: "One", LastName: "User", Role: "student"}}, nil
+}
+
+func (m *MockService) RequestPasswordReset(ctx context.Context, email string) error {
+	if m.resetReqErr != nil {
+		return m.resetReqErr
+	}
+	if email == "fail@example.com" {
+		return errors.New("reset request failed")
+	}
+	return nil
+}
+
+func (m *MockService) ResetPassword(ctx context.Context, token, newPassword string) error {
+	if m.resetErr != nil {
+		return m.resetErr
+	}
+	if token == "invalid" {
+		return errors.New("invalid token")
+	}
+	if newPassword == "" {
+		return errors.New("invalid password")
 	}
 	return nil
 }
@@ -463,7 +529,7 @@ func TestLogoutServiceError(t *testing.T) {
 	mockSvc := &MockService{logoutErr: errors.New("logout failed")}
 	r, h := setupRouterWithService(mockSvc)
 	r.POST("/logout", func(c *gin.Context) {
-		c.Set("claims", jwt.MapClaims{"user_id": float64(1)})
+		c.Set("user_id", 1)
 		h.Logout(c)
 	})
 

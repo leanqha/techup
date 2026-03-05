@@ -1,5 +1,3 @@
-
-
 # API Documentation
 
 Документация по публичным и административным API сервера TechUp.
@@ -58,6 +56,41 @@
   "first_name": "string",
   "last_name": "string",
   "role": "student"
+}
+```
+
+---
+
+## POST /api/v1/account/forgot-password
+Запросить сброс пароля. Возвращает одинаковый ответ для существующих и несуществующих email.
+### Request
+```json
+{
+  "email": "user@example.com"
+}
+```
+### Response
+```json
+{
+  "message": "if the account exists, a reset link has been sent"
+}
+```
+
+---
+
+## POST /api/v1/account/reset-password
+Сбросить пароль по токену из письма.
+### Request
+```json
+{
+  "token": "reset-token",
+  "new_password": "NewStrongPass1"
+}
+```
+### Response
+```json
+{
+  "message": "password reset successfully"
 }
 ```
 
@@ -142,3 +175,26 @@
   "error": "string"
 }
 ```
+
+## Swagger generation
+
+Swagger files in `docs/` should be generated from code annotations.
+
+Use:
+
+```bash
+make swagger
+```
+
+This command runs:
+
+```bash
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init \
+  -g cmd/server/main.go \
+  -d cmd/server,internal/account,internal/schedule,internal/map,internal/health \
+  -o docs \
+  --parseInternal \
+  --parseDependency \
+  --parseDepth 3
+```
+

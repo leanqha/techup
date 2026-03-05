@@ -352,17 +352,17 @@ func (r *Repository) LessonExists(ctx context.Context, lessonID int) (bool, erro
 	return exists, nil
 }
 
-func (r *Repository) GetLessonNote(
+func (r *Repository) GetNote(
 	ctx context.Context,
 	userID, lessonID int,
-) (*LessonNote, error) {
+) (*Note, error) {
 
 	query := `
-	SELECT id, user_id, lesson_id, text, created_at, updated_at
-	FROM lesson_notes
+	SELECT id, user_id, lesson_id, content, created_at, updated_at
+	FROM notes
 	WHERE user_id=$1 AND lesson_id=$2`
 
-	var n LessonNote
+	var n Note
 	err := r.db.QueryRow(ctx, query, userID, lessonID).
 		Scan(&n.ID, &n.UserID, &n.LessonID, &n.Text, &n.CreatedAt, &n.UpdatedAt)
 
@@ -377,17 +377,17 @@ func (r *Repository) GetLessonNote(
 	return &n, err
 }
 
-func (r *Repository) AddLessonNote(
+func (r *Repository) AddNote(
 	ctx context.Context,
 	userID, lessonID int,
 	text string,
 ) error {
 
 	query := `
-	INSERT INTO lesson_notes (user_id, lesson_id, text)
+	INSERT INTO notes (user_id, lesson_id, content)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (user_id, lesson_id)
-	DO UPDATE SET text=EXCLUDED.text, updated_at=now()`
+	DO UPDATE SET content=EXCLUDED.content, updated_at=now()`
 
 	_, err := r.db.Exec(ctx, query, userID, lessonID, text)
 	if err != nil {
@@ -395,6 +395,48 @@ func (r *Repository) AddLessonNote(
 	}
 
 	return err
+}
+
+func (r *Repository) UpdateNote(
+	ctx context.Context,
+	userID, lessonID int,
+	text string,
+) error {
+	query := `
+	UPDATE notes
+	SET content = $3, updated_at = now()
+	WHERE user_id = $1 AND lesson_id = $2`
+
+	result, err := r.db.Exec(ctx, query, userID, lessonID, text)
+	if err != nil {
+		logger.LogSQLError(err, query, userID, lessonID)
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
+}
+
+func (r *Repository) DeleteNote(
+	ctx context.Context,
+	userID, lessonID int,
+) error {
+	query := `DELETE FROM notes WHERE user_id = $1 AND lesson_id = $2`
+
+	result, err := r.db.Exec(ctx, query, userID, lessonID)
+	if err != nil {
+		logger.LogSQLError(err, query, userID, lessonID)
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
 }
 
 func (r *Repository) GetGroupIDByName(ctx context.Context, name string) (int, error) {

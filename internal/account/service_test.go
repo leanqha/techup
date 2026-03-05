@@ -14,6 +14,9 @@ import (
 type MockRepo struct {
 	accounts       map[string]*Account
 	refreshTokens  map[string]*RefreshToken
+	resetByHash    map[string]*PasswordResetToken
+	resetByID      map[int]*PasswordResetToken
+	nextResetID    int
 	createErr      error
 	saveError      error
 	saveRefreshErr error
@@ -71,6 +74,15 @@ func (m *MockRepo) UpdateAccount(_ context.Context, acc *Account) error {
 	m.accounts[acc.Email] = acc
 	return nil
 }
+
+func (m *MockRepo) ListAccounts(_ context.Context, _ AdminAccountsFilter) ([]Account, error) {
+	result := make([]Account, 0, len(m.accounts))
+	for _, acc := range m.accounts {
+		result = append(result, *acc)
+	}
+	return result, nil
+}
+
 func (m *MockRepo) SaveRefreshToken(_ context.Context, token *RefreshToken) error {
 	if m.saveRefreshErr != nil {
 		return m.saveRefreshErr
@@ -125,6 +137,52 @@ func (m *MockRepo) DeleteAccount(ctx context.Context, userID int) error {
 		}
 	}
 	return errors.New("account not found")
+}
+
+func (m *MockRepo) CreatePasswordResetToken(_ context.Context, token *PasswordResetToken) error {
+	if m.saveError != nil {
+		return m.saveError
+	}
+	if m.resetByHash == nil {
+		m.resetByHash = make(map[string]*PasswordResetToken)
+	}
+	if m.resetByID == nil {
+		m.resetByID = make(map[int]*PasswordResetToken)
+	}
+	m.nextResetID++
+	token.ID = m.nextResetID
+	token.CreatedAt = time.Now()
+	m.resetByHash[token.TokenHash] = token
+	m.resetByID[token.ID] = token
+	return nil
+}
+
+func (m *MockRepo) GetPasswordResetTokenByHash(_ context.Context, tokenHash string) (*PasswordResetToken, error) {
+	t, ok := m.resetByHash[tokenHash]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	return t, nil
+}
+
+func (m *MockRepo) MarkPasswordResetTokenUsed(_ context.Context, tokenID int) error {
+	t, ok := m.resetByID[tokenID]
+	if !ok {
+		return errors.New("not found")
+	}
+	now := time.Now()
+	t.UsedAt = &now
+	return nil
+}
+
+func (m *MockRepo) DeletePasswordResetTokens(_ context.Context, accountID int) error {
+	for hash, token := range m.resetByHash {
+		if token.AccountID == accountID {
+			delete(m.resetByHash, hash)
+			delete(m.resetByID, token.ID)
+		}
+	}
+	return nil
 }
 
 func TestRegisterAndLogin(t *testing.T) {
@@ -226,7 +284,7 @@ func TestLogout(t *testing.T) {
 		ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
 	}
 
-	err := service.Logout(context.Background(), acc.ID)
+	err := service.Logout(context.Background(), acc.ID, refreshToken)
 	assert.NoError(t, err)
 
 	_, exists := repo.refreshTokens[refreshToken]
@@ -306,13 +364,13 @@ func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
 	assert.NotEmpty(t, newAccess)
 	assert.NotEmpty(t, newRefresh)
 
-	err = service.Logout(context.Background(), acc.ID)
+	err = service.Logout(context.Background(), acc.ID, refresh)
 	assert.NoError(t, err)
 	for _, rt := range repo.refreshTokens {
 		assert.NotEqual(t, acc.ID, rt.AccountID)
 	}
 
-	err = service.Logout(context.Background(), 999)
+	err = service.Logout(context.Background(), 999, "")
 	assert.NoError(t, err) // не должно падать, просто ничего не удаляет
 }
 
@@ -402,7 +460,7 @@ func TestLogoutRepoError(t *testing.T) {
 		deleteError: errors.New("db err"),
 	}
 	service := NewService(repo)
-	err := service.Logout(context.Background(), 1)
+	err := service.Logout(context.Background(), 1, "")
 	assert.Error(t, err)
 }
 

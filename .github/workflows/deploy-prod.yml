@@ -1,0 +1,115 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PROD_APP_DIR: ${{ secrets.PROD_APP_DIR }}
+      PROD_REPO_BRANCH: ${{ secrets.PROD_REPO_BRANCH }}
+      PROD_REPO_URL: ${{ secrets.PROD_REPO_URL }}
+
+      PORT: ${{ secrets.PORT }}
+      GIN_MODE: ${{ secrets.GIN_MODE }}
+      DOMAIN: ${{ secrets.DOMAIN }}
+      APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_SSLMODE: ${{ secrets.DB_SSLMODE }}
+
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_ACCESS_TOKEN_TTL: ${{ secrets.JWT_ACCESS_TOKEN_TTL }}
+      JWT_REFRESH_TOKEN_TTL: ${{ secrets.JWT_REFRESH_TOKEN_TTL }}
+
+      PASSWORD_RESET_TTL_MINUTES: ${{ secrets.PASSWORD_RESET_TTL_MINUTES }}
+
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      SMTP_FROM: ${{ secrets.SMTP_FROM }}
+      SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+      SMTP_SKIP_VERIFY: ${{ secrets.SMTP_SKIP_VERIFY }}
+
+    steps:
+      - name: Validate deploy auth secret
+        run: |
+          if [ -z "${{ secrets.PROD_SSH_KEY }}" ] && [ -z "${{ secrets.PROD_PASSWORD }}" ]; then
+            echo "Set PROD_SSH_KEY or PROD_PASSWORD in the production environment secrets"
+            exit 1
+          fi
+
+      - name: Deploy on server (SSH key or password fallback)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          password: ${{ secrets.PROD_SSH_KEY == '' && secrets.PROD_PASSWORD || '' }}
+          port: ${{ secrets.PROD_PORT }}
+          envs: PROD_APP_DIR,PROD_REPO_BRANCH,PROD_REPO_URL,PORT,GIN_MODE,DOMAIN,APP_BASE_URL,DB_HOST,DB_PORT,DB_USER,DB_PASSWORD,DB_NAME,DB_SSLMODE,JWT_SECRET,JWT_ACCESS_TOKEN_TTL,JWT_REFRESH_TOKEN_TTL,PASSWORD_RESET_TTL_MINUTES,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM,SMTP_USE_TLS,SMTP_SKIP_VERIFY
+          script_stop: true
+          script: |
+            set -e
+
+            REPO_BRANCH="${PROD_REPO_BRANCH:-main}"
+
+            if [ -z "$PROD_APP_DIR" ]; then
+              echo "PROD_APP_DIR is required"
+              exit 1
+            fi
+
+            mkdir -p "$PROD_APP_DIR"
+            cd "$PROD_APP_DIR"
+
+            if [ ! -d .git ]; then
+              if [ -n "$(ls -A . 2>/dev/null)" ]; then
+                echo "PROD_APP_DIR exists and is not a git repo: $PROD_APP_DIR"
+                exit 1
+              fi
+              if [ -z "$PROD_REPO_URL" ]; then
+                echo "PROD_REPO_URL is required for first deploy"
+                exit 1
+              fi
+              git clone --branch "$REPO_BRANCH" "$PROD_REPO_URL" .
+            fi
+
+            git fetch --all --prune
+            git checkout "$REPO_BRANCH"
+            git reset --hard "origin/$REPO_BRANCH"
+
+            cat > .env.prod <<EOF
+            PORT=$PORT
+            GIN_MODE=$GIN_MODE
+            DOMAIN=$DOMAIN
+            APP_BASE_URL=$APP_BASE_URL
+            DB_HOST=$DB_HOST
+            DB_PORT=$DB_PORT
+            DB_USER=$DB_USER
+            DB_PASSWORD=$DB_PASSWORD
+            DB_NAME=$DB_NAME
+            DB_SSLMODE=$DB_SSLMODE
+            JWT_SECRET=$JWT_SECRET
+            JWT_ACCESS_TOKEN_TTL=$JWT_ACCESS_TOKEN_TTL
+            JWT_REFRESH_TOKEN_TTL=$JWT_REFRESH_TOKEN_TTL
+            PASSWORD_RESET_TTL_MINUTES=$PASSWORD_RESET_TTL_MINUTES
+            SMTP_HOST=$SMTP_HOST
+            SMTP_PORT=$SMTP_PORT
+            SMTP_USER=$SMTP_USER
+            SMTP_PASS=$SMTP_PASS
+            SMTP_FROM=$SMTP_FROM
+            SMTP_USE_TLS=$SMTP_USE_TLS
+            SMTP_SKIP_VERIFY=$SMTP_SKIP_VERIFY
+            EOF
+
+            ENV_FILE=.env.prod docker compose -f docker-compose.yml up -d --build

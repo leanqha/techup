@@ -38,7 +38,21 @@ func main() {
 	logger.Log.Info().Msg("database connected")
 
 	accountRepo := account.NewRepository(db)
-	accountSvc := account.NewService(accountRepo)
+	var accountNotifier account.PasswordResetNotifier
+	accountNotifier = account.NewLogPasswordResetNotifier(config.GetAppBaseURL())
+	if config.GetSMTPHost() != "" && config.GetSMTPFrom() != "" {
+		accountNotifier = account.NewSMTPPasswordResetNotifier(account.SMTPConfig{
+			Host:       config.GetSMTPHost(),
+			Port:       config.GetSMTPPort(),
+			Username:   config.GetSMTPUser(),
+			Password:   config.GetSMTPPassword(),
+			From:       config.GetSMTPFrom(),
+			UseTLS:     config.GetSMTPUseTLS(),
+			SkipVerify: config.GetSMTPSkipVerify(),
+			BaseURL:    config.GetAppBaseURL(),
+		}, nil)
+	}
+	accountSvc := account.NewService(accountRepo, accountNotifier)
 	accountHandler := account.NewHandler(accountSvc)
 
 	scheduleRepo := schedule.NewRepository(db)
@@ -80,6 +94,8 @@ func main() {
 	accountGroup.POST("/register", accountHandler.Register)
 	accountGroup.POST("/login", accountHandler.Login)
 	accountGroup.POST("/refresh", accountHandler.Refresh)
+	accountGroup.POST("/forgot-password", accountHandler.ForgotPassword)
+	accountGroup.POST("/reset-password", accountHandler.ResetPassword)
 
 	secureAccount := accountGroup.Group("/secure")
 	secureAccount.Use(account.AuthMiddleware())
@@ -103,8 +119,10 @@ func main() {
 	lessonNotes := scheduleGroup.Group("/lessons/:id")
 	lessonNotes.Use(account.AuthMiddleware())
 	{
-		lessonNotes.GET("/note", scheduleHandler.GetLessonNote)
-		lessonNotes.POST("/note", scheduleHandler.AddLessonNote)
+		lessonNotes.GET("/note", scheduleHandler.GetNote)
+		lessonNotes.POST("/note", scheduleHandler.AddNote)
+		lessonNotes.PUT("/note", scheduleHandler.UpdateNote)
+		lessonNotes.DELETE("/note", scheduleHandler.DeleteNote)
 	}
 
 	mapGroup := api.Group("/map")
@@ -117,6 +135,8 @@ func main() {
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(account.AuthMiddleware(), account.RequireRole("admin"))
 	{
+		adminGroup.GET("/accounts", accountHandler.AdminListAccounts)
+		adminGroup.PUT("/account/:id", accountHandler.AdminUpdateAccount)
 		adminGroup.DELETE("/account/:id", accountHandler.DeleteAccount)
 		adminGroup.POST("/set-role", accountHandler.SetRole)
 
@@ -129,6 +149,12 @@ func main() {
 		adminGroup.DELETE("/group/:id", scheduleHandler.DeleteGroup)
 
 		adminGroup.POST("/room", mapsHandler.AddRoom)
+		adminGroup.PUT("/room/:id", mapsHandler.UpdateRoom)
+		adminGroup.DELETE("/room/:id", mapsHandler.DeleteRoom)
+
+		adminGroup.POST("/connection", mapsHandler.AddConnection)
+		adminGroup.PUT("/connection/:id", mapsHandler.UpdateConnection)
+		adminGroup.DELETE("/connection/:id", mapsHandler.DeleteConnection)
 
 		adminGroup.POST("/lesson", scheduleHandler.AddLesson)
 		adminGroup.PUT("/lesson/:id", scheduleHandler.UpdateLesson)
