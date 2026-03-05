@@ -64,17 +64,15 @@ jobs:
 
             REPO_BRANCH="${PROD_REPO_BRANCH:-main}"
 
-            if [ -z "$PROD_APP_DIR" ]; then
-              echo "PROD_APP_DIR is required"
-              exit 1
-            fi
+            APP_DIR="${PROD_APP_DIR:-$HOME/techup}"
+            echo "Using deploy directory: $APP_DIR"
 
-            mkdir -p "$PROD_APP_DIR"
-            cd "$PROD_APP_DIR"
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
 
             if [ ! -d .git ]; then
               if [ -n "$(ls -A . 2>/dev/null)" ]; then
-                echo "PROD_APP_DIR exists and is not a git repo: $PROD_APP_DIR"
+                echo "Deploy dir exists and is not a git repo: $APP_DIR"
                 exit 1
               fi
               if [ -z "$PROD_REPO_URL" ]; then
