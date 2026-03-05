@@ -1,200 +1,248 @@
-# API Documentation
+# TechUp API
 
-Документация по публичным и административным API сервера TechUp.
+Production-oriented backend service for the TechUp university application.
 
----
+## What This Service Provides
 
-# Account API
+- Account lifecycle: register, login, refresh, logout, profile update, password change
+- Password reset flow with pluggable delivery (SMTP in production, logs in development)
+- Schedule domain APIs: faculties, groups, lessons, teachers, classrooms, search
+- Lesson notes for authenticated users
+- Campus map APIs: buildings, rooms, shortest path between rooms
+- Admin APIs for account role management and CRUD operations across schedule and map entities
+- Swagger/OpenAPI docs served from the running app
 
-## POST /api/v1/account/register
-Регистрирует нового пользователя.
-### Request
-```json
-{
-  "email": "string",
-  "password": "string",
-  "first_name": "string",
-  "last_name": "string"
-}
-```
-### Response
-```json
-{
-  "id": 1,
-  "email": "user@example.com"
-}
-```
+## Tech Stack
 
----
+- Go `1.25`
+- Gin (HTTP routing)
+- PostgreSQL + `pgx` connection pool
+- Goose (SQL migrations)
+- JWT-based auth (access + refresh token cookies)
+- Zerolog (structured logging)
+- Docker / Docker Compose
 
-## POST /api/v1/account/login
-Авторизация пользователя. Устанавливает access_token и refresh_token в HttpOnly куки.
-### Request
-```json
-{
-  "email": "string",
-  "password": "string"
-}
-```
-### Response
-```json
-{
-  "message": "login successful"
-}
+## Repository Layout
+
+```text
+cmd/server/          App entrypoint
+internal/account/    Auth, account, password reset logic
+internal/schedule/   Schedule and notes logic
+internal/map/        Map, rooms, pathfinding logic
+internal/health/     Health endpoint
+config/              Env and database configuration
+migrations/          Goose SQL migrations
+docs/                Generated Swagger artifacts
 ```
 
----
+## Prerequisites
 
-## GET /api/v1/account/secure/profile
-Получение профиля текущего пользователя.
-### Response
-```json
-{
-  "id": 1,
-  "uid": "uuid",
-  "email": "string",
-  "first_name": "string",
-  "last_name": "string",
-  "role": "student"
-}
+- Go `1.25+`
+- PostgreSQL `13+` (or compatible)
+- Docker + Docker Compose (optional, for containerized runs)
+- Goose migration CLI (`go install github.com/pressly/goose/v3/cmd/goose@latest`)
+
+## Configuration
+
+Copy the template and fill real values:
+
+```bash
+cp .env.example .env
 ```
 
----
+The app reads `.env` by default. You can point to another file with `ENV_FILE=/path/to/file`.
 
-## POST /api/v1/account/forgot-password
-Запросить сброс пароля. Возвращает одинаковый ответ для существующих и несуществующих email.
-### Request
-```json
-{
-  "email": "user@example.com"
-}
-```
-### Response
-```json
-{
-  "message": "if the account exists, a reset link has been sent"
-}
+## Quickstart (5 Minutes)
+
+```bash
+cp .env.example .env
+make migrate-up
+go run ./cmd/server
 ```
 
----
+Verify the service is up:
 
-## POST /api/v1/account/reset-password
-Сбросить пароль по токену из письма.
-### Request
-```json
-{
-  "token": "reset-token",
-  "new_password": "NewStrongPass1"
-}
-```
-### Response
-```json
-{
-  "message": "password reset successfully"
-}
+```bash
+curl -i http://localhost:3000/api/v1/health
 ```
 
----
+### Environment Variables
 
-# Schedule API
+| Variable                     | Required              | Default | Notes                                               |
+|------------------------------|-----------------------|---------|-----------------------------------------------------|
+| `PORT`                       | No                    | `3000`  | HTTP port used by the app                           |
+| `GIN_MODE`                   | Recommended           | `debug` | Use `release` in production                         |
+| `APP_BASE_URL`               | Yes (for reset links) | -       | Public base URL used in password reset emails       |
+| `DB_HOST`                    | Yes                   | -       | PostgreSQL host                                     |
+| `DB_PORT`                    | Yes                   | -       | PostgreSQL port                                     |
+| `DB_USER`                    | Yes                   | -       | PostgreSQL user                                     |
+| `DB_PASSWORD`                | Yes                   | -       | PostgreSQL password                                 |
+| `DB_NAME`                    | Yes                   | -       | PostgreSQL database name                            |
+| `DB_SSLMODE`                 | Yes                   | -       | Example: `disable`, `require`, `verify-full`        |
+| `JWT_SECRET`                 | Yes                   | -       | Strong random secret for token signing              |
+| `JWT_ACCESS_TOKEN_TTL`       | No                    | `15`    | Minutes                                             |
+| `JWT_REFRESH_TOKEN_TTL`      | No                    | `10080` | Minutes (7 days)                                    |
+| `PASSWORD_RESET_TTL_MINUTES` | No                    | `30`    | Reset token lifetime in minutes                     |
+| `SMTP_HOST`                  | Optional              | empty   | If empty, reset links are logged instead of emailed |
+| `SMTP_PORT`                  | No                    | `587`   | SMTP port                                           |
+| `SMTP_USER`                  | Optional              | empty   | SMTP username                                       |
+| `SMTP_PASS`                  | Optional              | empty   | SMTP password                                       |
+| `SMTP_FROM`                  | Optional              | empty   | Sender email                                        |
+| `SMTP_USE_TLS`               | No                    | `false` | TLS enabled/disabled                                |
+| `SMTP_SKIP_VERIFY`           | No                    | `false` | Skip TLS verification (avoid in production)         |
 
-## GET /api/v1/schedule/faculties
-Список факультетов.
+## Configuration Profiles
 
-## POST /api/v1/admin/faculty
-Добавление факультета (только админ).
-### Request
-```json
-{"name": "ФКТИ"}
+Use separate env files and switch with `ENV_FILE`:
+
+```bash
+# Development
+ENV_FILE=.env go run ./cmd/server
+
+# Production-like local run
+ENV_FILE=.env.prod go run ./cmd/server
+
+# Migrations against a specific environment file
+ENV_FILE=.env.prod make migrate-up
 ```
 
-## PUT /api/v1/admin/faculty/:id
-Обновление факультета.
+Recommended profile conventions:
 
-## DELETE /api/v1/admin/faculty/:id
-Удаление факультета.
+- `.env`: local development defaults
+- `.env.prod`: production/staging values (never commit secrets)
+- `.env.test`: isolated test database values if needed
 
----
+## Running Locally (Go)
 
-## GET /api/v1/schedule/groups
-Список групп.
+1. Configure environment in `.env`
+2. Run database migrations
+3. Start the server
 
-## POST /api/v1/admin/group
-Добавление группы.
-
----
-
-## GET /api/v1/schedule/lessons
-Список занятий.
-
-## POST /api/v1/admin/lesson
-Добавление занятия.
-
----
-
-# Map API
-
-## GET /api/v1/map/search
-Поиск комнат по building_id и/или floor.
-
-Пример:
-```
-/api/v1/map/search?building_id=1&floor=2
+```bash
+make migrate-up
+go run ./cmd/server
 ```
 
-## GET /api/v1/map/path/:start/:end
-Поиск кратчайшего пути между двумя комнатами.
+Service endpoints:
 
-### Response
-```json
-{
-  "path": ["101", "102", "103"],
-  "distance": 24.5
-}
+- API base: `http://localhost:3000/api/v1`
+- Health: `http://localhost:3000/api/v1/health`
+- Swagger UI: `http://localhost:3000/swagger/index.html`
+
+## Running with Docker Compose
+
+`docker-compose.yml` currently runs only the app container. PostgreSQL must be available externally and reachable using `DB_*` values.
+
+```bash
+make build
+make up
 ```
 
----
+Or directly:
 
-# Admin API
-
-Требуют роль `admin`.
-
-- POST /api/v1/admin/set-role
-- POST /api/v1/admin/faculty
-- POST /api/v1/admin/group
-- POST /api/v1/admin/lesson
-- PUT /api/v1/admin/*
-- DELETE /api/v1/admin/*
-
----
-
-# Ошибки
-Единый формат ошибок:
-```json
-{
-  "error": "string"
-}
+```bash
+ENV_FILE=.env docker compose -f docker-compose.yml up -d --build
 ```
 
-## Swagger generation
+## Database Migrations
 
-Swagger files in `docs/` should be generated from code annotations.
+Apply, rollback, and inspect migration state:
 
-Use:
+```bash
+make migrate-up
+make migrate-down
+make migrate-status
+make migrate-version
+```
+
+The migration directory defaults to `./migrations` and can be overridden via `GOOSE_MIGRATION_DIR`.
+
+### Schema Notes
+
+- Core schedule schema is created by ordered migrations in `migrations/`.
+- Later migrations add lesson type support, password reset tokens, subjects, and lesson notes.
+- Run `make migrate-up` before starting the app in new environments to avoid runtime query failures.
+- For rollback during incidents, use `make migrate-down` cautiously and verify data impact first.
+
+## Tests
+
+Run all tests:
+
+```bash
+make test
+```
+
+Run tests for one module (examples):
+
+```bash
+make test-account
+make test-schedule
+make test-map
+```
+
+## Troubleshooting
+
+- `failed to connect to database`: verify `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_SSLMODE`.
+- App starts but API is unreachable: confirm `PORT` in env and Docker port mapping (`${PORT}:3000`).
+- Password reset emails not sent: if `SMTP_HOST` or `SMTP_FROM` is empty, reset links are logged by design.
+- Browser CORS errors: backend currently allows only `https://mytechup.ru`; update CORS policy for your frontend origin.
+- Migration command fails: ensure Goose is installed and `ENV_FILE` points to the expected env file.
+
+## API Documentation (Swagger)
+
+Swagger artifacts in `docs/` are generated from code annotations.
 
 ```bash
 make swagger
 ```
 
-This command runs:
+After startup, Swagger UI is available at `/swagger/index.html`.
+
+## Production Deployment
+
+This repository includes CI/CD workflow: `.github/workflows/deploy-prod.yml`.
+
+Current production flow:
+
+1. Trigger on `main` push or manual dispatch.
+2. Connect to the target host over SSH.
+3. Sync repository to target branch.
+4. Generate `.env.prod` from GitHub environment secrets.
+5. Run `docker compose up -d --build` with `ENV_FILE=.env.prod`.
+
+### Required GitHub Environment Secrets
+
+- Repo/host: `PROD_HOST`, `PROD_PORT`, `PROD_USER`, `PROD_SSH_KEY`, `PROD_APP_DIR`, `PROD_REPO_URL`, `PROD_REPO_BRANCH`
+- App/runtime: `PORT`, `GIN_MODE`, `APP_BASE_URL`
+- Database: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`
+- Auth: `JWT_SECRET`, `JWT_ACCESS_TOKEN_TTL`, `JWT_REFRESH_TOKEN_TTL`
+- Password reset: `PASSWORD_RESET_TTL_MINUTES`
+- SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_USE_TLS`, `SMTP_SKIP_VERIFY`
+
+## Operational Notes
+
+- CORS currently allows only `https://mytechup.ru`; adjust if your frontend origin differs.
+- `/api/v1/health` is unauthenticated and intended for probes.
+- Keep `JWT_SECRET`, DB credentials, and SMTP credentials out of git; inject via environment.
+- Use secure cookie and TLS settings at the ingress/reverse-proxy layer in production.
+
+## Contributing
+
+- Create a feature branch from `main`.
+- Run tests locally before opening a PR:
 
 ```bash
-go run github.com/swaggo/swag/cmd/swag@v1.16.4 init \
-  -g cmd/server/main.go \
-  -d cmd/server,internal/account,internal/schedule,internal/map,internal/health \
-  -o docs \
-  --parseInternal \
-  --parseDependency \
-  --parseDepth 3
+make test
 ```
 
+- Regenerate Swagger docs if handler annotations changed:
+
+```bash
+make swagger
+```
+
+- In PR description, include: scope, migration impact, config changes, and test evidence.
+
+## License
+
+MIT - see `LICENSE`.
