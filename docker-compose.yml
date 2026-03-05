@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: techup-api
     env_file:
-      - .env
+      - ${ENV_FILE:-.env}
     ports:
       - "${PORT}:3000"
     restart: unless-stopped

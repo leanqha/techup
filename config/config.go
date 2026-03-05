@@ -4,15 +4,30 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 )
 
 func LoadEnv() error {
-	if err := godotenv.Load(); err != nil {
-		return fmt.Errorf("failed to load .env: %w", err)
+	envFile := strings.TrimSpace(os.Getenv("ENV_FILE"))
+	if envFile == "" {
+		envFile = ".env"
 	}
+
+	if _, err := os.Stat(envFile); err != nil {
+		if os.IsNotExist(err) {
+			// In CI/prod we rely on process environment variables.
+			return nil
+		}
+		return fmt.Errorf("failed to access env file %q: %w", envFile, err)
+	}
+
+	if err := godotenv.Overload(envFile); err != nil {
+		return fmt.Errorf("failed to load env file %q: %w", envFile, err)
+	}
+
 	return nil
 }
 

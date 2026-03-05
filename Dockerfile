@@ -23,9 +23,8 @@ WORKDIR /app
 
 RUN apk add --no-cache tzdata ca-certificates bash
 
-# Copy server and env
+# Copy binary only; runtime secrets are injected via environment variables.
 COPY --from=builder /app/server .
-COPY --from=builder /app/.env .env
 
 EXPOSE 3000
 CMD ["./server"]

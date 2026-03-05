@@ -3,22 +3,22 @@
 ENV_FILE ?= ./.env
 
 build:
-	docker compose -f docker-compose.yml build
+	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml build
 
 up:
-	docker compose -f docker-compose.yml up -d
-	docker compose -f docker-compose.yml logs -f
+	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml up -d
+	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml logs -f
 
 down:
-	docker compose -f docker-compose.yml down -v
+	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml down -v
 
 logs:
-	docker compose -f docker-compose.yml logs -f app
+	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml logs -f app
 
 restart:
-	docker compose -f docker-compose.yml down -v
-	docker compose -f docker-compose.yml build
-	docker compose -f docker-compose.yml up -d
+	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml down -v
+	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml build
+	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml up -d
 
 migrate: migrate-up
 
@@ -35,7 +35,7 @@ migrate-version:
 	sh -c 'export $$(grep -E "^[A-Za-z_][A-Za-z0-9_]*=" $(ENV_FILE) | sed -E "s/[[:space:]]+#.*$$//" | xargs); GOOSE_DRIVER=$${GOOSE_DRIVER:-postgres} GOOSE_DBSTRING="user=$$DB_USER password=$$DB_PASSWORD host=$$DB_HOST port=$$DB_PORT dbname=$$DB_NAME sslmode=$$DB_SSLMODE" goose -env $(ENV_FILE) -dir "$${GOOSE_MIGRATION_DIR:-./migrations}" version'
 
 psql:
-	docker compose -f docker-compose.yml exec db psql -U $${DB_USER} -d $${DB_NAME}
+	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml exec db psql -U $${DB_USER} -d $${DB_NAME}
 
 test:
 	go test ./... -p 1 -v

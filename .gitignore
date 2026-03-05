@@ -18,6 +18,8 @@ Thumbs.db
 
 # Файлы конфигурации с секретами
 .env
+.env.*
+!.env.example
 
 # Кэш go build
 *.test
