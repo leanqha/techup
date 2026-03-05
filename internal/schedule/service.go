@@ -25,8 +25,8 @@ type RepositoryInterface interface {
 	UpdateLesson(ctx context.Context, lesson Lesson) error
 	DeleteLesson(ctx context.Context, id int) error
 	GetLessons(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
-	GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
-	AddLessonNote(ctx context.Context, userID, lessonID int, text string) error
+	GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
+	AddNote(ctx context.Context, userID, lessonID int, text string) error
 	LessonExists(ctx context.Context, lessonID int) (bool, error)
 	GetGroupIDByName(ctx context.Context, name string) (int, error)
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
@@ -117,7 +117,7 @@ func (s *Service) GetLessons(
 var ErrNoteTooLong = errors.New("note is too long")
 var ErrLessonNotFound = errors.New("lesson not found")
 
-func (s *Service) GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+func (s *Service) GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
 	exists, err := s.repo.LessonExists(ctx, lessonID)
 	if err != nil {
 		return nil, err
@@ -126,10 +126,10 @@ func (s *Service) GetLessonNote(ctx context.Context, userID, lessonID int) (*Les
 		return nil, ErrLessonNotFound
 	}
 
-	return s.repo.GetLessonNote(ctx, userID, lessonID)
+	return s.repo.GetNote(ctx, userID, lessonID)
 }
 
-func (s *Service) AddLessonNote(ctx context.Context, userID, lessonID int, text string) error {
+func (s *Service) AddNote(ctx context.Context, userID, lessonID int, text string) error {
 	if len(text) > 5000 {
 		return ErrNoteTooLong
 	}
@@ -142,7 +142,7 @@ func (s *Service) AddLessonNote(ctx context.Context, userID, lessonID int, text 
 		return ErrLessonNotFound
 	}
 
-	return s.repo.AddLessonNote(ctx, userID, lessonID, text)
+	return s.repo.AddNote(ctx, userID, lessonID, text)
 }
 
 func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {

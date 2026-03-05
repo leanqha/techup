@@ -88,11 +88,11 @@ func (m *mockRepo) LessonExists(ctx context.Context, lessonID int) (bool, error)
 	return true, nil
 }
 
-func (m *mockRepo) GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+func (m *mockRepo) GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
 	return nil, nil
 }
 
-func (m *mockRepo) AddLessonNote(ctx context.Context, userID, lessonID int, text string) error {
+func (m *mockRepo) AddNote(ctx context.Context, userID, lessonID int, text string) error {
 	if m.addLessonNoteFn != nil {
 		return m.addLessonNoteFn(ctx, userID, lessonID, text)
 	}
@@ -198,7 +198,7 @@ func TestServiceAddLessonNoteValidation(t *testing.T) {
 	service := NewService(repo)
 
 	text := strings.Repeat("a", 5001)
-	err := service.AddLessonNote(context.Background(), 1, 2, text)
+	err := service.AddNote(context.Background(), 1, 2, text)
 	assert.Error(t, err)
 	assert.False(t, called)
 }

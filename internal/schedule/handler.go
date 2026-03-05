@@ -24,8 +24,8 @@ type ServiceInterface interface {
 	AddGroup(ctx context.Context, g Group) error
 	UpdateGroup(ctx context.Context, g Group) error
 	DeleteGroup(ctx context.Context, id int) error
-	GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
-	AddLessonNote(ctx context.Context, userID, lessonID int, text string) error
+	GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
+	AddNote(ctx context.Context, userID, lessonID int, text string) error
 	ImportSchedule(ctx context.Context, lessons []LessonImport) error
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	GetTeachers(ctx context.Context) ([]account.ProfileResponse, error)
@@ -406,7 +406,7 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// GetLessonNote godoc
+// GetNote godoc
 // @Summary      Get lesson note
 // @Description  Return the current user's note for a lesson. Returns 204 if no note exists.
 // @Tags         Schedule
@@ -418,7 +418,7 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 // @Failure      401 {object} map[string]string "Unauthorized"
 // @Failure      500 {object} map[string]string "Failed to load note"
 // @Router       /schedule/lessons/{id}/note [get]
-func (h *Handler) GetLessonNote(c *gin.Context) {
+func (h *Handler) GetNote(c *gin.Context) {
 	userID, err := account.GetUserIDFromContext(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -431,7 +431,7 @@ func (h *Handler) GetLessonNote(c *gin.Context) {
 		return
 	}
 
-	note, err := h.service.GetLessonNote(c.Request.Context(), userID, lessonID)
+	note, err := h.service.GetNote(c.Request.Context(), userID, lessonID)
 	if err != nil {
 		if errors.Is(err, ErrLessonNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -449,7 +449,7 @@ func (h *Handler) GetLessonNote(c *gin.Context) {
 	c.JSON(http.StatusOK, note)
 }
 
-// AddLessonNote godoc
+// AddNote godoc
 // @Summary      Add lesson note
 // @Description  Add or replace the current user's note for a lesson.
 // @Tags         Schedule
@@ -463,7 +463,7 @@ func (h *Handler) GetLessonNote(c *gin.Context) {
 // @Failure      401 {object} map[string]string "Unauthorized"
 // @Failure      500 {object} map[string]string "Failed to save note"
 // @Router       /schedule/lessons/{id}/note [post]
-func (h *Handler) AddLessonNote(c *gin.Context) {
+func (h *Handler) AddNote(c *gin.Context) {
 	userID, err := account.GetUserIDFromContext(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -485,7 +485,7 @@ func (h *Handler) AddLessonNote(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.AddLessonNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
+	if err := h.service.AddNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
 		if errors.Is(err, ErrNoteTooLong) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

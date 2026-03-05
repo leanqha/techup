@@ -86,14 +86,14 @@ func (m *mockService) DeleteGroup(ctx context.Context, id int) error {
 	return nil
 }
 
-func (m *mockService) GetLessonNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+func (m *mockService) GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
 	if m.getLessonNoteFn != nil {
 		return m.getLessonNoteFn(ctx, userID, lessonID)
 	}
 	return nil, nil
 }
 
-func (m *mockService) AddLessonNote(ctx context.Context, userID, lessonID int, text string) error {
+func (m *mockService) AddNote(ctx context.Context, userID, lessonID int, text string) error {
 	if m.addLessonNoteFn != nil {
 		return m.addLessonNoteFn(ctx, userID, lessonID, text)
 	}
@@ -136,8 +136,8 @@ func setupRouterWithService(svc ServiceInterface, withUser bool) *gin.Engine {
 	r.POST("/admin/lesson", h.AddLesson)
 	r.PUT("/admin/lesson/:id", h.UpdateLesson)
 	r.DELETE("/admin/lesson/:id", h.DeleteLesson)
-	r.GET("/schedule/lessons/:id/note", h.GetLessonNote)
-	r.POST("/schedule/lessons/:id/note", h.AddLessonNote)
+	r.GET("/schedule/lessons/:id/note", h.GetNote)
+	r.POST("/schedule/lessons/:id/note", h.AddNote)
 	r.POST("/admin/schedule/import", h.ImportSchedule)
 	r.GET("/schedule/search", h.SearchLessons)
 	return r

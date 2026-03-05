@@ -119,8 +119,8 @@ func main() {
 	lessonNotes := scheduleGroup.Group("/lessons/:id")
 	lessonNotes.Use(account.AuthMiddleware())
 	{
-		lessonNotes.GET("/note", scheduleHandler.GetLessonNote)
-		lessonNotes.POST("/note", scheduleHandler.AddLessonNote)
+		lessonNotes.GET("/note", scheduleHandler.GetNote)
+		lessonNotes.POST("/note", scheduleHandler.AddNote)
 	}
 
 	mapGroup := api.Group("/map")

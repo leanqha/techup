@@ -352,14 +352,14 @@ func (r *Repository) LessonExists(ctx context.Context, lessonID int) (bool, erro
 	return exists, nil
 }
 
-func (r *Repository) GetLessonNote(
+func (r *Repository) GetNote(
 	ctx context.Context,
 	userID, lessonID int,
 ) (*LessonNote, error) {
 
 	query := `
-	SELECT id, user_id, lesson_id, text, created_at, updated_at
-	FROM lesson_notes
+	SELECT id, user_id, lesson_id, content, created_at, updated_at
+	FROM notes
 	WHERE user_id=$1 AND lesson_id=$2`
 
 	var n LessonNote
@@ -377,17 +377,17 @@ func (r *Repository) GetLessonNote(
 	return &n, err
 }
 
-func (r *Repository) AddLessonNote(
+func (r *Repository) AddNote(
 	ctx context.Context,
 	userID, lessonID int,
 	text string,
 ) error {
 
 	query := `
-	INSERT INTO lesson_notes (user_id, lesson_id, text)
+	INSERT INTO notes (user_id, lesson_id, content)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (user_id, lesson_id)
-	DO UPDATE SET text=EXCLUDED.text, updated_at=now()`
+	DO UPDATE SET content=EXCLUDED.content, updated_at=now()`
 
 	_, err := r.db.Exec(ctx, query, userID, lessonID, text)
 	if err != nil {
