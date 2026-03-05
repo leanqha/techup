@@ -91,7 +91,7 @@ func (m *mockRepo) LessonExists(ctx context.Context, lessonID int) (bool, error)
 	return true, nil
 }
 
-func (m *mockRepo) GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+func (m *mockRepo) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
 	return nil, nil
 }
 

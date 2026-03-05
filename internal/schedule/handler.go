@@ -24,7 +24,7 @@ type ServiceInterface interface {
 	AddGroup(ctx context.Context, g Group) error
 	UpdateGroup(ctx context.Context, g Group) error
 	DeleteGroup(ctx context.Context, id int) error
-	GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
+	GetNote(ctx context.Context, userID, lessonID int) (*Note, error)
 	AddNote(ctx context.Context, userID, lessonID int, text string) error
 	UpdateNote(ctx context.Context, userID, lessonID int, text string) error
 	DeleteNote(ctx context.Context, userID, lessonID int) error
@@ -82,8 +82,8 @@ func (h *Handler) GetLessons(c *gin.Context) {
 // @Description  Add a lesson for a group on a specific date/time.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        lesson body LessonRequest true "Lesson payload"
 // @Success      201 {string} string "Created"
 // @Failure      400 {object} map[string]string "Invalid input"
@@ -138,8 +138,8 @@ func (h *Handler) AddLesson(c *gin.Context) {
 // @Description  Update lesson fields by ID.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        id     path int true "Lesson ID"
 // @Param        lesson body LessonRequest true "Updated lesson payload"
 // @Success      200 {string} string "OK"
@@ -203,7 +203,7 @@ func (h *Handler) UpdateLesson(c *gin.Context) {
 // @Description  Delete a lesson by ID.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Produce      JSON
+// @Produce      json
 // @Param        id path int true "Lesson ID"
 // @Success      204 {string} string "No Content"
 // @Failure      400 {object} map[string]string "Invalid ID"
@@ -226,7 +226,7 @@ func (h *Handler) DeleteLesson(c *gin.Context) {
 // @Summary      List faculties
 // @Description  Return all faculties.
 // @Tags         Schedule
-// @Produce      JSON
+// @Produce      json
 // @Success      200 {array} Faculty "Faculties list"
 // @Failure      500 {object} map[string]string "Failed to load faculties"
 // @Router       /schedule/faculties [get]
@@ -244,8 +244,8 @@ func (h *Handler) ListFaculties(c *gin.Context) {
 // @Description  Add a new faculty.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        faculty body Faculty true "Faculty payload"
 // @Success      200 {object} Faculty "Created faculty"
 // @Failure      400 {object} map[string]string "Invalid input"
@@ -270,8 +270,8 @@ func (h *Handler) AddFaculty(c *gin.Context) {
 // @Description  Update a faculty by ID.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        id      path int true "Faculty ID"
 // @Param        faculty body Faculty true "Updated faculty payload"
 // @Success      200 {object} Faculty "Updated faculty"
@@ -298,7 +298,7 @@ func (h *Handler) UpdateFaculty(c *gin.Context) {
 // @Description  Delete a faculty by ID.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Produce      JSON
+// @Produce      json
 // @Param        id path int true "Faculty ID"
 // @Success      204 {string} string "No Content"
 // @Failure      500 {object} map[string]string "Failed to delete faculty"
@@ -316,7 +316,7 @@ func (h *Handler) DeleteFaculty(c *gin.Context) {
 // @Summary      List groups
 // @Description  Return all groups.
 // @Tags         Schedule
-// @Produce      JSON
+// @Produce      json
 // @Success      200 {array} Group "Groups list"
 // @Failure      500 {object} map[string]string "Failed to load groups"
 // @Router       /schedule/groups [get]
@@ -334,8 +334,8 @@ func (h *Handler) ListGroups(c *gin.Context) {
 // @Description  Add a new group.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        group body Group true "Group payload"
 // @Success      200 {object} Group "Created group"
 // @Failure      400 {object} map[string]string "Invalid input"
@@ -360,8 +360,8 @@ func (h *Handler) AddGroup(c *gin.Context) {
 // @Description  Update group fields. Group name is required.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        id    path int true "Group ID"
 // @Param        group body Group true "Updated group payload"
 // @Success      200 {integer} int "Updated group ID"
@@ -394,7 +394,7 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 // @Description  Delete a group by ID.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Produce      JSON
+// @Produce      json
 // @Param        id path int true "Group ID"
 // @Success      204 {string} string "No Content"
 // @Failure      500 {object} map[string]string "Failed to delete group"
@@ -413,9 +413,9 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 // @Description  Return the current user's note for a lesson. Returns 204 if no note exists.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Produce      JSON
+// @Produce      json
 // @Param        id path int true "Lesson ID"
-// @Success      200 {object} LessonNote "Lesson note"
+// @Success      200 {object} Note "Lesson note"
 // @Success      204 {string} string "No Content"
 // @Failure      401 {object} map[string]string "Unauthorized"
 // @Failure      500 {object} map[string]string "Failed to load note"
@@ -456,8 +456,8 @@ func (h *Handler) GetNote(c *gin.Context) {
 // @Description  Add or replace the current user's note for a lesson.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        id   path int true "Lesson ID"
 // @Param        note body map[string]string true "Note payload (text)"
 // @Success      200 {string} string "OK"
@@ -508,8 +508,8 @@ func (h *Handler) AddNote(c *gin.Context) {
 // @Description  Update an existing note for the current user and lesson.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        id   path int true "Lesson ID"
 // @Param        note body map[string]string true "Note payload (text)"
 // @Success      200 {string} string "OK"
@@ -561,7 +561,7 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 // @Description  Delete the current user's note for a lesson.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Produce      JSON
+// @Produce      json
 // @Param        id path int true "Lesson ID"
 // @Success      204 {string} string "No Content"
 // @Failure      400 {object} map[string]string "Invalid input"
@@ -599,8 +599,8 @@ func (h *Handler) DeleteNote(c *gin.Context) {
 // @Description  Import multiple lessons in bulk.
 // @Tags         Schedule
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        lessons body []LessonImportRequest true "Lessons payload"
 // @Success      201 {string} string "Created"
 // @Failure      400 {object} map[string]string "Invalid input"
@@ -609,7 +609,7 @@ func (h *Handler) DeleteNote(c *gin.Context) {
 func (h *Handler) ImportSchedule(c *gin.Context) {
 	var dtos []LessonImportRequest
 	if err := c.ShouldBindJSON(&dtos); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json: " + err.Error()})
 		return
 	}
 
@@ -655,7 +655,7 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 // @Summary      Search lessons
 // @Description  Search lessons by optional filters.
 // @Tags         Schedule
-// @Produce      JSON
+// @Produce      json
 // @Param        date       query string false "Date (YYYY-MM-DD)"
 // @Param        teacher_id query int false "Teacher ID"
 // @Param        group_id   query int false "Group ID"
@@ -708,7 +708,7 @@ func (h *Handler) SearchLessons(c *gin.Context) {
 // @Summary      List teachers
 // @Description  Return all teachers.
 // @Tags         Schedule
-// @Produce      JSON
+// @Produce      json
 // @Success      200 {array} account.ProfileResponse "Teachers list"
 // @Failure      500 {object} map[string]string "Failed to load teachers"
 // @Router       /schedule/teachers [get]
@@ -725,7 +725,7 @@ func (h *Handler) GetTeachers(c *gin.Context) {
 // @Summary      List classrooms
 // @Description  Return all available classrooms.
 // @Tags         Schedule
-// @Produce      JSON
+// @Produce      json
 // @Success      200 {array} string "Classrooms list"
 // @Failure      500 {object} map[string]string "Failed to load classrooms"
 // @Router       /schedule/classrooms [get]

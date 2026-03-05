@@ -46,8 +46,8 @@ type LessonCSV struct {
 	Classroom string
 }
 
-// LessonNote — персональная заметка пользователя к паре
-type LessonNote struct {
+// Note — персональная заметка пользователя к паре
+type Note struct {
 	ID        int       `json:"id"`
 	UserID    int       `json:"-"`
 	LessonID  int       `json:"lesson_id"`

@@ -1,4 +1,4 @@
-.PHONY: build up down logs restart migrate migrate-up migrate-down migrate-status migrate-version psql test cover tidy
+.PHONY: build up down logs restart migrate migrate-up migrate-down migrate-status migrate-version psql test test-% cover tidy swagger
 
 ENV_FILE ?= ./.env
 
@@ -40,8 +40,30 @@ psql:
 test:
 	go test ./... -p 1 -v
 
+# Run tests for a specific module: make test-schedule, make test-account, make test-server.
+test-%:
+	@if [ -d "./internal/$*" ]; then \
+		go test ./internal/$*/... -p 1 -v; \
+	elif [ -d "./cmd/$*" ]; then \
+		go test ./cmd/$*/... -p 1 -v; \
+	elif [ -d "./$*" ]; then \
+		go test ./$*/... -p 1 -v; \
+	else \
+		echo "Unknown module '$*'. Expected one of internal/<module>, cmd/<module>, or a top-level package dir."; \
+		exit 1; \
+	fi
+
 cover:
 	go tool cover -html=coverage.out
 
 tidy:
 	go mod tidy
+
+swagger:
+	go run github.com/swaggo/swag/cmd/swag@v1.16.4 init \
+		-g cmd/server/main.go \
+		-d cmd/server,internal/account,internal/schedule,internal/map,internal/health \
+		-o docs \
+		--parseInternal \
+		--parseDependency \
+		--parseDepth 3

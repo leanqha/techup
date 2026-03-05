@@ -175,3 +175,25 @@
   "error": "string"
 }
 ```
+
+## Swagger generation
+
+Swagger files in `docs/` should be generated from code annotations.
+
+Use:
+
+```bash
+make swagger
+```
+
+This command runs:
+
+```bash
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init \
+  -g cmd/server/main.go \
+  -d cmd/server,internal/account,internal/schedule,internal/map,internal/health \
+  -o docs \
+  --parseInternal \
+  --parseDependency \
+  --parseDepth 3
+```

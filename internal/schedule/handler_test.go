@@ -20,7 +20,7 @@ type mockService struct {
 	addLessonFn      func(ctx context.Context, lesson Lesson) error
 	updateLessonFn   func(ctx context.Context, lesson Lesson) error
 	deleteLessonFn   func(ctx context.Context, id int) error
-	getNoteFn        func(ctx context.Context, userID, lessonID int) (*LessonNote, error)
+	getNoteFn        func(ctx context.Context, userID, lessonID int) (*Note, error)
 	addNoteFn        func(ctx context.Context, userID, lessonID int, text string) error
 	updateNoteFn     func(ctx context.Context, userID, lessonID int, text string) error
 	deleteNoteFn     func(ctx context.Context, userID, lessonID int) error
@@ -88,7 +88,7 @@ func (m *mockService) DeleteGroup(ctx context.Context, id int) error {
 	return nil
 }
 
-func (m *mockService) GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+func (m *mockService) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
 	if m.getNoteFn != nil {
 		return m.getNoteFn(ctx, userID, lessonID)
 	}
@@ -311,7 +311,7 @@ func TestDeleteLessonHandler(t *testing.T) {
 
 func TestLessonNoteHandlers(t *testing.T) {
 	svc := &mockService{
-		getNoteFn: func(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+		getNoteFn: func(ctx context.Context, userID, lessonID int) (*Note, error) {
 			return nil, nil
 		},
 		addNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {

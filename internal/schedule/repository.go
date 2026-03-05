@@ -355,14 +355,14 @@ func (r *Repository) LessonExists(ctx context.Context, lessonID int) (bool, erro
 func (r *Repository) GetNote(
 	ctx context.Context,
 	userID, lessonID int,
-) (*LessonNote, error) {
+) (*Note, error) {
 
 	query := `
 	SELECT id, user_id, lesson_id, content, created_at, updated_at
 	FROM notes
 	WHERE user_id=$1 AND lesson_id=$2`
 
-	var n LessonNote
+	var n Note
 	err := r.db.QueryRow(ctx, query, userID, lessonID).
 		Scan(&n.ID, &n.UserID, &n.LessonID, &n.Text, &n.CreatedAt, &n.UpdatedAt)
 

@@ -27,7 +27,7 @@ type RepositoryInterface interface {
 	UpdateLesson(ctx context.Context, lesson Lesson) error
 	DeleteLesson(ctx context.Context, id int) error
 	GetLessons(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
-	GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
+	GetNote(ctx context.Context, userID, lessonID int) (*Note, error)
 	AddNote(ctx context.Context, userID, lessonID int, text string) error
 	UpdateNote(ctx context.Context, userID, lessonID int, text string) error
 	DeleteNote(ctx context.Context, userID, lessonID int) error
@@ -122,7 +122,7 @@ var ErrNoteTooLong = errors.New("note is too long")
 var ErrLessonNotFound = errors.New("lesson not found")
 var ErrNoteNotFound = errors.New("note not found")
 
-func (s *Service) GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
+func (s *Service) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
 	exists, err := s.repo.LessonExists(ctx, lessonID)
 	if err != nil {
 		return nil, err

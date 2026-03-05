@@ -35,7 +35,7 @@ func NewHandler(service ServiceInterface) *Handler {
 // @Summary Get all buildings
 // @Description Returns a list of all buildings
 // @Tags map
-// @Produce JSON
+// @Produce json
 // @Success 200 {array} Building
 // @Failure 500 {object} error
 // @Router /buildings [get]
@@ -52,7 +52,7 @@ func (h *Handler) GetBuildings(c *gin.Context) {
 // @Summary Get path between two rooms
 // @Description Calculates path between start_room_id and end_room_id
 // @Tags map
-// @Produce JSON
+// @Produce json
 // @Param start_room_id query int true "Start Room ID"
 // @Param end_room_id query int true "End Room ID"
 // @Success 200 {object} GetPathResponse
@@ -135,7 +135,7 @@ func (h *Handler) DeleteRoom(c *gin.Context) {
 // @Summary Search rooms
 // @Description Returns rooms filtered by building_id and/or floor
 // @Tags map
-// @Produce JSON
+// @Produce json
 // @Param building_id query int false "Building ID"
 // @Param floor query int false "Floor number"
 // @Success 200 {array} Room

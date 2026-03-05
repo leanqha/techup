@@ -57,8 +57,8 @@ func NewHandler(s ServiceInterface) *Handler {
 // @Summary      Register a new user account
 // @Description  Create a new account with email/password and profile details. Sets HTTP-only cookies (access_token, refresh_token).
 // @Tags         Account
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        register body RegisterRequest true "Registration details"
 // @Success      200 {object} map[string]interface{} "Message plus user profile"
 // @Failure      400 {object} ErrorResponse "Invalid input or registration error"
@@ -113,8 +113,8 @@ func (h *Handler) Register(c *gin.Context) {
 // @Summary      Authenticate user
 // @Description  Verify credentials and set HTTP-only cookies (access_token, refresh_token). Returns a confirmation message.
 // @Tags         Account
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        login body LoginRequest true "Login credentials"
 // @Success      200 {object} map[string]string "Login confirmation message"
 // @Failure      400 {object} ErrorResponse "Invalid input"
@@ -165,7 +165,7 @@ func (h *Handler) Login(c *gin.Context) {
 // @Description  Return profile data for the authenticated user.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Produce      JSON
+// @Produce      json
 // @Success      200 {object} ProfileResponse "User profile"
 // @Failure      401 {object} ErrorResponse "Unauthorized"
 // @Failure      404 {object} ErrorResponse "User not found"
@@ -197,7 +197,7 @@ func (h *Handler) Profile(c *gin.Context) {
 // @Summary      Refresh authentication tokens
 // @Description  Issue new access and refresh tokens using the refresh_token cookie; sets new HTTP-only cookies.
 // @Tags         Account
-// @Produce      JSON
+// @Produce      json
 // @Success      200 {object} map[string]string "Refresh confirmation message"
 // @Failure      400 {object} ErrorResponse "Refresh token not provided"
 // @Failure      401 {object} ErrorResponse "Invalid or expired refresh token"
@@ -245,8 +245,8 @@ func (h *Handler) Refresh(c *gin.Context) {
 // @Description  Change the password for the authenticated user. Requires current and new passwords.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        change body ChangePasswordRequest true "Password change payload"
 // @Success      200 {object} map[string]string "Password change confirmation message"
 // @Failure      400 {object} ErrorResponse "Invalid input or password change error"
@@ -281,8 +281,8 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 // @Description  Update profile fields for the authenticated user and return the updated profile.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        update body UpdateProfileRequest true "Profile update payload"
 // @Success      200 {object} ProfileResponse "Updated user profile"
 // @Failure      400 {object} ErrorResponse "Invalid input or update error"
@@ -323,8 +323,8 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 // @Description  Change a user's role. Requires admin privileges.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        role body SetRoleRequest true "Role update payload"
 // @Success      200 {object} map[string]string "Role update confirmation message"
 // @Failure      400 {object} ErrorResponse "Invalid input or update error"
@@ -364,7 +364,7 @@ func (h *Handler) SetRole(c *gin.Context) {
 // @Description  Revoke refresh tokens, clear auth cookies, and return a confirmation message.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Produce      JSON
+// @Produce      json
 // @Success      200 {object} map[string]string "Logout confirmation message"
 // @Failure      401 {object} ErrorResponse "Unauthorized"
 // @Failure      500 {object} ErrorResponse "Logout error"
@@ -405,8 +405,8 @@ func clearAuthCookie(c *gin.Context, name string) {
 // @Summary      Request password reset
 // @Description  Send a password reset link/token to the user's email.
 // @Tags         Account
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        body body ForgotPasswordRequest true "Password reset request"
 // @Success      200 {object} map[string]string "Reset request accepted"
 // @Failure      400 {object} ErrorResponse "Invalid input"
@@ -431,8 +431,8 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 // @Summary      Reset password
 // @Description  Reset the user's password using a valid reset token.
 // @Tags         Account
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        body body ResetPasswordRequest true "Password reset payload"
 // @Success      200 {object} map[string]string "Password reset confirmation"
 // @Failure      400 {object} ErrorResponse "Invalid input or token"
@@ -458,7 +458,7 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 // @Description  Delete an account by ID. Admins can delete any account; users can delete their own.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Produce      JSON
+// @Produce      json
 // @Param        id path int true "User ID"
 // @Success      200 {object} map[string]string "Deletion confirmation message"
 // @Failure      400 {object} ErrorResponse "Invalid user ID"
@@ -507,7 +507,7 @@ func (h *Handler) DeleteAccount(c *gin.Context) {
 // @Description  Return accounts filtered by optional criteria.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Produce      JSON
+// @Produce      json
 // @Param        role        query string false "Role"
 // @Param        group_id    query int    false "Group ID"
 // @Param        email       query string false "Email (partial match)"
@@ -580,8 +580,8 @@ func (h *Handler) AdminListAccounts(c *gin.Context) {
 // @Description  Update account fields by ID.
 // @Tags         Account
 // @Security     ApiKeyAuth
-// @Accept       JSON
-// @Produce      JSON
+// @Accept       json
+// @Produce      json
 // @Param        id   path int true "User ID"
 // @Param        body body AdminUpdateAccountRequest true "Account update payload"
 // @Success      200 {object} AdminAccountResponse "Updated account"

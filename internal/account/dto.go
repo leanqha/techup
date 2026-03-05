@@ -1,5 +1,10 @@
 package account
 
+// ErrorResponse represents a standard API error payload.
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 // RegisterRequest describes payload for account registration.
 type RegisterRequest struct {
 	Email     string `json:"email" binding:"required,email"`
@@ -14,7 +19,7 @@ type LoginRequest struct {
 	Password string `json:"password" example:"strongpassword"`
 }
 
-// LoginResponse represents token payloads (when returned in JSON).
+// LoginResponse represents token payloads (when returned in json).
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
