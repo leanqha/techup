@@ -26,6 +26,8 @@ type mockService struct {
 	deleteNoteFn     func(ctx context.Context, userID, lessonID int) error
 	importScheduleFn func(ctx context.Context, lessons []LessonImport) error
 	searchLessonsFn  func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
+	getTeachersFn    func(ctx context.Context) ([]account.ProfileResponse, error)
+	getClassroomsFn  func(ctx context.Context) ([]string, error)
 }
 
 func (m *mockService) GetLessons(ctx context.Context, groupID int, fromStr, toStr string) ([]LessonResponse, error) {
@@ -56,35 +58,35 @@ func (m *mockService) DeleteLesson(ctx context.Context, id int) error {
 	return nil
 }
 
-func (m *mockService) ListFaculties(ctx context.Context) ([]Faculty, error) {
+func (m *mockService) ListFaculties(_ context.Context) ([]Faculty, error) {
 	return nil, nil
 }
 
-func (m *mockService) AddFaculty(ctx context.Context, faculty Faculty) error {
+func (m *mockService) AddFaculty(_ context.Context, _ Faculty) error {
 	return nil
 }
 
-func (m *mockService) UpdateFaculty(ctx context.Context, faculty Faculty) error {
+func (m *mockService) UpdateFaculty(_ context.Context, _ Faculty) error {
 	return nil
 }
 
-func (m *mockService) DeleteFaculty(ctx context.Context, id int) error {
+func (m *mockService) DeleteFaculty(_ context.Context, _ int) error {
 	return nil
 }
 
-func (m *mockService) ListGroups(ctx context.Context) ([]Group, error) {
+func (m *mockService) ListGroups(_ context.Context) ([]Group, error) {
 	return nil, nil
 }
 
-func (m *mockService) AddGroup(ctx context.Context, g Group) error {
+func (m *mockService) AddGroup(_ context.Context, _ Group) error {
 	return nil
 }
 
-func (m *mockService) UpdateGroup(ctx context.Context, g Group) error {
+func (m *mockService) UpdateGroup(_ context.Context, _ Group) error {
 	return nil
 }
 
-func (m *mockService) DeleteGroup(ctx context.Context, id int) error {
+func (m *mockService) DeleteGroup(_ context.Context, _ int) error {
 	return nil
 }
 
@@ -131,10 +133,16 @@ func (m *mockService) SearchLessons(ctx context.Context, f SearchLessonsFilter) 
 }
 
 func (m *mockService) GetTeachers(ctx context.Context) ([]account.ProfileResponse, error) {
+	if m.getTeachersFn != nil {
+		return m.getTeachersFn(ctx)
+	}
 	return nil, nil
 }
 
 func (m *mockService) GetClassrooms(ctx context.Context) ([]string, error) {
+	if m.getClassroomsFn != nil {
+		return m.getClassroomsFn(ctx)
+	}
 	return nil, nil
 }
 
@@ -158,6 +166,8 @@ func setupRouterWithService(svc ServiceInterface, withUser bool) *gin.Engine {
 	r.DELETE("/schedule/lessons/:id/note", h.DeleteNote)
 	r.POST("/admin/schedule/import", h.ImportSchedule)
 	r.GET("/schedule/search", h.SearchLessons)
+	r.GET("/schedule/teachers", h.GetTeachers)
+	r.GET("/schedule/classrooms", h.GetClassrooms)
 	return r
 }
 
@@ -493,4 +503,52 @@ func TestSearchLessonsHandler(t *testing.T) {
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, failReq)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestGetTeachersHandler(t *testing.T) {
+	svc := &mockService{
+		getTeachersFn: func(ctx context.Context) ([]account.ProfileResponse, error) {
+			return []account.ProfileResponse{{ID: 1, Email: "teacher@example.com", Role: "teacher"}}, nil
+		},
+	}
+	r := setupRouterWithService(svc, false)
+
+	okReq := httptest.NewRequest(http.MethodGet, "/schedule/teachers", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, okReq)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "teacher@example.com")
+
+	svc.getTeachersFn = func(ctx context.Context) ([]account.ProfileResponse, error) {
+		return nil, errors.New("db down")
+	}
+	failReq := httptest.NewRequest(http.MethodGet, "/schedule/teachers", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, failReq)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), "failed to get teachers")
+}
+
+func TestGetClassroomsHandler(t *testing.T) {
+	svc := &mockService{
+		getClassroomsFn: func(ctx context.Context) ([]string, error) {
+			return []string{"101", "102"}, nil
+		},
+	}
+	r := setupRouterWithService(svc, false)
+
+	okReq := httptest.NewRequest(http.MethodGet, "/schedule/classrooms", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, okReq)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "101")
+
+	svc.getClassroomsFn = func(ctx context.Context) ([]string, error) {
+		return nil, errors.New("db down")
+	}
+	failReq := httptest.NewRequest(http.MethodGet, "/schedule/classrooms", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, failReq)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), "failed to get classrooms")
 }

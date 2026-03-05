@@ -27,35 +27,35 @@ type mockRepo struct {
 	getClassroomsFn    func(ctx context.Context) ([]string, error)
 }
 
-func (m *mockRepo) AddFaculty(ctx context.Context, faculty Faculty) error {
+func (m *mockRepo) AddFaculty(_ context.Context, _ Faculty) error {
 	return nil
 }
 
-func (m *mockRepo) ListFaculties(ctx context.Context) ([]Faculty, error) {
+func (m *mockRepo) ListFaculties(_ context.Context) ([]Faculty, error) {
 	return nil, nil
 }
 
-func (m *mockRepo) UpdateFaculty(ctx context.Context, faculty Faculty) error {
+func (m *mockRepo) UpdateFaculty(_ context.Context, _ Faculty) error {
 	return nil
 }
 
-func (m *mockRepo) DeleteFaculty(ctx context.Context, id int) error {
+func (m *mockRepo) DeleteFaculty(_ context.Context, _ int) error {
 	return nil
 }
 
-func (m *mockRepo) AddGroup(ctx context.Context, g Group) error {
+func (m *mockRepo) AddGroup(_ context.Context, _ Group) error {
 	return nil
 }
 
-func (m *mockRepo) ListGroups(ctx context.Context) ([]Group, error) {
+func (m *mockRepo) ListGroups(_ context.Context) ([]Group, error) {
 	return nil, nil
 }
 
-func (m *mockRepo) UpdateGroup(ctx context.Context, g Group) error {
+func (m *mockRepo) UpdateGroup(_ context.Context, _ Group) error {
 	return nil
 }
 
-func (m *mockRepo) DeleteGroup(ctx context.Context, id int) error {
+func (m *mockRepo) DeleteGroup(_ context.Context, _ int) error {
 	return nil
 }
 
@@ -73,7 +73,7 @@ func (m *mockRepo) UpdateLesson(ctx context.Context, lesson Lesson) error {
 	return nil
 }
 
-func (m *mockRepo) DeleteLesson(ctx context.Context, id int) error {
+func (m *mockRepo) DeleteLesson(_ context.Context, _ int) error {
 	return nil
 }
 
@@ -91,7 +91,7 @@ func (m *mockRepo) LessonExists(ctx context.Context, lessonID int) (bool, error)
 	return true, nil
 }
 
-func (m *mockRepo) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
+func (m *mockRepo) GetNote(_ context.Context, _, _ int) (*Note, error) {
 	return nil, nil
 }
 
@@ -291,7 +291,9 @@ func TestServiceImportSchedule(t *testing.T) {
 		return 0, errors.New("not found")
 	}
 	err = service.ImportSchedule(context.Background(), lessons)
-	assert.Error(t, err)
+	if err == nil {
+		t.Fatal("expected group not found error")
+	}
 	assert.Contains(t, err.Error(), "group not found")
 }
 

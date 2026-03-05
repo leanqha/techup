@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
 
 func TestRegisterLoginRefreshLogout(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 
 	h := account.NewHandler(svc)
 	r := gin.New()
@@ -158,7 +158,7 @@ func extractTokensFromResponse(resp *http.Response) (string, string) {
 }
 
 func TestLoginWithWrongPassword(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	ctx := context.Background()
 	email := gofakeit.Email()
 
@@ -167,7 +167,7 @@ func TestLoginWithWrongPassword(t *testing.T) {
 }
 
 func TestCleanup(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	ctx := context.Background()
 	email := gofakeit.Email()
 
