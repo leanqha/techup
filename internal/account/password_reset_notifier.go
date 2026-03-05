@@ -3,12 +3,12 @@ package account
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"net"
 	"net/smtp"
 	"net/url"
 	"strings"
+	"techup/internal/apperrors"
 	"techup/internal/logger"
 )
 
@@ -76,7 +76,7 @@ func NewSMTPPasswordResetNotifier(cfg SMTPConfig, sender EmailSender) *SMTPPassw
 
 func (n *SMTPPasswordResetNotifier) SendPasswordReset(_ context.Context, email, token string) error {
 	if n.cfg.BaseURL == "" {
-		return errors.New("APP_BASE_URL is required for SMTP notifier")
+		return apperrors.InvalidArgument("APP_BASE_URL is required for SMTP notifier")
 	}
 	resetURL := fmt.Sprintf("%s/reset-password?token=%s", n.cfg.BaseURL, url.QueryEscape(token))
 	subject, body := buildResetEmail(n.cfg.From, email, resetURL)

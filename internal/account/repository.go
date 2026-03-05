@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"techup/internal/apperrors"
 	"techup/internal/logger"
 
 	"github.com/jackc/pgx/v5"
@@ -29,7 +30,7 @@ func (r *Repository) CreateAccount(ctx context.Context, acc *Account) error {
 	err := r.db.QueryRow(ctx, query, acc.Email, acc.PasswordHash, acc.FirstName, acc.LastName, acc.Role).Scan(&acc.ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") {
-			return fmt.Errorf("email already exists")
+			return apperrors.Conflict("email already exists")
 		}
 		logger.LogSQLError(err, query, acc.Email, acc.PasswordHash)
 		return err
@@ -49,7 +50,10 @@ func (r *Repository) GetByEmail(ctx context.Context, email string) (*Account, er
 	)
 	if err != nil {
 		logger.LogSQLError(err, query, email)
-		return nil, fmt.Errorf("account not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperrors.NotFound("account not found")
+		}
+		return nil, err
 	}
 
 	if middleName.Valid {
@@ -78,7 +82,7 @@ func (r *Repository) GetByID(ctx context.Context, id int) (*Account, error) {
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("account not found")
+			return nil, apperrors.NotFound("account not found")
 		}
 		logger.LogSQLError(err, query, id)
 		return nil, err
@@ -129,7 +133,7 @@ func (r *Repository) UpdateAccount(ctx context.Context, acc *Account) error {
 	}
 
 	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("account not found or not updated")
+		return apperrors.NotFound("account not found")
 	}
 
 	return nil
@@ -194,7 +198,7 @@ func (r *Repository) DeleteAccount(ctx context.Context, id int) error {
 	}
 
 	if ct.RowsAffected() != 1 {
-		return errors.New("account not found")
+		return apperrors.NotFound("account not found")
 	}
 	return nil
 }
@@ -245,7 +249,7 @@ func (r *Repository) MarkPasswordResetTokenUsed(ctx context.Context, tokenID int
 		return err
 	}
 	if ct.RowsAffected() != 1 {
-		return fmt.Errorf("password reset token not found")
+		return apperrors.NotFound("password reset token not found")
 	}
 	return nil
 }

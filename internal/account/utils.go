@@ -3,9 +3,8 @@ package account
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
-	"fmt"
 	"techup/config"
+	"techup/internal/apperrors"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +30,7 @@ func randomTokenID() (string, error) {
 func GenerateTokens(acc *Account) (string, string, error) {
 	secret := config.GetJWTSecret()
 	if secret == "" {
-		return "", "", errors.New("JWT secret not set")
+		return "", "", apperrors.Internal("JWT secret not set", nil)
 	}
 
 	accessTTL := time.Duration(config.GetAccessTokenTTLSeconds()) * time.Second
@@ -96,21 +95,26 @@ func ParseToken(tokenStr string) (jwt.MapClaims, error) {
 	})
 
 	if err != nil || !token.Valid {
-		return nil, err
+		return nil, apperrors.Unauthorized("invalid token")
 	}
 
-	return token.Claims.(jwt.MapClaims), nil
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, apperrors.Unauthorized("invalid token")
+	}
+
+	return claims, nil
 }
 
 // GetUserIDFromContext extracts the user ID from gin.Context.
 func GetUserIDFromContext(c *gin.Context) (int, error) {
 	uid, exists := c.Get("user_id")
 	if !exists {
-		return 0, fmt.Errorf("user_id not found in context")
+		return 0, apperrors.Unauthorized("user_id not found in context")
 	}
 	userID, ok := uid.(int)
 	if !ok {
-		return 0, fmt.Errorf("user_id in context is not of type int")
+		return 0, apperrors.Unauthorized("user_id in context is not of type int")
 	}
 	return userID, nil
 }

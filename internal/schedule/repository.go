@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"techup/internal/account"
+	"techup/internal/apperrors"
 	"techup/internal/logger"
 	"time"
 
@@ -37,6 +38,9 @@ func (r *Repository) GetFaculty(ctx context.Context, id int) (*Faculty, error) {
 	err := r.db.QueryRow(ctx, query, id).Scan(&f.ID, &f.Name)
 	if err != nil {
 		logger.LogSQLError(err, query, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperrors.NotFound("faculty not found")
+		}
 		return nil, err
 	}
 	return &f, nil
@@ -64,20 +68,28 @@ func (r *Repository) ListFaculties(ctx context.Context) ([]Faculty, error) {
 
 func (r *Repository) UpdateFaculty(ctx context.Context, faculty Faculty) error {
 	query := `UPDATE faculties SET name=$1 WHERE id=$2`
-	_, err := r.db.Exec(ctx, query, faculty.Name, faculty.ID)
+	ct, err := r.db.Exec(ctx, query, faculty.Name, faculty.ID)
 	if err != nil {
 		logger.LogSQLError(err, query, faculty.Name)
+		return err
 	}
-	return err
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("faculty not found")
+	}
+	return nil
 }
 
 func (r *Repository) DeleteFaculty(ctx context.Context, id int) error {
 	query := `DELETE FROM faculties WHERE id=$1`
-	_, err := r.db.Exec(ctx, query, id)
+	ct, err := r.db.Exec(ctx, query, id)
 	if err != nil {
 		logger.LogSQLError(err, query, id)
+		return err
 	}
-	return err
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("faculty not found")
+	}
+	return nil
 }
 
 func (r *Repository) AddGroup(ctx context.Context, g Group) error {
@@ -101,6 +113,9 @@ func (r *Repository) GetGroup(ctx context.Context, id int) (*Group, error) {
 		Scan(&g.ID, &g.FacultyID, &g.Name, &g.Course, &g.Degree, &g.YearStart, &g.Specialization, &g.IsActive)
 	if err != nil {
 		logger.LogSQLError(err, query, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperrors.NotFound("group not found")
+		}
 		return nil, err
 	}
 	return &g, nil
@@ -150,21 +165,29 @@ func (r *Repository) ListGroups(ctx context.Context) ([]Group, error) {
 
 func (r *Repository) UpdateGroup(ctx context.Context, g Group) error {
 	query := `UPDATE groups SET faculty_id=$1, name=$2, course=$3, degree=$4, year_start=$5, specialization=$6, is_active=$7 WHERE id=$8`
-	_, err := r.db.Exec(ctx, query,
+	ct, err := r.db.Exec(ctx, query,
 		g.FacultyID, g.Name, g.Course, g.Degree, g.YearStart, g.Specialization, g.IsActive, g.ID)
 	if err != nil {
 		logger.LogSQLError(err, query, g.FacultyID, g.Name, g.Course, g.Degree, g.YearStart, g.Specialization, g.IsActive, g.ID)
+		return err
 	}
-	return err
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("group not found")
+	}
+	return nil
 }
 
 func (r *Repository) DeleteGroup(ctx context.Context, id int) error {
 	query := `DELETE FROM groups WHERE id=$1`
-	_, err := r.db.Exec(ctx, query, id)
+	ct, err := r.db.Exec(ctx, query, id)
 	if err != nil {
 		logger.LogSQLError(err, query, id)
+		return err
 	}
-	return err
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("group not found")
+	}
+	return nil
 }
 
 func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
@@ -220,10 +243,10 @@ func (r *Repository) UpdateLesson(ctx context.Context, lesson Lesson) error {
 	query := `
 	UPDATE lessons
 	SET group_id=$1, date=$2, start_time=$3, end_time=$4,
-		subject=$5, teacher_id=$6, classroom=$7
-	WHERE id=$8`
+		subject=$5, type=$6, teacher_id=$7, classroom=$8
+	WHERE id=$9`
 
-	_, err := r.db.Exec(ctx, query,
+	ct, err := r.db.Exec(ctx, query,
 		lesson.GroupID,
 		lesson.Date,
 		lesson.StartTime,
@@ -237,18 +260,26 @@ func (r *Repository) UpdateLesson(ctx context.Context, lesson Lesson) error {
 
 	if err != nil {
 		logger.LogSQLError(err, query, lesson.ID)
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("lesson not found")
 	}
 
-	return err
+	return nil
 }
 
 func (r *Repository) DeleteLesson(ctx context.Context, id int) error {
 	query := `DELETE FROM lessons WHERE id=$1`
-	_, err := r.db.Exec(ctx, query, id)
+	ct, err := r.db.Exec(ctx, query, id)
 	if err != nil {
 		logger.LogSQLError(err, query, id)
+		return err
 	}
-	return err
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("lesson not found")
+	}
+	return nil
 }
 
 func (r *Repository) GetLessons(
@@ -414,7 +445,7 @@ func (r *Repository) UpdateNote(
 	}
 
 	if result.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return apperrors.NotFound("note not found")
 	}
 
 	return nil
@@ -433,7 +464,7 @@ func (r *Repository) DeleteNote(
 	}
 
 	if result.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return apperrors.NotFound("note not found")
 	}
 
 	return nil
@@ -452,6 +483,9 @@ func (r *Repository) GetGroupIDByName(ctx context.Context, name string) (int, er
 	err := r.db.QueryRow(ctx, query, name).Scan(&id)
 	if err != nil {
 		logger.LogSQLError(err, query, name)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, apperrors.NotFound("group not found")
+		}
 		return 0, err
 	}
 

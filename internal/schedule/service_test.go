@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"techup/internal/account"
+	"techup/internal/apperrors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
@@ -288,7 +289,7 @@ func TestServiceImportSchedule(t *testing.T) {
 	assert.Equal(t, 42, captured.GroupID)
 
 	repo.getGroupIDByNameFn = func(ctx context.Context, name string) (int, error) {
-		return 0, errors.New("not found")
+		return 0, apperrors.NotFound("group not found")
 	}
 	err = service.ImportSchedule(context.Background(), lessons)
 	if err == nil {

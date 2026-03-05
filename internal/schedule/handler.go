@@ -2,10 +2,10 @@ package schedule
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 	"techup/internal/account"
+	"techup/internal/apperrors"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -42,6 +42,10 @@ func NewHandler(service ServiceInterface) *Handler {
 	return &Handler{service: service}
 }
 
+func respondError(c *gin.Context, err error) {
+	c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+}
+
 // GetLessons godoc
 // @Summary      List lessons for a group and date range
 // @Description  Return lessons for a group between the provided dates (inclusive).
@@ -70,7 +74,7 @@ func (h *Handler) GetLessons(c *gin.Context) {
 
 	lessons, err := h.service.GetLessons(c.Request.Context(), groupID, from, to)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -126,7 +130,7 @@ func (h *Handler) AddLesson(c *gin.Context) {
 	}
 
 	if err := h.service.AddLesson(c.Request.Context(), lesson); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -191,7 +195,7 @@ func (h *Handler) UpdateLesson(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateLesson(c.Request.Context(), lesson); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -216,7 +220,7 @@ func (h *Handler) DeleteLesson(c *gin.Context) {
 		return
 	}
 	if err := h.service.DeleteLesson(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -233,7 +237,7 @@ func (h *Handler) DeleteLesson(c *gin.Context) {
 func (h *Handler) ListFaculties(c *gin.Context) {
 	fac, err := h.service.ListFaculties(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, fac)
@@ -259,7 +263,7 @@ func (h *Handler) AddFaculty(c *gin.Context) {
 	}
 	err := h.service.AddFaculty(c.Request.Context(), f)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, f)
@@ -287,7 +291,7 @@ func (h *Handler) UpdateFaculty(c *gin.Context) {
 	}
 	f.ID = id
 	if err := h.service.UpdateFaculty(c.Request.Context(), f); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, f)
@@ -306,7 +310,7 @@ func (h *Handler) UpdateFaculty(c *gin.Context) {
 func (h *Handler) DeleteFaculty(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := h.service.DeleteFaculty(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -323,7 +327,7 @@ func (h *Handler) DeleteFaculty(c *gin.Context) {
 func (h *Handler) ListGroups(c *gin.Context) {
 	groups, err := h.service.ListGroups(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, groups)
@@ -349,7 +353,7 @@ func (h *Handler) AddGroup(c *gin.Context) {
 	}
 	err := h.service.AddGroup(c.Request.Context(), g)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, g)
@@ -382,7 +386,7 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 
 	err := h.service.UpdateGroup(c.Request.Context(), g)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -402,7 +406,7 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 func (h *Handler) DeleteGroup(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := h.service.DeleteGroup(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -435,11 +439,7 @@ func (h *Handler) GetNote(c *gin.Context) {
 
 	note, err := h.service.GetNote(c.Request.Context(), userID, lessonID)
 	if err != nil {
-		if errors.Is(err, ErrLessonNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -488,15 +488,7 @@ func (h *Handler) AddNote(c *gin.Context) {
 	}
 
 	if err := h.service.AddNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
-		if errors.Is(err, ErrNoteTooLong) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		if errors.Is(err, ErrLessonNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -541,15 +533,7 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
-		if errors.Is(err, ErrNoteTooLong) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		if errors.Is(err, ErrLessonNotFound) || errors.Is(err, ErrNoteNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -583,11 +567,7 @@ func (h *Handler) DeleteNote(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteNote(c.Request.Context(), userID, lessonID); err != nil {
-		if errors.Is(err, ErrLessonNotFound) || errors.Is(err, ErrNoteNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -644,7 +624,7 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 	}
 
 	if err := h.service.ImportSchedule(c.Request.Context(), lessons); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -678,12 +658,20 @@ func (h *Handler) SearchLessons(c *gin.Context) {
 	}
 
 	if v := c.Query("teacher_id"); v != "" {
-		id, _ := strconv.Atoi(v)
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid teacher_id"})
+			return
+		}
 		f.TeacherID = &id
 	}
 
 	if v := c.Query("group_id"); v != "" {
-		id, _ := strconv.Atoi(v)
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group_id"})
+			return
+		}
 		f.GroupID = &id
 	}
 
@@ -697,7 +685,7 @@ func (h *Handler) SearchLessons(c *gin.Context) {
 
 	lessons, err := h.service.SearchLessons(c.Request.Context(), f)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, err)
 		return
 	}
 
@@ -715,7 +703,7 @@ func (h *Handler) SearchLessons(c *gin.Context) {
 func (h *Handler) GetTeachers(c *gin.Context) {
 	teachers, err := h.service.GetTeachers(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get teachers"})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": "failed to get teachers"})
 		return
 	}
 	c.JSON(http.StatusOK, teachers)
@@ -732,7 +720,7 @@ func (h *Handler) GetTeachers(c *gin.Context) {
 func (h *Handler) GetClassrooms(c *gin.Context) {
 	classrooms, err := h.service.GetClassrooms(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get classrooms"})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": "failed to get classrooms"})
 		return
 	}
 	c.JSON(http.StatusOK, classrooms)
