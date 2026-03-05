@@ -121,6 +121,8 @@ func main() {
 	{
 		lessonNotes.GET("/note", scheduleHandler.GetNote)
 		lessonNotes.POST("/note", scheduleHandler.AddNote)
+		lessonNotes.PUT("/note", scheduleHandler.UpdateNote)
+		lessonNotes.DELETE("/note", scheduleHandler.DeleteNote)
 	}
 
 	mapGroup := api.Group("/map")

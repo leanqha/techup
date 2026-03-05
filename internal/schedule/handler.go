@@ -26,6 +26,8 @@ type ServiceInterface interface {
 	DeleteGroup(ctx context.Context, id int) error
 	GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
 	AddNote(ctx context.Context, userID, lessonID int, text string) error
+	UpdateNote(ctx context.Context, userID, lessonID int, text string) error
+	DeleteNote(ctx context.Context, userID, lessonID int) error
 	ImportSchedule(ctx context.Context, lessons []LessonImport) error
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	GetTeachers(ctx context.Context) ([]account.ProfileResponse, error)
@@ -499,6 +501,97 @@ func (h *Handler) AddNote(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+// UpdateNote godoc
+// @Summary      Update lesson note
+// @Description  Update an existing note for the current user and lesson.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Accept       JSON
+// @Produce      JSON
+// @Param        id   path int true "Lesson ID"
+// @Param        note body map[string]string true "Note payload (text)"
+// @Success      200 {string} string "OK"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      401 {object} map[string]string "Unauthorized"
+// @Failure      404 {object} map[string]string "Lesson or note not found"
+// @Failure      500 {object} map[string]string "Failed to update note"
+// @Router       /schedule/lessons/{id}/note [put]
+func (h *Handler) UpdateNote(c *gin.Context) {
+	userID, err := account.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	lessonID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req struct {
+		Text string `json:"text" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.UpdateNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
+		if errors.Is(err, ErrNoteTooLong) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, ErrLessonNotFound) || errors.Is(err, ErrNoteNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// DeleteNote godoc
+// @Summary      Delete lesson note
+// @Description  Delete the current user's note for a lesson.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Produce      JSON
+// @Param        id path int true "Lesson ID"
+// @Success      204 {string} string "No Content"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      401 {object} map[string]string "Unauthorized"
+// @Failure      404 {object} map[string]string "Lesson or note not found"
+// @Failure      500 {object} map[string]string "Failed to delete note"
+// @Router       /schedule/lessons/{id}/note [delete]
+func (h *Handler) DeleteNote(c *gin.Context) {
+	userID, err := account.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	lessonID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := h.service.DeleteNote(c.Request.Context(), userID, lessonID); err != nil {
+		if errors.Is(err, ErrLessonNotFound) || errors.Is(err, ErrNoteNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 // ImportSchedule godoc

@@ -397,6 +397,48 @@ func (r *Repository) AddNote(
 	return err
 }
 
+func (r *Repository) UpdateNote(
+	ctx context.Context,
+	userID, lessonID int,
+	text string,
+) error {
+	query := `
+	UPDATE notes
+	SET content = $3, updated_at = now()
+	WHERE user_id = $1 AND lesson_id = $2`
+
+	result, err := r.db.Exec(ctx, query, userID, lessonID, text)
+	if err != nil {
+		logger.LogSQLError(err, query, userID, lessonID)
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
+}
+
+func (r *Repository) DeleteNote(
+	ctx context.Context,
+	userID, lessonID int,
+) error {
+	query := `DELETE FROM notes WHERE user_id = $1 AND lesson_id = $2`
+
+	result, err := r.db.Exec(ctx, query, userID, lessonID)
+	if err != nil {
+		logger.LogSQLError(err, query, userID, lessonID)
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
+}
+
 func (r *Repository) GetGroupIDByName(ctx context.Context, name string) (int, error) {
 
 	var id int

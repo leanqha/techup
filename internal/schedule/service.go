@@ -10,6 +10,8 @@ import (
 	"strings"
 	"techup/internal/account"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type RepositoryInterface interface {
@@ -27,6 +29,8 @@ type RepositoryInterface interface {
 	GetLessons(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
 	GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error)
 	AddNote(ctx context.Context, userID, lessonID int, text string) error
+	UpdateNote(ctx context.Context, userID, lessonID int, text string) error
+	DeleteNote(ctx context.Context, userID, lessonID int) error
 	LessonExists(ctx context.Context, lessonID int) (bool, error)
 	GetGroupIDByName(ctx context.Context, name string) (int, error)
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
@@ -116,6 +120,7 @@ func (s *Service) GetLessons(
 
 var ErrNoteTooLong = errors.New("note is too long")
 var ErrLessonNotFound = errors.New("lesson not found")
+var ErrNoteNotFound = errors.New("note not found")
 
 func (s *Service) GetNote(ctx context.Context, userID, lessonID int) (*LessonNote, error) {
 	exists, err := s.repo.LessonExists(ctx, lessonID)
@@ -143,6 +148,42 @@ func (s *Service) AddNote(ctx context.Context, userID, lessonID int, text string
 	}
 
 	return s.repo.AddNote(ctx, userID, lessonID, text)
+}
+
+func (s *Service) UpdateNote(ctx context.Context, userID, lessonID int, text string) error {
+	if len(text) > 5000 {
+		return ErrNoteTooLong
+	}
+
+	exists, err := s.repo.LessonExists(ctx, lessonID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrLessonNotFound
+	}
+
+	err = s.repo.UpdateNote(ctx, userID, lessonID, text)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNoteNotFound
+	}
+	return err
+}
+
+func (s *Service) DeleteNote(ctx context.Context, userID, lessonID int) error {
+	exists, err := s.repo.LessonExists(ctx, lessonID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrLessonNotFound
+	}
+
+	err = s.repo.DeleteNote(ctx, userID, lessonID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNoteNotFound
+	}
+	return err
 }
 
 func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {

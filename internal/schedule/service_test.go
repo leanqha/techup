@@ -9,6 +9,7 @@ import (
 
 	"techup/internal/account"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +17,9 @@ type mockRepo struct {
 	addLessonFn        func(ctx context.Context, lesson Lesson) error
 	updateLessonFn     func(ctx context.Context, lesson Lesson) error
 	getLessonsFn       func(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
-	addLessonNoteFn    func(ctx context.Context, userID, lessonID int, text string) error
+	addNoteFn          func(ctx context.Context, userID, lessonID int, text string) error
+	updateNoteFn       func(ctx context.Context, userID, lessonID int, text string) error
+	deleteNoteFn       func(ctx context.Context, userID, lessonID int) error
 	lessonExistsFn     func(ctx context.Context, lessonID int) (bool, error)
 	getGroupIDByNameFn func(ctx context.Context, name string) (int, error)
 	searchLessonsFn    func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
@@ -93,8 +96,22 @@ func (m *mockRepo) GetNote(ctx context.Context, userID, lessonID int) (*LessonNo
 }
 
 func (m *mockRepo) AddNote(ctx context.Context, userID, lessonID int, text string) error {
-	if m.addLessonNoteFn != nil {
-		return m.addLessonNoteFn(ctx, userID, lessonID, text)
+	if m.addNoteFn != nil {
+		return m.addNoteFn(ctx, userID, lessonID, text)
+	}
+	return nil
+}
+
+func (m *mockRepo) UpdateNote(ctx context.Context, userID, lessonID int, text string) error {
+	if m.updateNoteFn != nil {
+		return m.updateNoteFn(ctx, userID, lessonID, text)
+	}
+	return nil
+}
+
+func (m *mockRepo) DeleteNote(ctx context.Context, userID, lessonID int) error {
+	if m.deleteNoteFn != nil {
+		return m.deleteNoteFn(ctx, userID, lessonID)
 	}
 	return nil
 }
@@ -190,7 +207,7 @@ func TestServiceGetLessonsDateValidation(t *testing.T) {
 func TestServiceAddLessonNoteValidation(t *testing.T) {
 	called := false
 	repo := &mockRepo{
-		addLessonNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
+		addNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
 			called = true
 			return nil
 		},
@@ -201,6 +218,40 @@ func TestServiceAddLessonNoteValidation(t *testing.T) {
 	err := service.AddNote(context.Background(), 1, 2, text)
 	assert.Error(t, err)
 	assert.False(t, called)
+}
+
+func TestServiceUpdateNoteValidationAndNotFound(t *testing.T) {
+	called := false
+	repo := &mockRepo{
+		updateNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
+			called = true
+			return nil
+		},
+	}
+	service := NewService(repo)
+
+	text := strings.Repeat("a", 5001)
+	err := service.UpdateNote(context.Background(), 1, 2, text)
+	assert.ErrorIs(t, err, ErrNoteTooLong)
+	assert.False(t, called)
+
+	repo.updateNoteFn = func(ctx context.Context, userID, lessonID int, text string) error {
+		return pgx.ErrNoRows
+	}
+	err = service.UpdateNote(context.Background(), 1, 2, "ok")
+	assert.ErrorIs(t, err, ErrNoteNotFound)
+}
+
+func TestServiceDeleteNoteNotFound(t *testing.T) {
+	repo := &mockRepo{
+		deleteNoteFn: func(ctx context.Context, userID, lessonID int) error {
+			return pgx.ErrNoRows
+		},
+	}
+	service := NewService(repo)
+
+	err := service.DeleteNote(context.Background(), 1, 2)
+	assert.ErrorIs(t, err, ErrNoteNotFound)
 }
 
 func TestServiceImportSchedule(t *testing.T) {
