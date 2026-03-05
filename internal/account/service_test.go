@@ -121,7 +121,7 @@ func (m *MockRepo) DeleteRefreshTokens(_ context.Context, userID int) error {
 	return nil
 }
 
-func (m *MockRepo) DeleteAccount(ctx context.Context, userID int) error {
+func (m *MockRepo) DeleteAccount(_ context.Context, userID int) error {
 	if m.deleteError != nil {
 		return m.deleteError
 	}
@@ -186,7 +186,7 @@ func (m *MockRepo) DeletePasswordResetTokens(_ context.Context, accountID int) e
 }
 
 func TestRegisterAndLogin(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts:      make(map[string]*Account),
 		refreshTokens: make(map[string]*RefreshToken),
@@ -224,7 +224,7 @@ func TestRegisterAndLogin(t *testing.T) {
 }
 
 func TestGetByID(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts: map[string]*Account{
 			"user@example.com": {ID: 1, Email: "user@example.com", FirstName: "Alice", LastName: "Smith"},
@@ -242,7 +242,7 @@ func TestGetByID(t *testing.T) {
 }
 
 func TestRefreshTokens(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts:      make(map[string]*Account),
 		refreshTokens: make(map[string]*RefreshToken),
@@ -266,7 +266,7 @@ func TestRefreshTokens(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts:      make(map[string]*Account),
 		refreshTokens: make(map[string]*RefreshToken),
@@ -292,7 +292,7 @@ func TestLogout(t *testing.T) {
 }
 
 func TestUpdateProfile(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts: make(map[string]*Account),
 	}
@@ -319,7 +319,7 @@ func TestUpdateProfile(t *testing.T) {
 }
 
 func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts:      make(map[string]*Account),
 		refreshTokens: make(map[string]*RefreshToken),
@@ -375,7 +375,7 @@ func TestLoginRefreshLogoutEdgeCases(t *testing.T) {
 }
 
 func TestRegisterValidation(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
 
@@ -401,7 +401,7 @@ func TestRegisterValidation(t *testing.T) {
 }
 
 func TestPasswordHashing(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
 
@@ -414,7 +414,7 @@ func TestPasswordHashing(t *testing.T) {
 }
 
 func TestRefreshTokenExpired(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
 	acc := &Account{ID: 1, Email: gofakeit.Email()}
@@ -432,7 +432,7 @@ func TestRefreshTokenExpired(t *testing.T) {
 }
 
 func TestRefreshTokenWrongUser(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
 	service := NewService(repo)
 
@@ -451,7 +451,7 @@ func TestRefreshTokenWrongUser(t *testing.T) {
 }
 
 func TestLogoutRepoError(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts: make(map[string]*Account),
 		refreshTokens: map[string]*RefreshToken{
@@ -465,7 +465,7 @@ func TestLogoutRepoError(t *testing.T) {
 }
 
 func TestLoginInvalidHash(t *testing.T) {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	repo := &MockRepo{
 		accounts: map[string]*Account{
 			gofakeit.Email(): {ID: 1, Email: gofakeit.Email(), PasswordHash: "not-a-valid-hash"},

@@ -48,7 +48,7 @@ func (m *MockService) Register(_ context.Context, req RegisterRequest) (*Account
 	}, "access-token", "refresh-token", nil
 }
 
-func (m *MockService) Login(_ context.Context, email, password string) (string, string, error) {
+func (m *MockService) Login(_ context.Context, email, _ string) (string, string, error) {
 	if m.loginErr != nil {
 		return "", "", m.loginErr
 	}
@@ -58,7 +58,7 @@ func (m *MockService) Login(_ context.Context, email, password string) (string, 
 	return "access-token", "refresh-token", nil
 }
 
-func (m *MockService) GetByID(ctx context.Context, id int) (*Account, error) {
+func (m *MockService) GetByID(_ context.Context, id int) (*Account, error) {
 	if m.getByIDErr != nil {
 		return nil, m.getByIDErr
 	}
@@ -75,7 +75,7 @@ func (m *MockService) GetByID(ctx context.Context, id int) (*Account, error) {
 	}, nil
 }
 
-func (m *MockService) UpdateProfile(ctx context.Context, userID int, req *UpdateProfileRequest) (*Account, error) {
+func (m *MockService) UpdateProfile(_ context.Context, userID int, req *UpdateProfileRequest) (*Account, error) {
 	if m.updateErr != nil {
 		return nil, m.updateErr
 	}
@@ -89,7 +89,7 @@ func (m *MockService) UpdateProfile(ctx context.Context, userID int, req *Update
 	}, nil
 }
 
-func (m *MockService) ChangePassword(ctx context.Context, userID int, req *ChangePasswordRequest) error {
+func (m *MockService) ChangePassword(_ context.Context, _ int, req *ChangePasswordRequest) error {
 	if m.changeErr != nil {
 		return m.changeErr
 	}
@@ -99,7 +99,7 @@ func (m *MockService) ChangePassword(ctx context.Context, userID int, req *Chang
 	return nil
 }
 
-func (m *MockService) SetRole(ctx context.Context, adminID int, req *SetRoleRequest) error {
+func (m *MockService) SetRole(_ context.Context, adminID int, _ *SetRoleRequest) error {
 	if m.setRoleErr != nil {
 		return m.setRoleErr
 	}
@@ -109,7 +109,7 @@ func (m *MockService) SetRole(ctx context.Context, adminID int, req *SetRoleRequ
 	return nil
 }
 
-func (m *MockService) RefreshTokens(ctx context.Context, refreshToken string) (string, string, error) {
+func (m *MockService) RefreshTokens(_ context.Context, refreshToken string) (string, string, error) {
 	if m.refreshErr != nil {
 		return "", "", m.refreshErr
 	}
@@ -119,14 +119,14 @@ func (m *MockService) RefreshTokens(ctx context.Context, refreshToken string) (s
 	return "new-access", "new-refresh", nil
 }
 
-func (m *MockService) Logout(ctx context.Context, userID int, refreshToken string) error {
+func (m *MockService) Logout(_ context.Context, _ int, _ string) error {
 	if m.logoutErr != nil {
 		return m.logoutErr
 	}
 	return nil
 }
 
-func (m *MockService) DeleteAccount(ctx context.Context, userID int) error {
+func (m *MockService) DeleteAccount(_ context.Context, userID int) error {
 	if m.deleteErr != nil {
 		return m.deleteErr
 	}
@@ -136,7 +136,7 @@ func (m *MockService) DeleteAccount(ctx context.Context, userID int) error {
 	return nil
 }
 
-func (m *MockService) UpdateAccountAdmin(ctx context.Context, userID int, req *AdminUpdateAccountRequest) (*Account, error) {
+func (m *MockService) UpdateAccountAdmin(_ context.Context, userID int, req *AdminUpdateAccountRequest) (*Account, error) {
 	if m.adminErr != nil {
 		return nil, m.adminErr
 	}
@@ -168,14 +168,14 @@ func (m *MockService) UpdateAccountAdmin(ctx context.Context, userID int, req *A
 	return acc, nil
 }
 
-func (m *MockService) ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error) {
+func (m *MockService) ListAccounts(_ context.Context, _ AdminAccountsFilter) ([]Account, error) {
 	if m.listErr != nil {
 		return nil, m.listErr
 	}
 	return []Account{{ID: 1, UID: "uid1", Email: "one@example.com", FirstName: "One", LastName: "User", Role: "student"}}, nil
 }
 
-func (m *MockService) RequestPasswordReset(ctx context.Context, email string) error {
+func (m *MockService) RequestPasswordReset(_ context.Context, email string) error {
 	if m.resetReqErr != nil {
 		return m.resetReqErr
 	}
@@ -185,7 +185,7 @@ func (m *MockService) RequestPasswordReset(ctx context.Context, email string) er
 	return nil
 }
 
-func (m *MockService) ResetPassword(ctx context.Context, token, newPassword string) error {
+func (m *MockService) ResetPassword(_ context.Context, token, newPassword string) error {
 	if m.resetErr != nil {
 		return m.resetErr
 	}
@@ -200,7 +200,7 @@ func (m *MockService) ResetPassword(ctx context.Context, token, newPassword stri
 
 func setupRouter() (*gin.Engine, *Handler) {
 	gin.SetMode(gin.TestMode)
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 	mockSvc := &MockService{}
 	h := NewHandler(mockSvc)
 	r := gin.New()
@@ -559,4 +559,166 @@ func TestDeleteAccountInvalidID(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "invalid user id")
+}
+
+func TestForgotPasswordHandler(t *testing.T) {
+	r, h := setupRouter()
+	r.POST("/forgot-password", h.ForgotPassword)
+
+	body := `{"email":"user@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/forgot-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "reset request accepted")
+}
+
+func TestForgotPasswordHandlerInvalidInput(t *testing.T) {
+	r, h := setupRouter()
+	r.POST("/forgot-password", h.ForgotPassword)
+
+	req := httptest.NewRequest(http.MethodPost, "/forgot-password", bytes.NewBufferString(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "invalid input")
+}
+
+func TestResetPasswordHandler(t *testing.T) {
+	r, h := setupRouter()
+	r.POST("/reset-password", h.ResetPassword)
+
+	body := `{"token":"valid-token","new_password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/reset-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "password reset successful")
+}
+
+func TestResetPasswordHandlerServiceError(t *testing.T) {
+	r, h := setupRouter()
+	r.POST("/reset-password", h.ResetPassword)
+
+	body := `{"token":"invalid","new_password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, "/reset-password", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "invalid token")
+}
+
+func TestAdminListAccountsHandler(t *testing.T) {
+	r, h := setupRouter()
+	r.GET("/admin/accounts", h.AdminListAccounts)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/accounts?role=student&group_id=1&is_verified=true", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "one@example.com")
+}
+
+func TestAdminListAccountsHandlerInvalidGroupID(t *testing.T) {
+	r, h := setupRouter()
+	r.GET("/admin/accounts", h.AdminListAccounts)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/accounts?group_id=abc", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "invalid group_id")
+}
+
+func TestAdminListAccountsHandlerInvalidIsVerified(t *testing.T) {
+	r, h := setupRouter()
+	r.GET("/admin/accounts", h.AdminListAccounts)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/accounts?is_verified=not-bool", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "invalid is_verified")
+}
+
+func TestAdminUpdateAccountHandlerSuccess(t *testing.T) {
+	r, h := setupRouter()
+	r.PUT("/admin/account/:id", h.AdminUpdateAccount)
+
+	req := httptest.NewRequest(http.MethodPut, "/admin/account/1", bytes.NewBufferString(`{"email":"updated@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "updated@example.com")
+}
+
+func TestAdminUpdateAccountHandlerNotFound(t *testing.T) {
+	mockSvc := &MockService{adminErr: errors.New("account not found")}
+	r, h := setupRouterWithService(mockSvc)
+	r.PUT("/admin/account/:id", h.AdminUpdateAccount)
+
+	req := httptest.NewRequest(http.MethodPut, "/admin/account/1", bytes.NewBufferString(`{"email":"updated@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "account not found")
+}
+
+func TestAdminUpdateAccountHandlerInternalError(t *testing.T) {
+	mockSvc := &MockService{adminErr: errors.New("db down")}
+	r, h := setupRouterWithService(mockSvc)
+	r.PUT("/admin/account/:id", h.AdminUpdateAccount)
+
+	req := httptest.NewRequest(http.MethodPut, "/admin/account/1", bytes.NewBufferString(`{"email":"updated@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), "db down")
+}
+
+func TestDeleteAccountNotFound(t *testing.T) {
+	mockSvc := &MockService{deleteErr: errors.New("account not found")}
+	r, h := setupRouterWithService(mockSvc)
+	r.DELETE("/account/:id", func(c *gin.Context) {
+		c.Set("claims", jwt.MapClaims{
+			"user_id": float64(1),
+			"role":    "admin",
+		})
+		h.DeleteAccount(c)
+	})
+
+	req := httptest.NewRequest(http.MethodDelete, "/account/1", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "account not found")
 }

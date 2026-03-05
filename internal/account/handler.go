@@ -2,7 +2,6 @@ package account
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -491,7 +490,7 @@ func (h *Handler) DeleteAccount(c *gin.Context) {
 
 	err = h.service.DeleteAccount(c, userID)
 	if err != nil {
-		if errors.Is(err, errors.New("account not found")) {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
 			return
 		}
@@ -610,7 +609,7 @@ func (h *Handler) AdminUpdateAccount(c *gin.Context) {
 
 	acc, err := h.service.UpdateAccountAdmin(c.Request.Context(), id, &req)
 	if err != nil {
-		if errors.Is(err, errors.New("account not found")) {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
 			return
 		}
