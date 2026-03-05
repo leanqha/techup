@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"techup/config"
+	"techup/internal/apperrors"
 	"techup/internal/logger"
 
 	"github.com/gin-gonic/gin"
@@ -347,7 +348,7 @@ func (h *Handler) SetRole(c *gin.Context) {
 
 	err := h.service.SetRole(c, userID, &req)
 	if err != nil {
-		if err.Error() == "forbidden" {
+		if apperrors.IsCode(err, apperrors.CodeForbidden) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			return
 		}
@@ -419,6 +420,10 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	}
 
 	if err := h.service.RequestPasswordReset(c.Request.Context(), req.Email); err != nil {
+		if apperrors.IsCode(err, apperrors.CodeInvalidArgument) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -490,7 +495,7 @@ func (h *Handler) DeleteAccount(c *gin.Context) {
 
 	err = h.service.DeleteAccount(c, userID)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+		if apperrors.IsCode(err, apperrors.CodeNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
 			return
 		}
@@ -609,8 +614,12 @@ func (h *Handler) AdminUpdateAccount(c *gin.Context) {
 
 	acc, err := h.service.UpdateAccountAdmin(c.Request.Context(), id, &req)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+		if apperrors.IsCode(err, apperrors.CodeNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "account not found"})
+			return
+		}
+		if apperrors.IsCode(err, apperrors.CodeInvalidArgument) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

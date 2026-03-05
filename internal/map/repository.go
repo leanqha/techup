@@ -3,6 +3,7 @@ package maps
 import (
 	"context"
 	"fmt"
+	"techup/internal/apperrors"
 	"techup/internal/logger"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -114,11 +115,15 @@ func (r *Repository) UpdateRoom(ctx context.Context, room *Room) error {
 		SET building_id = $1, floor = $2, name = $3, updated_at = NOW()
 		WHERE id = $4
 	`
-	_, err := r.db.Exec(ctx, query, room.BuildingID, room.Floor, room.Name, room.ID)
+	ct, err := r.db.Exec(ctx, query, room.BuildingID, room.Floor, room.Name, room.ID)
 	if err != nil {
 		logger.LogSQLError(err, query, room.BuildingID, room.Floor, room.Name, room.ID)
+		return err
 	}
-	return err
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("room not found")
+	}
+	return nil
 }
 
 // AddConnection inserts a new connection between rooms
@@ -140,28 +145,40 @@ func (r *Repository) UpdateConnection(ctx context.Context, conn *Connection) err
 		SET room_from = $1, room_to = $2, distance = $3, type = $4, updated_at = NOW()
 		WHERE id = $5
 	`
-	_, err := r.db.Exec(ctx, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type, conn.ID)
+	ct, err := r.db.Exec(ctx, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type, conn.ID)
 	if err != nil {
 		logger.LogSQLError(err, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type, conn.ID)
+		return err
 	}
-	return err
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("connection not found")
+	}
+	return nil
 }
 
 func (r *Repository) DeleteRoom(ctx context.Context, id int) error {
 	query := `DELETE FROM rooms WHERE id = $1`
-	_, err := r.db.Exec(ctx, query, id)
+	ct, err := r.db.Exec(ctx, query, id)
 	if err != nil {
 		logger.LogSQLError(err, query, id)
+		return err
 	}
-	return err
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("room not found")
+	}
+	return nil
 }
 
 // DeleteConnection deletes connection by ID
 func (r *Repository) DeleteConnection(ctx context.Context, id int) error {
 	query := `DELETE FROM connections WHERE id = $1`
-	_, err := r.db.Exec(ctx, query, id)
+	ct, err := r.db.Exec(ctx, query, id)
 	if err != nil {
 		logger.LogSQLError(err, query, id)
+		return err
 	}
-	return err
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("connection not found")
+	}
+	return nil
 }

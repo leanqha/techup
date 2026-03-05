@@ -2,7 +2,7 @@ package maps
 
 import (
 	"context"
-	"fmt"
+	"techup/internal/apperrors"
 )
 
 type RepositoryInterface interface {
@@ -67,10 +67,10 @@ func (s *Service) FindPath(ctx context.Context, startRoom, endRoom string) ([]st
 
 	// Проверка существования комнат
 	if _, ok := graph[startRoom]; !ok {
-		return nil, 0, fmt.Errorf("start room %s not found in graph", startRoom)
+		return nil, 0, apperrors.NotFound("start room " + startRoom + " not found in graph")
 	}
 	if _, ok := graph[endRoom]; !ok {
-		return nil, 0, fmt.Errorf("end room %s not found in graph", endRoom)
+		return nil, 0, apperrors.NotFound("end room " + endRoom + " not found in graph")
 	}
 
 	// Используем A* (с нулевой эвристикой эквивалентно Дейкстре).

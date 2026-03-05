@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"techup/internal/apperrors"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
@@ -104,7 +105,7 @@ func (m *MockService) SetRole(_ context.Context, adminID int, _ *SetRoleRequest)
 		return m.setRoleErr
 	}
 	if adminID != 1 {
-		return errors.New("forbidden")
+		return apperrors.Forbidden("forbidden")
 	}
 	return nil
 }
@@ -131,7 +132,7 @@ func (m *MockService) DeleteAccount(_ context.Context, userID int) error {
 		return m.deleteErr
 	}
 	if userID == 999 {
-		return errors.New("account not found")
+		return apperrors.NotFound("account not found")
 	}
 	return nil
 }
@@ -141,7 +142,7 @@ func (m *MockService) UpdateAccountAdmin(_ context.Context, userID int, req *Adm
 		return nil, m.adminErr
 	}
 	if userID == 0 {
-		return nil, errors.New("account not found")
+		return nil, apperrors.NotFound("account not found")
 	}
 	acc := &Account{ID: userID, UID: "uid1", Email: "admin@example.com", FirstName: "Admin", LastName: "User", Role: "student"}
 	if req.Email != nil {
@@ -674,7 +675,7 @@ func TestAdminUpdateAccountHandlerSuccess(t *testing.T) {
 }
 
 func TestAdminUpdateAccountHandlerNotFound(t *testing.T) {
-	mockSvc := &MockService{adminErr: errors.New("account not found")}
+	mockSvc := &MockService{adminErr: apperrors.NotFound("account not found")}
 	r, h := setupRouterWithService(mockSvc)
 	r.PUT("/admin/account/:id", h.AdminUpdateAccount)
 
@@ -704,7 +705,7 @@ func TestAdminUpdateAccountHandlerInternalError(t *testing.T) {
 }
 
 func TestDeleteAccountNotFound(t *testing.T) {
-	mockSvc := &MockService{deleteErr: errors.New("account not found")}
+	mockSvc := &MockService{deleteErr: apperrors.NotFound("account not found")}
 	r, h := setupRouterWithService(mockSvc)
 	r.DELETE("/account/:id", func(c *gin.Context) {
 		c.Set("claims", jwt.MapClaims{

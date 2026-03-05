@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"techup/internal/account"
+	"techup/internal/apperrors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -80,14 +81,14 @@ func (s *Service) DeleteGroup(ctx context.Context, id int) error {
 
 func (s *Service) AddLesson(ctx context.Context, lesson Lesson) error {
 	if lesson.StartTime.After(lesson.EndTime) {
-		return errors.New("start_time must be before end_time")
+		return apperrors.InvalidArgument("start_time must be before end_time")
 	}
 	return s.repo.AddLesson(ctx, lesson)
 }
 
 func (s *Service) UpdateLesson(ctx context.Context, lesson Lesson) error {
 	if lesson.StartTime.After(lesson.EndTime) {
-		return errors.New("start_time must be before end_time")
+		return apperrors.InvalidArgument("start_time must be before end_time")
 	}
 	return s.repo.UpdateLesson(ctx, lesson)
 }
@@ -103,24 +104,24 @@ func (s *Service) GetLessons(
 ) ([]LessonResponse, error) {
 	from, err := time.Parse("2006-01-02", fromStr)
 	if err != nil {
-		return nil, errors.New("invalid from date format")
+		return nil, apperrors.InvalidArgument("invalid from date format")
 	}
 
 	to, err := time.Parse("2006-01-02", toStr)
 	if err != nil {
-		return nil, errors.New("invalid to date format")
+		return nil, apperrors.InvalidArgument("invalid to date format")
 	}
 
 	if from.After(to) {
-		return nil, errors.New("from date must be before to date")
+		return nil, apperrors.InvalidArgument("from date must be before to date")
 	}
 
 	return s.repo.GetLessons(ctx, groupID, from, to)
 }
 
-var ErrNoteTooLong = errors.New("note is too long")
-var ErrLessonNotFound = errors.New("lesson not found")
-var ErrNoteNotFound = errors.New("note not found")
+var ErrNoteTooLong = apperrors.InvalidArgument("note is too long")
+var ErrLessonNotFound = apperrors.NotFound("lesson not found")
+var ErrNoteNotFound = apperrors.NotFound("note not found")
 
 func (s *Service) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
 	exists, err := s.repo.LessonExists(ctx, lessonID)
@@ -164,7 +165,7 @@ func (s *Service) UpdateNote(ctx context.Context, userID, lessonID int, text str
 	}
 
 	err = s.repo.UpdateNote(ctx, userID, lessonID, text)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) || apperrors.IsCode(err, apperrors.CodeNotFound) {
 		return ErrNoteNotFound
 	}
 	return err
@@ -180,7 +181,7 @@ func (s *Service) DeleteNote(ctx context.Context, userID, lessonID int) error {
 	}
 
 	err = s.repo.DeleteNote(ctx, userID, lessonID)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) || apperrors.IsCode(err, apperrors.CodeNotFound) {
 		return ErrNoteNotFound
 	}
 	return err
@@ -218,12 +219,12 @@ func (s *Service) parseCSV(r io.Reader) ([]LessonCSV, error) {
 
 		typeValue := rec[5]
 		if typeValue == "" {
-			return nil, fmt.Errorf("missing lesson type in row %d", i+1)
+			return nil, apperrors.InvalidArgument(fmt.Sprintf("missing lesson type in row %d", i+1))
 		}
 
 		teacherID, err := strconv.Atoi(rec[6])
 		if err != nil {
-			return nil, fmt.Errorf("invalid teacher_id in row %d: %v", i+1, err)
+			return nil, apperrors.InvalidArgument(fmt.Sprintf("invalid teacher_id in row %d: %v", i+1, err))
 		}
 
 		res = append(res, LessonCSV{
@@ -245,12 +246,15 @@ func (s *Service) ImportSchedule(ctx context.Context, lessons []LessonImport) er
 	for _, lesson := range lessons {
 		groupName := strings.TrimSpace(lesson.GroupName)
 		if groupName == "" {
-			return errors.New("group name is required")
+			return apperrors.InvalidArgument("group name is required")
 		}
 
 		groupID, err := s.repo.GetGroupIDByName(ctx, groupName)
 		if err != nil {
-			return fmt.Errorf("group not found: %s", groupName)
+			if apperrors.IsCode(err, apperrors.CodeNotFound) {
+				return apperrors.NotFound("group not found: " + groupName)
+			}
+			return err
 		}
 
 		l := Lesson{

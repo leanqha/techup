@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"errors"
+	"techup/internal/apperrors"
 	"testing"
 	"time"
 
@@ -32,7 +33,7 @@ func (m *MockRepo) CreateAccount(_ context.Context, acc *Account) error {
 		return m.saveError
 	}
 	if _, exists := m.accounts[acc.Email]; exists {
-		return errors.New("email already exists")
+		return apperrors.Conflict("email already exists")
 	}
 	acc.ID = len(m.accounts) + 1
 	m.accounts[acc.Email] = acc
@@ -45,7 +46,7 @@ func (m *MockRepo) GetByEmail(_ context.Context, email string) (*Account, error)
 	}
 	acc, ok := m.accounts[email]
 	if !ok {
-		return nil, errors.New("account not found")
+		return nil, apperrors.NotFound("account not found")
 	}
 	return acc, nil
 }
@@ -56,13 +57,13 @@ func (m *MockRepo) GetByID(_ context.Context, id int) (*Account, error) {
 			return acc, nil
 		}
 	}
-	return nil, errors.New("account not found")
+	return nil, apperrors.NotFound("account not found")
 }
 
 func (m *MockRepo) UpdateAccount(_ context.Context, acc *Account) error {
 	for email, a := range m.accounts {
 		if email == acc.Email && a.ID != acc.ID {
-			return errors.New("email already exists")
+			return apperrors.Conflict("email already exists")
 		}
 	}
 	for email, a := range m.accounts {
@@ -96,7 +97,7 @@ func (m *MockRepo) SaveRefreshToken(_ context.Context, token *RefreshToken) erro
 func (m *MockRepo) GetRefreshToken(_ context.Context, token string) (*RefreshToken, error) {
 	t, ok := m.refreshTokens[token]
 	if !ok {
-		return nil, errors.New("not found")
+		return nil, apperrors.NotFound("refresh token not found")
 	}
 	return t, nil
 }
@@ -136,7 +137,7 @@ func (m *MockRepo) DeleteAccount(_ context.Context, userID int) error {
 			return nil
 		}
 	}
-	return errors.New("account not found")
+	return apperrors.NotFound("account not found")
 }
 
 func (m *MockRepo) CreatePasswordResetToken(_ context.Context, token *PasswordResetToken) error {
@@ -160,7 +161,7 @@ func (m *MockRepo) CreatePasswordResetToken(_ context.Context, token *PasswordRe
 func (m *MockRepo) GetPasswordResetTokenByHash(_ context.Context, tokenHash string) (*PasswordResetToken, error) {
 	t, ok := m.resetByHash[tokenHash]
 	if !ok {
-		return nil, errors.New("not found")
+		return nil, apperrors.NotFound("password reset token not found")
 	}
 	return t, nil
 }
@@ -168,7 +169,7 @@ func (m *MockRepo) GetPasswordResetTokenByHash(_ context.Context, tokenHash stri
 func (m *MockRepo) MarkPasswordResetTokenUsed(_ context.Context, tokenID int) error {
 	t, ok := m.resetByID[tokenID]
 	if !ok {
-		return errors.New("not found")
+		return apperrors.NotFound("password reset token not found")
 	}
 	now := time.Now()
 	t.UsedAt = &now
@@ -457,7 +458,7 @@ func TestLogoutRepoError(t *testing.T) {
 		refreshTokens: map[string]*RefreshToken{
 			"t": {AccountID: 1, Token: "t"},
 		},
-		deleteError: errors.New("db err"),
+		deleteError: apperrors.Internal("db err", nil),
 	}
 	service := NewService(repo)
 	err := service.Logout(context.Background(), 1, "")

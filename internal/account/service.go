@@ -6,9 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"strings"
 	"techup/config"
+	"techup/internal/apperrors"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -55,12 +55,12 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*Account, 
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
 	if req.Email == "" || req.FirstName == "" || req.LastName == "" || len(req.Password) < 6 {
-		return nil, "", "", errors.New("invalid input data")
+		return nil, "", "", apperrors.InvalidArgument("invalid input data")
 	}
 
 	exists, _ := s.repo.GetByEmail(ctx, req.Email)
 	if exists != nil {
-		return nil, "", "", errors.New("email already exists")
+		return nil, "", "", apperrors.Conflict("email already exists")
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -98,11 +98,11 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*Account, 
 func (s *Service) Login(ctx context.Context, email, password string) (string, string, error) {
 	acc, err := s.repo.GetByEmail(ctx, strings.TrimSpace(email))
 	if err != nil {
-		return "", "", errors.New("invalid credentials")
+		return "", "", apperrors.Unauthorized("invalid credentials")
 	}
 
 	if bcrypt.CompareHashAndPassword([]byte(acc.PasswordHash), []byte(password)) != nil {
-		return "", "", errors.New("invalid credentials")
+		return "", "", apperrors.Unauthorized("invalid credentials")
 	}
 
 	accessToken, refreshToken, err := GenerateTokens(acc)
@@ -131,7 +131,7 @@ func (s *Service) ChangePassword(ctx context.Context, userID int, req *ChangePas
 	}
 
 	if bcrypt.CompareHashAndPassword([]byte(acc.PasswordHash), []byte(req.OldPassword)) != nil {
-		return errors.New("old password is incorrect")
+		return apperrors.InvalidArgument("old password is incorrect")
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
@@ -166,7 +166,7 @@ func (s *Service) UpdateAccountAdmin(ctx context.Context, userID int, req *Admin
 	if req.Email != nil {
 		email := strings.TrimSpace(*req.Email)
 		if email == "" {
-			return nil, errors.New("email is required")
+			return nil, apperrors.InvalidArgument("email is required")
 		}
 		acc.Email = email
 	}
@@ -182,7 +182,7 @@ func (s *Service) UpdateAccountAdmin(ctx context.Context, userID int, req *Admin
 	if req.Role != nil {
 		role := strings.TrimSpace(*req.Role)
 		if role == "" {
-			return nil, errors.New("role is required")
+			return nil, apperrors.InvalidArgument("role is required")
 		}
 		acc.Role = role
 	}
@@ -195,7 +195,7 @@ func (s *Service) UpdateAccountAdmin(ctx context.Context, userID int, req *Admin
 	if req.UID != nil {
 		uid := strings.TrimSpace(*req.UID)
 		if uid == "" {
-			return nil, errors.New("uid is required")
+			return nil, apperrors.InvalidArgument("uid is required")
 		}
 		acc.UID = uid
 	}
@@ -217,7 +217,7 @@ func (s *Service) SetRole(ctx context.Context, userID int, req *SetRoleRequest) 
 		return err
 	}
 	if admin.Role != "admin" {
-		return errors.New("forbidden")
+		return apperrors.Forbidden("forbidden")
 	}
 	acc, err := s.repo.GetByID(ctx, req.UserID)
 	if err != nil {
@@ -230,22 +230,22 @@ func (s *Service) SetRole(ctx context.Context, userID int, req *SetRoleRequest) 
 func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (string, string, error) {
 	claims, err := ParseToken(refreshToken)
 	if err != nil {
-		return "", "", errors.New("invalid refresh token")
+		return "", "", apperrors.Unauthorized("invalid refresh token")
 	}
 
 	tokenType, ok := claims["type"].(string)
 	if !ok || tokenType != "refresh" {
-		return "", "", errors.New("invalid token type")
+		return "", "", apperrors.Unauthorized("invalid token type")
 	}
 
 	rt, err := s.repo.GetRefreshToken(ctx, refreshToken)
 	if err != nil {
-		return "", "", errors.New("invalid refresh token")
+		return "", "", apperrors.Unauthorized("invalid refresh token")
 	}
 
 	if time.Now().After(rt.ExpiresAt) {
 		_ = s.repo.DeleteRefreshToken(ctx, refreshToken)
-		return "", "", errors.New("refresh token expired")
+		return "", "", apperrors.Unauthorized("refresh token expired")
 	}
 
 	acc, err := s.repo.GetByID(ctx, rt.AccountID)
@@ -287,7 +287,7 @@ func (s *Service) Logout(ctx context.Context, userID int, refreshToken string) e
 		}
 	}
 	if userID <= 0 && refreshToken == "" {
-		return errors.New("logout requires user ID or refresh token")
+		return apperrors.InvalidArgument("logout requires user ID or refresh token")
 	}
 	return nil
 }
@@ -299,12 +299,12 @@ func (s *Service) DeleteAccount(ctx context.Context, userID int) error {
 func (s *Service) RequestPasswordReset(ctx context.Context, email string) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
-		return errors.New("email is required")
+		return apperrors.InvalidArgument("email is required")
 	}
 
 	acc, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+		if apperrors.IsCode(err, apperrors.CodeNotFound) {
 			return nil
 		}
 		return err
@@ -342,18 +342,18 @@ func (s *Service) RequestPasswordReset(ctx context.Context, email string) error 
 func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) error {
 	token = strings.TrimSpace(token)
 	if token == "" {
-		return errors.New("token is required")
+		return apperrors.InvalidArgument("token is required")
 	}
 	if len(newPassword) < 8 {
-		return errors.New("new password must be at least 8 characters")
+		return apperrors.InvalidArgument("new password must be at least 8 characters")
 	}
 
 	resetToken, err := s.repo.GetPasswordResetTokenByHash(ctx, hashResetToken(token))
 	if err != nil {
-		return errors.New("invalid or expired token")
+		return apperrors.InvalidArgument("invalid or expired token")
 	}
 	if resetToken.UsedAt != nil || time.Now().After(resetToken.ExpiresAt) {
-		return errors.New("invalid or expired token")
+		return apperrors.InvalidArgument("invalid or expired token")
 	}
 
 	acc, err := s.repo.GetByID(ctx, resetToken.AccountID)

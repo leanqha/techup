@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"techup/internal/apperrors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,7 +43,7 @@ func NewHandler(service ServiceInterface) *Handler {
 func (h *Handler) GetBuildings(c *gin.Context) {
 	buildings, err := h.service.GetAllBuildings(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get buildings"})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
 	c.JSON(http.StatusOK, buildings)
@@ -65,7 +66,7 @@ func (h *Handler) GetPath(c *gin.Context) {
 
 	path, distance, err := h.service.FindPath(c.Request.Context(), startRoom, endRoom)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate shortest path"})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
 	response := GetPathResponse{
@@ -83,7 +84,7 @@ func (h *Handler) AddRoom(c *gin.Context) {
 	}
 
 	if err := h.service.AddRoom(c.Request.Context(), req.Name, req.BuildingID, req.Floor); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
 
@@ -109,7 +110,7 @@ func (h *Handler) UpdateRoom(c *gin.Context) {
 		BuildingID: req.BuildingID,
 		Floor:      req.Floor,
 	}); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
 
@@ -124,7 +125,7 @@ func (h *Handler) DeleteRoom(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteRoom(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
 
@@ -168,7 +169,7 @@ func (h *Handler) SearchRooms(c *gin.Context) {
 
 	rooms, err := h.service.SearchRooms(c.Request.Context(), buildingID, floor)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
 
@@ -188,7 +189,7 @@ func (h *Handler) AddConnection(c *gin.Context) {
 		Distance: req.Distance,
 		Type:     req.Type,
 	}); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
 
@@ -215,7 +216,7 @@ func (h *Handler) UpdateConnection(c *gin.Context) {
 		Distance: req.Distance,
 		Type:     req.Type,
 	}); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
 
@@ -230,7 +231,7 @@ func (h *Handler) DeleteConnection(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteConnection(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
 

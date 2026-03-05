@@ -2,7 +2,7 @@ package maps
 
 import (
 	"container/heap"
-	"errors"
+	"techup/internal/apperrors"
 )
 
 type priorityNode struct {
@@ -79,7 +79,7 @@ func AStarAlgorithm(graph map[string][]struct {
 		}
 	}
 
-	return nil, 0, errors.New("no path found")
+	return nil, 0, apperrors.NotFound("no path found")
 }
 
 func reconstructPath(cameFrom map[string]string, current string) []string {
