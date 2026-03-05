@@ -55,10 +55,6 @@ func GetPort() string {
 	return port
 }
 
-func GetDomain() string {
-	return os.Getenv("DOMAIN")
-}
-
 func GetAccessTokenTTLSeconds() int {
 	minutes, _ := strconv.Atoi(os.Getenv("JWT_ACCESS_TOKEN_TTL"))
 	if minutes == 0 {
