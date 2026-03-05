@@ -42,20 +42,19 @@ jobs:
       SMTP_SKIP_VERIFY: ${{ secrets.SMTP_SKIP_VERIFY }}
 
     steps:
-      - name: Validate deploy auth secret
+      - name: Validate deploy SSH key
         run: |
-          if [ -z "${{ secrets.PROD_SSH_KEY }}" ] && [ -z "${{ secrets.PROD_PASSWORD }}" ]; then
-            echo "Set PROD_SSH_KEY or PROD_PASSWORD in the production environment secrets"
+          if [ -z "${{ secrets.PROD_SSH_KEY }}" ]; then
+            echo "Set PROD_SSH_KEY in the prod environment secrets"
             exit 1
           fi
 
-      - name: Deploy on server (SSH key or password fallback)
+      - name: Deploy on server (SSH key only)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
-          password: ${{ secrets.PROD_SSH_KEY == '' && secrets.PROD_PASSWORD || '' }}
           port: ${{ secrets.PROD_PORT }}
           envs: PROD_APP_DIR,PROD_REPO_BRANCH,PROD_REPO_URL,PORT,GIN_MODE,DOMAIN,APP_BASE_URL,DB_HOST,DB_PORT,DB_USER,DB_PASSWORD,DB_NAME,DB_SSLMODE,JWT_SECRET,JWT_ACCESS_TOKEN_TTL,JWT_REFRESH_TOKEN_TTL,PASSWORD_RESET_TTL_MINUTES,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM,SMTP_USE_TLS,SMTP_SKIP_VERIFY
           script_stop: true
