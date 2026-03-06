@@ -18,9 +18,9 @@ type mockRepo struct {
 	addLessonFn        func(ctx context.Context, lesson Lesson) error
 	updateLessonFn     func(ctx context.Context, lesson Lesson) error
 	getLessonsFn       func(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
-	addNoteFn          func(ctx context.Context, userID, lessonID int, text string) error
-	updateNoteFn       func(ctx context.Context, userID, lessonID int, text string) error
-	deleteNoteFn       func(ctx context.Context, userID, lessonID int) error
+	addNoteFn          func(ctx context.Context, note Note) error
+	updateNoteFn       func(ctx context.Context, note Note) error
+	deleteNoteFn       func(ctx context.Context, note Note) error
 	lessonExistsFn     func(ctx context.Context, lessonID int) (bool, error)
 	getGroupIDByNameFn func(ctx context.Context, name string) (int, error)
 	searchLessonsFn    func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
@@ -92,27 +92,27 @@ func (m *mockRepo) LessonExists(ctx context.Context, lessonID int) (bool, error)
 	return true, nil
 }
 
-func (m *mockRepo) GetNote(_ context.Context, _, _ int) (*Note, error) {
+func (m *mockRepo) GetNote(_ context.Context, _ Note) (*Note, error) {
 	return nil, nil
 }
 
-func (m *mockRepo) AddNote(ctx context.Context, userID, lessonID int, text string) error {
+func (m *mockRepo) AddNote(ctx context.Context, note Note) error {
 	if m.addNoteFn != nil {
-		return m.addNoteFn(ctx, userID, lessonID, text)
+		return m.addNoteFn(ctx, note)
 	}
 	return nil
 }
 
-func (m *mockRepo) UpdateNote(ctx context.Context, userID, lessonID int, text string) error {
+func (m *mockRepo) UpdateNote(ctx context.Context, note Note) error {
 	if m.updateNoteFn != nil {
-		return m.updateNoteFn(ctx, userID, lessonID, text)
+		return m.updateNoteFn(ctx, note)
 	}
 	return nil
 }
 
-func (m *mockRepo) DeleteNote(ctx context.Context, userID, lessonID int) error {
+func (m *mockRepo) DeleteNote(ctx context.Context, note Note) error {
 	if m.deleteNoteFn != nil {
-		return m.deleteNoteFn(ctx, userID, lessonID)
+		return m.deleteNoteFn(ctx, note)
 	}
 	return nil
 }
@@ -208,7 +208,7 @@ func TestServiceGetLessonsDateValidation(t *testing.T) {
 func TestServiceAddLessonNoteValidation(t *testing.T) {
 	called := false
 	repo := &mockRepo{
-		addNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
+		addNoteFn: func(ctx context.Context, note Note) error {
 			called = true
 			return nil
 		},
@@ -216,7 +216,7 @@ func TestServiceAddLessonNoteValidation(t *testing.T) {
 	service := NewService(repo)
 
 	text := strings.Repeat("a", 5001)
-	err := service.AddNote(context.Background(), 1, 2, text)
+	err := service.AddNote(context.Background(), Note{UserID: 1, LessonID: 2, Text: text})
 	assert.Error(t, err)
 	assert.False(t, called)
 }
@@ -224,7 +224,7 @@ func TestServiceAddLessonNoteValidation(t *testing.T) {
 func TestServiceUpdateNoteValidationAndNotFound(t *testing.T) {
 	called := false
 	repo := &mockRepo{
-		updateNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
+		updateNoteFn: func(ctx context.Context, note Note) error {
 			called = true
 			return nil
 		},
@@ -232,26 +232,26 @@ func TestServiceUpdateNoteValidationAndNotFound(t *testing.T) {
 	service := NewService(repo)
 
 	text := strings.Repeat("a", 5001)
-	err := service.UpdateNote(context.Background(), 1, 2, text)
+	err := service.UpdateNote(context.Background(), Note{UserID: 1, LessonID: 2, Text: text})
 	assert.ErrorIs(t, err, ErrNoteTooLong)
 	assert.False(t, called)
 
-	repo.updateNoteFn = func(ctx context.Context, userID, lessonID int, text string) error {
+	repo.updateNoteFn = func(ctx context.Context, note Note) error {
 		return pgx.ErrNoRows
 	}
-	err = service.UpdateNote(context.Background(), 1, 2, "ok")
+	err = service.UpdateNote(context.Background(), Note{UserID: 1, LessonID: 2, Text: "ok"})
 	assert.ErrorIs(t, err, ErrNoteNotFound)
 }
 
 func TestServiceDeleteNoteNotFound(t *testing.T) {
 	repo := &mockRepo{
-		deleteNoteFn: func(ctx context.Context, userID, lessonID int) error {
+		deleteNoteFn: func(ctx context.Context, note Note) error {
 			return pgx.ErrNoRows
 		},
 	}
 	service := NewService(repo)
 
-	err := service.DeleteNote(context.Background(), 1, 2)
+	err := service.DeleteNote(context.Background(), Note{UserID: 1, LessonID: 2})
 	assert.ErrorIs(t, err, ErrNoteNotFound)
 }
 

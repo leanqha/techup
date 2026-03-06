@@ -20,10 +20,10 @@ type mockService struct {
 	addLessonFn      func(ctx context.Context, lesson Lesson) error
 	updateLessonFn   func(ctx context.Context, lesson Lesson) error
 	deleteLessonFn   func(ctx context.Context, id int) error
-	getNoteFn        func(ctx context.Context, userID, lessonID int) (*Note, error)
-	addNoteFn        func(ctx context.Context, userID, lessonID int, text string) error
-	updateNoteFn     func(ctx context.Context, userID, lessonID int, text string) error
-	deleteNoteFn     func(ctx context.Context, userID, lessonID int) error
+	getNoteFn        func(ctx context.Context, note Note) (*Note, error)
+	addNoteFn        func(ctx context.Context, note Note) error
+	updateNoteFn     func(ctx context.Context, note Note) error
+	deleteNoteFn     func(ctx context.Context, note Note) error
 	importScheduleFn func(ctx context.Context, lessons []LessonImport) error
 	searchLessonsFn  func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	getTeachersFn    func(ctx context.Context) ([]account.ProfileResponse, error)
@@ -90,30 +90,30 @@ func (m *mockService) DeleteGroup(_ context.Context, _ int) error {
 	return nil
 }
 
-func (m *mockService) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
+func (m *mockService) GetNote(ctx context.Context, note Note) (*Note, error) {
 	if m.getNoteFn != nil {
-		return m.getNoteFn(ctx, userID, lessonID)
+		return m.getNoteFn(ctx, note)
 	}
 	return nil, nil
 }
 
-func (m *mockService) AddNote(ctx context.Context, userID, lessonID int, text string) error {
+func (m *mockService) AddNote(ctx context.Context, note Note) error {
 	if m.addNoteFn != nil {
-		return m.addNoteFn(ctx, userID, lessonID, text)
+		return m.addNoteFn(ctx, note)
 	}
 	return nil
 }
 
-func (m *mockService) UpdateNote(ctx context.Context, userID, lessonID int, text string) error {
+func (m *mockService) UpdateNote(ctx context.Context, note Note) error {
 	if m.updateNoteFn != nil {
-		return m.updateNoteFn(ctx, userID, lessonID, text)
+		return m.updateNoteFn(ctx, note)
 	}
 	return nil
 }
 
-func (m *mockService) DeleteNote(ctx context.Context, userID, lessonID int) error {
+func (m *mockService) DeleteNote(ctx context.Context, note Note) error {
 	if m.deleteNoteFn != nil {
-		return m.deleteNoteFn(ctx, userID, lessonID)
+		return m.deleteNoteFn(ctx, note)
 	}
 	return nil
 }
@@ -321,29 +321,29 @@ func TestDeleteLessonHandler(t *testing.T) {
 
 func TestLessonNoteHandlers(t *testing.T) {
 	svc := &mockService{
-		getNoteFn: func(ctx context.Context, userID, lessonID int) (*Note, error) {
+		getNoteFn: func(ctx context.Context, note Note) (*Note, error) {
 			return nil, nil
 		},
-		addNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
-			if text == "fail" {
+		addNoteFn: func(ctx context.Context, note Note) error {
+			if note.Text == "fail" {
 				return errors.New("save failed")
 			}
 			return nil
 		},
-		updateNoteFn: func(ctx context.Context, userID, lessonID int, text string) error {
-			if text == "missing" {
+		updateNoteFn: func(ctx context.Context, note Note) error {
+			if note.Text == "missing" {
 				return ErrNoteNotFound
 			}
-			if text == "bad" {
+			if note.Text == "bad" {
 				return errors.New("update failed")
 			}
 			return nil
 		},
-		deleteNoteFn: func(ctx context.Context, userID, lessonID int) error {
-			if lessonID == 99 {
+		deleteNoteFn: func(ctx context.Context, note Note) error {
+			if note.LessonID == 99 {
 				return ErrNoteNotFound
 			}
-			if lessonID == 98 {
+			if note.LessonID == 98 {
 				return errors.New("delete failed")
 			}
 			return nil

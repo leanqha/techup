@@ -64,3 +64,8 @@ type LessonImportRequest struct {
 	Type      string `json:"type" binding:"required"`
 	Classroom string `json:"classroom" binding:"required"`
 }
+
+// NoteTextRequest describes payload for note text used by add/update note handlers.
+type NoteTextRequest struct {
+	Text string `json:"text" binding:"required"`
+}
