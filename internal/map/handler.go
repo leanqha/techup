@@ -21,7 +21,7 @@ type ServiceInterface interface {
 	GetRoomByID(ctx context.Context, id int) (*Room, error)
 	FindPath(ctx context.Context, startRoom, endRoom string) ([]string, float64, error)
 	SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error)
-	AddRoom(ctx context.Context, name string, buildingID int, floor int) error
+	AddRoom(ctx context.Context, name string, buildingID int, floor int, description string) error
 	UpdateRoom(ctx context.Context, room Room) error
 	DeleteRoom(ctx context.Context, id int) error
 
@@ -300,7 +300,7 @@ func (h *Handler) AddRoom(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.AddRoom(c.Request.Context(), req.Name, req.BuildingID, req.Floor); err != nil {
+	if err := h.service.AddRoom(c.Request.Context(), req.Name, req.BuildingID, req.Floor, req.Description); err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
@@ -322,10 +322,11 @@ func (h *Handler) UpdateRoom(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateRoom(c.Request.Context(), Room{
-		ID:         id,
-		Name:       req.Name,
-		BuildingID: req.BuildingID,
-		Floor:      req.Floor,
+		ID:          id,
+		Name:        req.Name,
+		BuildingID:  req.BuildingID,
+		Floor:       req.Floor,
+		Description: req.Description,
 	}); err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return

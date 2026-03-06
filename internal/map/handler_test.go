@@ -23,7 +23,7 @@ type mockMapService struct {
 	getRoomByIDFn       func(ctx context.Context, id int) (*Room, error)
 	findPathFn          func(ctx context.Context, startRoom, endRoom string) ([]string, float64, error)
 	searchRoomsFn       func(ctx context.Context, buildingID *int, floor *int) ([]Room, error)
-	addRoomFn           func(ctx context.Context, name string, buildingID int, floor int) error
+	addRoomFn           func(ctx context.Context, name string, buildingID int, floor int, description string) error
 	updateRoomFn        func(ctx context.Context, room Room) error
 	deleteRoomFn        func(ctx context.Context, id int) error
 	getConnectionsFn    func(ctx context.Context) ([]Connection, error)
@@ -96,9 +96,9 @@ func (m *mockMapService) SearchRooms(ctx context.Context, buildingID *int, floor
 	return nil, nil
 }
 
-func (m *mockMapService) AddRoom(ctx context.Context, name string, buildingID int, floor int) error {
+func (m *mockMapService) AddRoom(ctx context.Context, name string, buildingID int, floor int, description string) error {
 	if m.addRoomFn != nil {
-		return m.addRoomFn(ctx, name, buildingID, floor)
+		return m.addRoomFn(ctx, name, buildingID, floor, description)
 	}
 	return nil
 }
@@ -267,10 +267,16 @@ func TestRoomHandlers(t *testing.T) {
 	svc := &mockMapService{}
 	r := setupMapRouter(svc)
 
-	payload := AddRoomRequest{Name: "201", BuildingID: 1, Floor: 2}
+	payload := AddRoomRequest{Name: "201", BuildingID: 1, Floor: 2, Description: "Lecture hall"}
 	body, _ := json.Marshal(payload)
 
-	svc.addRoomFn = func(context.Context, string, int, int) error { return nil }
+	svc.addRoomFn = func(_ context.Context, name string, buildingID int, floor int, description string) error {
+		assert.Equal(t, "201", name)
+		assert.Equal(t, 1, buildingID)
+		assert.Equal(t, 2, floor)
+		assert.Equal(t, "Lecture hall", description)
+		return nil
+	}
 	req := httptest.NewRequest(http.MethodPost, "/admin/room", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

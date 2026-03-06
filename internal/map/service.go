@@ -103,11 +103,12 @@ func (s *Service) FindPath(ctx context.Context, startRoom, endRoom string) ([]st
 	return AStarAlgorithm(graph, startRoom, endRoom, nil)
 }
 
-func (s *Service) AddRoom(ctx context.Context, name string, buildingID int, floor int) error {
+func (s *Service) AddRoom(ctx context.Context, name string, buildingID int, floor int, description string) error {
 	room := &Room{
-		Name:       name,
-		BuildingID: buildingID,
-		Floor:      floor,
+		Name:        name,
+		BuildingID:  buildingID,
+		Floor:       floor,
+		Description: description,
 	}
 	return s.repo.AddRoom(ctx, room)
 }

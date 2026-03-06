@@ -227,11 +227,12 @@ func TestServiceCRUD_PassesValuesToRepo(t *testing.T) {
 	}
 	svc := NewService(repo)
 
-	err := svc.AddRoom(context.Background(), "201", 1, 2)
+	err := svc.AddRoom(context.Background(), "201", 1, 2, "Lecture hall")
 	assert.NoError(t, err)
 	assert.Equal(t, "201", gotRoom.Name)
 	assert.Equal(t, 1, gotRoom.BuildingID)
 	assert.Equal(t, 2, gotRoom.Floor)
+	assert.Equal(t, "Lecture hall", gotRoom.Description)
 
 	err = svc.AddConnection(context.Background(), Connection{RoomFrom: "A", RoomTo: "B", Distance: 4.5, Type: "stairs"})
 	assert.NoError(t, err)
