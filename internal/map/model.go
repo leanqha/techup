@@ -9,10 +9,11 @@ type Building struct {
 
 // Room represents a specific classroom, office, or corridor
 type Room struct {
-	ID         int    `db:"id" json:"id"`
-	BuildingID int    `db:"building_id" json:"building_id"`
-	Floor      int    `db:"floor" json:"floor"`
-	Name       string `db:"name" json:"name"`
+	ID          int    `db:"id" json:"id"`
+	BuildingID  int    `db:"building_id" json:"building_id"`
+	Floor       int    `db:"floor" json:"floor"`
+	Name        string `db:"name" json:"name"`
+	Description string `db:"description" json:"description"`
 }
 
 // Connection represents a link between two rooms (corridor, stairs, etc.)

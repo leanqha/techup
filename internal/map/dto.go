@@ -8,9 +8,10 @@ type GetPathResponse struct {
 
 // AddRoomRequest describes payload for creating a room.
 type AddRoomRequest struct {
-	Name       string `json:"name" binding:"required"`
-	BuildingID int    `json:"building_id" binding:"required"`
-	Floor      int    `json:"floor" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	BuildingID  int    `json:"building_id" binding:"required"`
+	Floor       int    `json:"floor" binding:"required"`
+	Description string `json:"description"`
 }
 
 // AddConnectionRequest describes payload for connecting two rooms.
