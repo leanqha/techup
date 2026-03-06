@@ -17,14 +17,17 @@ import (
 
 type RepositoryInterface interface {
 	AddFaculty(ctx context.Context, faculty Faculty) error
+	GetFaculty(ctx context.Context, id int) (*Faculty, error)
 	ListFaculties(ctx context.Context) ([]Faculty, error)
 	UpdateFaculty(ctx context.Context, faculty Faculty) error
 	DeleteFaculty(ctx context.Context, id int) error
 	AddGroup(ctx context.Context, g Group) error
+	GetGroup(ctx context.Context, id int) (*Group, error)
 	ListGroups(ctx context.Context) ([]Group, error)
 	UpdateGroup(ctx context.Context, g Group) error
 	DeleteGroup(ctx context.Context, id int) error
 	AddLesson(ctx context.Context, lesson Lesson) error
+	GetLesson(ctx context.Context, id int) (*LessonResponse, error)
 	UpdateLesson(ctx context.Context, lesson Lesson) error
 	DeleteLesson(ctx context.Context, id int) error
 	GetLessons(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
@@ -305,4 +308,16 @@ func (s *Service) GetTeachers(ctx context.Context) ([]account.ProfileResponse, e
 
 func (s *Service) GetClassrooms(ctx context.Context) ([]string, error) {
 	return s.repo.GetClassrooms(ctx)
+}
+
+func (s *Service) GetFaculty(ctx context.Context, id int) (*Faculty, error) {
+	return s.repo.GetFaculty(ctx, id)
+}
+
+func (s *Service) GetGroup(ctx context.Context, id int) (*Group, error) {
+	return s.repo.GetGroup(ctx, id)
+}
+
+func (s *Service) GetLesson(ctx context.Context, id int) (*LessonResponse, error) {
+	return s.repo.GetLesson(ctx, id)
 }

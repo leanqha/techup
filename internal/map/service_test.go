@@ -9,20 +9,69 @@ import (
 )
 
 type mockMapRepo struct {
-	getAllBuildingsFn  func(ctx context.Context) ([]Building, error)
-	searchRoomsFn      func(ctx context.Context, room *Room, hasBuildingID, hasFloor bool) ([]Room, error)
-	getConnectionsFn   func(ctx context.Context) ([]Connection, error)
-	addRoomFn          func(ctx context.Context, room *Room) error
-	updateRoomFn       func(ctx context.Context, room *Room) error
-	deleteRoomFn       func(ctx context.Context, id int) error
-	addConnectionFn    func(ctx context.Context, conn *Connection) error
-	updateConnectionFn func(ctx context.Context, conn *Connection) error
-	deleteConnectionFn func(ctx context.Context, id int) error
+	getAllBuildingsFn   func(ctx context.Context) ([]Building, error)
+	getBuildingByIDFn   func(ctx context.Context, id int) (*Building, error)
+	addBuildingFn       func(ctx context.Context, building *Building) error
+	updateBuildingFn    func(ctx context.Context, building *Building) error
+	deleteBuildingFn    func(ctx context.Context, id int) error
+	getRoomsFn          func(ctx context.Context) ([]Room, error)
+	getRoomByIDFn       func(ctx context.Context, id int) (*Room, error)
+	searchRoomsFn       func(ctx context.Context, room *Room, hasBuildingID, hasFloor bool) ([]Room, error)
+	getConnectionsFn    func(ctx context.Context) ([]Connection, error)
+	getConnectionByIDFn func(ctx context.Context, id int) (*Connection, error)
+	addRoomFn           func(ctx context.Context, room *Room) error
+	updateRoomFn        func(ctx context.Context, room *Room) error
+	deleteRoomFn        func(ctx context.Context, id int) error
+	addConnectionFn     func(ctx context.Context, conn *Connection) error
+	updateConnectionFn  func(ctx context.Context, conn *Connection) error
+	deleteConnectionFn  func(ctx context.Context, id int) error
 }
 
 func (m *mockMapRepo) GetAllBuildings(ctx context.Context) ([]Building, error) {
 	if m.getAllBuildingsFn != nil {
 		return m.getAllBuildingsFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockMapRepo) GetBuildingByID(ctx context.Context, id int) (*Building, error) {
+	if m.getBuildingByIDFn != nil {
+		return m.getBuildingByIDFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockMapRepo) AddBuilding(ctx context.Context, building *Building) error {
+	if m.addBuildingFn != nil {
+		return m.addBuildingFn(ctx, building)
+	}
+	return nil
+}
+
+func (m *mockMapRepo) UpdateBuilding(ctx context.Context, building *Building) error {
+	if m.updateBuildingFn != nil {
+		return m.updateBuildingFn(ctx, building)
+	}
+	return nil
+}
+
+func (m *mockMapRepo) DeleteBuilding(ctx context.Context, id int) error {
+	if m.deleteBuildingFn != nil {
+		return m.deleteBuildingFn(ctx, id)
+	}
+	return nil
+}
+
+func (m *mockMapRepo) GetRooms(ctx context.Context) ([]Room, error) {
+	if m.getRoomsFn != nil {
+		return m.getRoomsFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockMapRepo) GetRoomByID(ctx context.Context, id int) (*Room, error) {
+	if m.getRoomByIDFn != nil {
+		return m.getRoomByIDFn(ctx, id)
 	}
 	return nil, nil
 }
@@ -37,6 +86,13 @@ func (m *mockMapRepo) SearchRooms(ctx context.Context, room *Room, hasBuildingID
 func (m *mockMapRepo) GetConnections(ctx context.Context) ([]Connection, error) {
 	if m.getConnectionsFn != nil {
 		return m.getConnectionsFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockMapRepo) GetConnectionByID(ctx context.Context, id int) (*Connection, error) {
+	if m.getConnectionByIDFn != nil {
+		return m.getConnectionByIDFn(ctx, id)
 	}
 	return nil, nil
 }
@@ -183,4 +239,65 @@ func TestServiceCRUD_PassesValuesToRepo(t *testing.T) {
 	assert.Equal(t, "B", gotConnection.RoomTo)
 	assert.Equal(t, 4.5, gotConnection.Distance)
 	assert.Equal(t, "stairs", gotConnection.Type)
+}
+
+func TestServiceGetByIDDelegatesToRepo(t *testing.T) {
+	repo := &mockMapRepo{
+		getBuildingByIDFn: func(_ context.Context, id int) (*Building, error) {
+			assert.Equal(t, 1, id)
+			return &Building{ID: id}, nil
+		},
+		getRoomByIDFn: func(_ context.Context, id int) (*Room, error) {
+			assert.Equal(t, 2, id)
+			return &Room{ID: id}, nil
+		},
+		getConnectionByIDFn: func(_ context.Context, id int) (*Connection, error) {
+			assert.Equal(t, 3, id)
+			return &Connection{ID: id}, nil
+		},
+	}
+	svc := NewService(repo)
+
+	building, err := svc.GetBuildingByID(context.Background(), 1)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, building.ID)
+
+	room, err := svc.GetRoomByID(context.Background(), 2)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, room.ID)
+
+	conn, err := svc.GetConnectionByID(context.Background(), 3)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, conn.ID)
+}
+
+func TestServiceBuildingCRUD_PassesValuesToRepo(t *testing.T) {
+	var got Building
+	repo := &mockMapRepo{
+		addBuildingFn: func(_ context.Context, building *Building) error {
+			got = *building
+			return nil
+		},
+		updateBuildingFn: func(_ context.Context, building *Building) error {
+			got = *building
+			return nil
+		},
+		deleteBuildingFn: func(_ context.Context, id int) error {
+			assert.Equal(t, 10, id)
+			return nil
+		},
+	}
+	svc := NewService(repo)
+
+	err := svc.AddBuilding(context.Background(), Building{ID: 10, Name: "Main", Address: "Addr"})
+	assert.NoError(t, err)
+	assert.Equal(t, 10, got.ID)
+	assert.Equal(t, "Main", got.Name)
+
+	err = svc.UpdateBuilding(context.Background(), Building{ID: 10, Name: "New", Address: "NewAddr"})
+	assert.NoError(t, err)
+	assert.Equal(t, "New", got.Name)
+
+	err = svc.DeleteBuilding(context.Background(), 10)
+	assert.NoError(t, err)
 }

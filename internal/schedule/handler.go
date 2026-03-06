@@ -13,14 +13,17 @@ import (
 
 type ServiceInterface interface {
 	GetLessons(ctx context.Context, groupID int, fromStr, toStr string) ([]LessonResponse, error)
+	GetLesson(ctx context.Context, id int) (*LessonResponse, error)
 	AddLesson(ctx context.Context, lesson Lesson) error
 	UpdateLesson(ctx context.Context, lesson Lesson) error
 	DeleteLesson(ctx context.Context, id int) error
 	ListFaculties(ctx context.Context) ([]Faculty, error)
+	GetFaculty(ctx context.Context, id int) (*Faculty, error)
 	AddFaculty(ctx context.Context, faculty Faculty) error
 	UpdateFaculty(ctx context.Context, faculty Faculty) error
 	DeleteFaculty(ctx context.Context, id int) error
 	ListGroups(ctx context.Context) ([]Group, error)
+	GetGroup(ctx context.Context, id int) (*Group, error)
 	AddGroup(ctx context.Context, g Group) error
 	UpdateGroup(ctx context.Context, g Group) error
 	DeleteGroup(ctx context.Context, id int) error
@@ -269,6 +272,32 @@ func (h *Handler) AddFaculty(c *gin.Context) {
 	c.JSON(http.StatusOK, f)
 }
 
+// GetFaculty godoc
+// @Summary      Get faculty by ID
+// @Description  Return faculty by ID.
+// @Tags         Schedule
+// @Produce      json
+// @Param        id path int true "Faculty ID"
+// @Success      200 {object} Faculty "Faculty"
+// @Failure      400 {object} map[string]string "Invalid ID"
+// @Failure      404 {object} map[string]string "Faculty not found"
+// @Failure      500 {object} map[string]string "Failed to load faculty"
+// @Router       /schedule/faculties/{id} [get]
+func (h *Handler) GetFaculty(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	faculty, err := h.service.GetFaculty(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, faculty)
+}
+
 // UpdateFaculty godoc
 // @Summary      Update a faculty (admin only)
 // @Description  Update a faculty by ID.
@@ -283,7 +312,11 @@ func (h *Handler) AddFaculty(c *gin.Context) {
 // @Failure      500 {object} map[string]string "Failed to update faculty"
 // @Router       /admin/faculty/{id} [put]
 func (h *Handler) UpdateFaculty(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 	var f Faculty
 	if err := c.ShouldBindJSON(&f); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -308,7 +341,11 @@ func (h *Handler) UpdateFaculty(c *gin.Context) {
 // @Failure      500 {object} map[string]string "Failed to delete faculty"
 // @Router       /admin/faculty/{id} [delete]
 func (h *Handler) DeleteFaculty(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 	if err := h.service.DeleteFaculty(c.Request.Context(), id); err != nil {
 		respondError(c, err)
 		return
@@ -359,6 +396,32 @@ func (h *Handler) AddGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, g)
 }
 
+// GetGroup godoc
+// @Summary      Get group by ID
+// @Description  Return group by ID.
+// @Tags         Schedule
+// @Produce      json
+// @Param        id path int true "Group ID"
+// @Success      200 {object} Group "Group"
+// @Failure      400 {object} map[string]string "Invalid ID"
+// @Failure      404 {object} map[string]string "Group not found"
+// @Failure      500 {object} map[string]string "Failed to load group"
+// @Router       /schedule/groups/{id} [get]
+func (h *Handler) GetGroup(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	group, err := h.service.GetGroup(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, group)
+}
+
 // UpdateGroup godoc
 // @Summary      Update a group (admin only)
 // @Description  Update group fields. Group name is required.
@@ -373,6 +436,12 @@ func (h *Handler) AddGroup(c *gin.Context) {
 // @Failure      500 {object} map[string]string "Failed to update group"
 // @Router       /admin/group/{id} [put]
 func (h *Handler) UpdateGroup(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
 	var g Group
 	if err := c.ShouldBindJSON(&g); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -384,7 +453,8 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 		return
 	}
 
-	err := h.service.UpdateGroup(c.Request.Context(), g)
+	g.ID = id
+	err = h.service.UpdateGroup(c.Request.Context(), g)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -404,7 +474,11 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 // @Failure      500 {object} map[string]string "Failed to delete group"
 // @Router       /admin/group/{id} [delete]
 func (h *Handler) DeleteGroup(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 	if err := h.service.DeleteGroup(c.Request.Context(), id); err != nil {
 		respondError(c, err)
 		return
@@ -720,4 +794,31 @@ func (h *Handler) GetClassrooms(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, classrooms)
+}
+
+// GetLesson godoc
+// @Summary      Get lesson by ID
+// @Description  Return a single lesson by ID.
+// @Tags         Schedule
+// @Produce      json
+// @Param        id path int true "Lesson ID"
+// @Success      200 {object} LessonResponse "Lesson"
+// @Failure      400 {object} map[string]string "Invalid ID"
+// @Failure      404 {object} map[string]string "Lesson not found"
+// @Failure      500 {object} map[string]string "Failed to load lesson"
+// @Router       /schedule/lessons/{id} [get]
+func (h *Handler) GetLesson(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	lesson, err := h.service.GetLesson(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, lesson)
 }

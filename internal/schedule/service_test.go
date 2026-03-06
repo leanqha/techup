@@ -15,6 +15,9 @@ import (
 )
 
 type mockRepo struct {
+	getFacultyFn       func(ctx context.Context, id int) (*Faculty, error)
+	getGroupFn         func(ctx context.Context, id int) (*Group, error)
+	getLessonFn        func(ctx context.Context, id int) (*LessonResponse, error)
 	addLessonFn        func(ctx context.Context, lesson Lesson) error
 	updateLessonFn     func(ctx context.Context, lesson Lesson) error
 	getLessonsFn       func(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
@@ -141,6 +144,27 @@ func (m *mockRepo) GetTeachers(ctx context.Context) ([]account.Account, error) {
 func (m *mockRepo) GetClassrooms(ctx context.Context) ([]string, error) {
 	if m.getClassroomsFn != nil {
 		return m.getClassroomsFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) GetFaculty(ctx context.Context, id int) (*Faculty, error) {
+	if m.getFacultyFn != nil {
+		return m.getFacultyFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) GetGroup(ctx context.Context, id int) (*Group, error) {
+	if m.getGroupFn != nil {
+		return m.getGroupFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) GetLesson(ctx context.Context, id int) (*LessonResponse, error) {
+	if m.getLessonFn != nil {
+		return m.getLessonFn(ctx, id)
 	}
 	return nil, nil
 }
@@ -357,4 +381,34 @@ func TestServiceGetTeachersAndClassrooms(t *testing.T) {
 	rooms, err := service.GetClassrooms(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"101", "102"}, rooms)
+}
+
+func TestServiceGetByIDDelegates(t *testing.T) {
+	repo := &mockRepo{
+		getFacultyFn: func(_ context.Context, id int) (*Faculty, error) {
+			assert.Equal(t, 1, id)
+			return &Faculty{ID: id}, nil
+		},
+		getGroupFn: func(_ context.Context, id int) (*Group, error) {
+			assert.Equal(t, 2, id)
+			return &Group{ID: id}, nil
+		},
+		getLessonFn: func(_ context.Context, id int) (*LessonResponse, error) {
+			assert.Equal(t, 3, id)
+			return &LessonResponse{ID: id}, nil
+		},
+	}
+	svc := NewService(repo)
+
+	fac, err := svc.GetFaculty(context.Background(), 1)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, fac.ID)
+
+	grp, err := svc.GetGroup(context.Background(), 2)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, grp.ID)
+
+	lesson, err := svc.GetLesson(context.Background(), 3)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, lesson.ID)
 }

@@ -647,3 +647,77 @@ func (r *Repository) GetClassrooms(ctx context.Context) ([]string, error) {
 
 	return classrooms, nil
 }
+
+func (r *Repository) GetLesson(ctx context.Context, id int) (*LessonResponse, error) {
+	query := `
+	SELECT
+		l.id,
+		l.group_id,
+		g.name,
+		l.date,
+		l.start_time,
+		l.end_time,
+		l.subject,
+		l.type,
+		l.teacher_id,
+		a.first_name,
+		a.middle_name,
+		a.last_name,
+		l.classroom
+	FROM lessons l
+	LEFT JOIN groups g ON l.group_id = g.id
+	LEFT JOIN accounts a ON l.teacher_id = a.id
+	WHERE l.id = $1
+	`
+
+	var (
+		lesson     LessonResponse
+		date       time.Time
+		startTime  time.Time
+		endTime    time.Time
+		firstName  *string
+		middleName *string
+		lastName   *string
+	)
+
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&lesson.ID,
+		&lesson.Group.ID,
+		&lesson.Group.Name,
+		&date,
+		&startTime,
+		&endTime,
+		&lesson.Subject,
+		&lesson.Type,
+		&lesson.Teacher.ID,
+		&firstName,
+		&middleName,
+		&lastName,
+		&lesson.Classroom,
+	)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperrors.NotFound("lesson not found")
+		}
+		return nil, err
+	}
+
+	lesson.Date = date.Format("2006-01-02")
+	lesson.StartTime = startTime.Format("15:04")
+	lesson.EndTime = endTime.Format("15:04")
+
+	var parts []string
+	if lastName != nil && *lastName != "" {
+		parts = append(parts, *lastName)
+	}
+	if firstName != nil && *firstName != "" {
+		parts = append(parts, *firstName)
+	}
+	if middleName != nil && *middleName != "" {
+		parts = append(parts, *middleName)
+	}
+	lesson.Teacher.FullName = strings.Join(parts, " ")
+
+	return &lesson, nil
+}

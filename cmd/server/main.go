@@ -109,8 +109,11 @@ func main() {
 	scheduleGroup := api.Group("/schedule")
 	{
 		scheduleGroup.GET("/lessons", scheduleHandler.GetLessons)
+		scheduleGroup.GET("/lessons/:id", scheduleHandler.GetLesson)
 		scheduleGroup.GET("/groups", scheduleHandler.ListGroups)
+		scheduleGroup.GET("/groups/:id", scheduleHandler.GetGroup)
 		scheduleGroup.GET("/faculties", scheduleHandler.ListFaculties)
+		scheduleGroup.GET("/faculties/:id", scheduleHandler.GetFaculty)
 		scheduleGroup.GET("/search", scheduleHandler.SearchLessons)
 		scheduleGroup.GET("/teachers", scheduleHandler.GetTeachers)
 		scheduleGroup.GET("/classrooms", scheduleHandler.GetClassrooms)
@@ -127,8 +130,13 @@ func main() {
 
 	mapGroup := api.Group("/map")
 	{
-		mapGroup.GET("/search", mapsHandler.SearchRooms)
 		mapGroup.GET("/buildings", mapsHandler.GetBuildings)
+		mapGroup.GET("/buildings/:id", mapsHandler.GetBuilding)
+		mapGroup.GET("/rooms", mapsHandler.GetRooms)
+		mapGroup.GET("/rooms/:id", mapsHandler.GetRoom)
+		mapGroup.GET("/connections", mapsHandler.GetConnections)
+		mapGroup.GET("/connections/:id", mapsHandler.GetConnection)
+		mapGroup.GET("/search", mapsHandler.SearchRooms)
 		mapGroup.GET("/path/:start/:end", mapsHandler.GetPath)
 	}
 
@@ -147,6 +155,10 @@ func main() {
 		adminGroup.POST("/group", scheduleHandler.AddGroup)
 		adminGroup.PUT("/group/:id", scheduleHandler.UpdateGroup)
 		adminGroup.DELETE("/group/:id", scheduleHandler.DeleteGroup)
+
+		adminGroup.POST("/building", mapsHandler.AddBuilding)
+		adminGroup.PUT("/building/:id", mapsHandler.UpdateBuilding)
+		adminGroup.DELETE("/building/:id", mapsHandler.DeleteBuilding)
 
 		adminGroup.POST("/room", mapsHandler.AddRoom)
 		adminGroup.PUT("/room/:id", mapsHandler.UpdateRoom)

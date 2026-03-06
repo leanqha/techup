@@ -6,6 +6,7 @@ import (
 	"techup/internal/apperrors"
 	"techup/internal/logger"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -181,4 +182,105 @@ func (r *Repository) DeleteConnection(ctx context.Context, id int) error {
 		return apperrors.NotFound("connection not found")
 	}
 	return nil
+}
+
+func (r *Repository) GetBuildingByID(ctx context.Context, id int) (*Building, error) {
+	query := `SELECT id, name, address FROM buildings WHERE id = $1`
+	var b Building
+	if err := r.db.QueryRow(ctx, query, id).Scan(&b.ID, &b.Name, &b.Address); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, apperrors.NotFound("building not found")
+		}
+		logger.LogSQLError(err, query, id)
+		return nil, err
+	}
+	return &b, nil
+}
+
+func (r *Repository) AddBuilding(ctx context.Context, building *Building) error {
+	query := `
+		INSERT INTO buildings (id, name, address)
+		VALUES ($1, $2, $3)
+	`
+	_, err := r.db.Exec(ctx, query, building.ID, building.Name, building.Address)
+	if err != nil {
+		logger.LogSQLError(err, query, building.ID, building.Name, building.Address)
+	}
+	return err
+}
+
+func (r *Repository) UpdateBuilding(ctx context.Context, building *Building) error {
+	query := `
+		UPDATE buildings
+		SET name = $1, address = $2, updated_at = NOW()
+		WHERE id = $3
+	`
+	ct, err := r.db.Exec(ctx, query, building.Name, building.Address, building.ID)
+	if err != nil {
+		logger.LogSQLError(err, query, building.Name, building.Address, building.ID)
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("building not found")
+	}
+	return nil
+}
+
+func (r *Repository) DeleteBuilding(ctx context.Context, id int) error {
+	query := `DELETE FROM buildings WHERE id = $1`
+	ct, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("building not found")
+	}
+	return nil
+}
+
+func (r *Repository) GetRooms(ctx context.Context) ([]Room, error) {
+	query := `SELECT id, building_id, floor, name FROM rooms`
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		logger.LogSQLError(err, query, "GetRooms")
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rooms []Room
+	for rows.Next() {
+		var room Room
+		if err := rows.Scan(&room.ID, &room.BuildingID, &room.Floor, &room.Name); err != nil {
+			return nil, err
+		}
+		rooms = append(rooms, room)
+	}
+	return rooms, nil
+}
+
+func (r *Repository) GetRoomByID(ctx context.Context, id int) (*Room, error) {
+	query := `SELECT id, building_id, floor, name FROM rooms WHERE id = $1`
+	var room Room
+	if err := r.db.QueryRow(ctx, query, id).Scan(&room.ID, &room.BuildingID, &room.Floor, &room.Name); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, apperrors.NotFound("room not found")
+		}
+		logger.LogSQLError(err, query, id)
+		return nil, err
+	}
+	return &room, nil
+}
+
+func (r *Repository) GetConnectionByID(ctx context.Context, id int) (*Connection, error) {
+	query := `SELECT id, room_from, room_to, distance, type FROM connections WHERE id = $1`
+	var conn Connection
+	if err := r.db.QueryRow(ctx, query, id).Scan(&conn.ID, &conn.RoomFrom, &conn.RoomTo, &conn.Distance, &conn.Type); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, apperrors.NotFound("connection not found")
+		}
+		logger.LogSQLError(err, query, id)
+		return nil, err
+	}
+	return &conn, nil
 }
