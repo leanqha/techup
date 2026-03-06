@@ -12,11 +12,21 @@ import (
 
 type ServiceInterface interface {
 	GetAllBuildings(ctx context.Context) ([]Building, error)
+	GetBuildingByID(ctx context.Context, id int) (*Building, error)
+	AddBuilding(ctx context.Context, building Building) error
+	UpdateBuilding(ctx context.Context, building Building) error
+	DeleteBuilding(ctx context.Context, id int) error
+
+	GetRooms(ctx context.Context) ([]Room, error)
+	GetRoomByID(ctx context.Context, id int) (*Room, error)
 	FindPath(ctx context.Context, startRoom, endRoom string) ([]string, float64, error)
 	SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error)
 	AddRoom(ctx context.Context, name string, buildingID int, floor int) error
 	UpdateRoom(ctx context.Context, room Room) error
 	DeleteRoom(ctx context.Context, id int) error
+
+	GetConnections(ctx context.Context) ([]Connection, error)
+	GetConnectionByID(ctx context.Context, id int) (*Connection, error)
 	AddConnection(ctx context.Context, connection Connection) error
 	UpdateConnection(ctx context.Context, connection Connection) error
 	DeleteConnection(ctx context.Context, id int) error
@@ -49,6 +59,169 @@ func (h *Handler) GetBuildings(c *gin.Context) {
 	c.JSON(http.StatusOK, buildings)
 }
 
+// GetBuilding godoc
+// @Summary Get a building by ID
+// @Description Returns a building by its ID
+// @Tags map
+// @Produce json
+// @Param id path int true "Building ID"
+// @Success 200 {object} Building
+// @Failure 400 {object} error
+// @Failure 404 {object} error
+// @Failure 500 {object} error
+// @Router /buildings/{id} [get]
+func (h *Handler) GetBuilding(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	building, err := h.service.GetBuildingByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+		return
+	}
+	c.JSON(http.StatusOK, building)
+}
+
+// AddBuilding godoc
+// @Summary Add a new building
+// @Description Creates a new building
+// @Tags map
+// @Accept json
+// @Produce json
+// @Param building body AddBuildingRequest true "Building data"
+// @Success 201 {object} Building
+// @Failure 400 {object} error
+// @Failure 500 {object} error
+// @Router /buildings [post]
+func (h *Handler) AddBuilding(c *gin.Context) {
+	var req AddBuildingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.AddBuilding(c.Request.Context(), Building{
+		ID:      req.ID,
+		Name:    req.Name,
+		Address: req.Address,
+	}); err != nil {
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+		return
+	}
+
+	c.Status(http.StatusCreated)
+}
+
+// UpdateBuilding godoc
+// @Summary Update an existing building
+// @Description Updates a building by its ID
+// @Tags map
+// @Accept json
+// @Produce json
+// @Param id path int true "Building ID"
+// @Param building body UpdateBuildingRequest true "Updated building data"
+// @Success 200 {object} Building
+// @Failure 400 {object} error
+// @Failure 404 {object} error
+// @Failure 500 {object} error
+// @Router /buildings/{id} [put]
+func (h *Handler) UpdateBuilding(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req UpdateBuildingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.UpdateBuilding(c.Request.Context(), Building{
+		ID:      id,
+		Name:    req.Name,
+		Address: req.Address,
+	}); err != nil {
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// DeleteBuilding godoc
+// @Summary Delete a building
+// @Description Deletes a building by its ID
+// @Tags map
+// @Produce json
+// @Param id path int true "Building ID"
+// @Success 204 {object} nil
+// @Failure 400 {object} error
+// @Failure 404 {object} error
+// @Failure 500 {object} error
+// @Router /buildings/{id} [delete]
+func (h *Handler) DeleteBuilding(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := h.service.DeleteBuilding(c.Request.Context(), id); err != nil {
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// GetRooms godoc
+// @Summary Get all rooms
+// @Description Returns a list of all rooms
+// @Tags map
+// @Produce json
+// @Success 200 {array} Room
+// @Failure 500 {object} error
+// @Router /rooms [get]
+func (h *Handler) GetRooms(c *gin.Context) {
+	rooms, err := h.service.GetRooms(c.Request.Context())
+	if err != nil {
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+		return
+	}
+	c.JSON(http.StatusOK, rooms)
+}
+
+// GetRoom godoc
+// @Summary Get a room by ID
+// @Description Returns a room by its ID
+// @Tags map
+// @Produce json
+// @Param id path int true "Room ID"
+// @Success 200 {object} Room
+// @Failure 400 {object} error
+// @Failure 404 {object} error
+// @Failure 500 {object} error
+// @Router /rooms/{id} [get]
+func (h *Handler) GetRoom(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	room, err := h.service.GetRoomByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+		return
+	}
+	c.JSON(http.StatusOK, room)
+}
+
 // GetPath godoc
 // @Summary Get path between two rooms
 // @Description Calculates path between start_room_id and end_room_id
@@ -74,6 +247,50 @@ func (h *Handler) GetPath(c *gin.Context) {
 		Dist: distance,
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+// SearchRooms godoc
+// @Summary Search rooms
+// @Description Returns rooms filtered by building_id and/or floor
+// @Tags map
+// @Produce json
+// @Param building_id query int false "Building ID"
+// @Param floor query int false "Floor number"
+// @Success 200 {array} Room
+// @Failure 400 {object} map[string]string "Invalid query parameters"
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /api/v1/map/search [get]
+func (h *Handler) SearchRooms(c *gin.Context) {
+	var (
+		buildingID *int
+		floor      *int
+	)
+
+	if b := c.Query("building_id"); b != "" {
+		var id int
+		if _, err := fmt.Sscanf(b, "%d", &id); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid building_id"})
+			return
+		}
+		buildingID = &id
+	}
+
+	if f := c.Query("floor"); f != "" {
+		var fl int
+		if _, err := fmt.Sscanf(f, "%d", &fl); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid floor"})
+			return
+		}
+		floor = &fl
+	}
+
+	rooms, err := h.service.SearchRooms(c.Request.Context(), buildingID, floor)
+	if err != nil {
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, rooms)
 }
 
 func (h *Handler) AddRoom(c *gin.Context) {
@@ -132,48 +349,47 @@ func (h *Handler) DeleteRoom(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// SearchRooms godoc
-// @Summary Search rooms
-// @Description Returns rooms filtered by building_id and/or floor
+// GetConnections godoc
+// @Summary Get all connections
+// @Description Returns a list of all connections
 // @Tags map
 // @Produce json
-// @Param building_id query int false "Building ID"
-// @Param floor query int false "Floor number"
-// @Success 200 {array} Room
-// @Failure 400 {object} map[string]string "Invalid query parameters"
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /api/v1/map/search [get]
-func (h *Handler) SearchRooms(c *gin.Context) {
-	var (
-		buildingID *int
-		floor      *int
-	)
-
-	if b := c.Query("building_id"); b != "" {
-		var id int
-		if _, err := fmt.Sscanf(b, "%d", &id); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid building_id"})
-			return
-		}
-		buildingID = &id
-	}
-
-	if f := c.Query("floor"); f != "" {
-		var fl int
-		if _, err := fmt.Sscanf(f, "%d", &fl); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid floor"})
-			return
-		}
-		floor = &fl
-	}
-
-	rooms, err := h.service.SearchRooms(c.Request.Context(), buildingID, floor)
+// @Success 200 {array} Connection
+// @Failure 500 {object} error
+// @Router /connections [get]
+func (h *Handler) GetConnections(c *gin.Context) {
+	connections, err := h.service.GetConnections(c.Request.Context())
 	if err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
+	c.JSON(http.StatusOK, connections)
+}
 
-	c.JSON(http.StatusOK, rooms)
+// GetConnection godoc
+// @Summary Get a connection by ID
+// @Description Returns a connection by its ID
+// @Tags map
+// @Produce json
+// @Param id path int true "Connection ID"
+// @Success 200 {object} Connection
+// @Failure 400 {object} error
+// @Failure 404 {object} error
+// @Failure 500 {object} error
+// @Router /connections/{id} [get]
+func (h *Handler) GetConnection(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	connection, err := h.service.GetConnectionByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+		return
+	}
+	c.JSON(http.StatusOK, connection)
 }
 
 func (h *Handler) AddConnection(c *gin.Context) {

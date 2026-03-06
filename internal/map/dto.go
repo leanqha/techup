@@ -26,3 +26,16 @@ type SearchRoomsRequest struct {
 	Floor      int `json:"floor" binding:"required"`
 	BuildingID int `json:"building_id" binding:"required"`
 }
+
+// AddBuildingRequest describes payload for creating a building.
+type AddBuildingRequest struct {
+	ID      int    `json:"id" binding:"required"`
+	Name    string `json:"name" binding:"required"`
+	Address string `json:"address" binding:"required"`
+}
+
+// UpdateBuildingRequest describes payload for updating a building.
+type UpdateBuildingRequest struct {
+	Name    string `json:"name" binding:"required"`
+	Address string `json:"address" binding:"required"`
+}

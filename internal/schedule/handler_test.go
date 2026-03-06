@@ -17,9 +17,14 @@ import (
 
 type mockService struct {
 	getLessonsFn     func(ctx context.Context, groupID int, fromStr, toStr string) ([]LessonResponse, error)
+	getLessonFn      func(ctx context.Context, id int) (*LessonResponse, error)
 	addLessonFn      func(ctx context.Context, lesson Lesson) error
 	updateLessonFn   func(ctx context.Context, lesson Lesson) error
 	deleteLessonFn   func(ctx context.Context, id int) error
+	listFacultiesFn  func(ctx context.Context) ([]Faculty, error)
+	getFacultyFn     func(ctx context.Context, id int) (*Faculty, error)
+	listGroupsFn     func(ctx context.Context) ([]Group, error)
+	getGroupFn       func(ctx context.Context, id int) (*Group, error)
 	getNoteFn        func(ctx context.Context, note Note) (*Note, error)
 	addNoteFn        func(ctx context.Context, note Note) error
 	updateNoteFn     func(ctx context.Context, note Note) error
@@ -33,6 +38,13 @@ type mockService struct {
 func (m *mockService) GetLessons(ctx context.Context, groupID int, fromStr, toStr string) ([]LessonResponse, error) {
 	if m.getLessonsFn != nil {
 		return m.getLessonsFn(ctx, groupID, fromStr, toStr)
+	}
+	return nil, nil
+}
+
+func (m *mockService) GetLesson(ctx context.Context, id int) (*LessonResponse, error) {
+	if m.getLessonFn != nil {
+		return m.getLessonFn(ctx, id)
 	}
 	return nil, nil
 }
@@ -58,7 +70,17 @@ func (m *mockService) DeleteLesson(ctx context.Context, id int) error {
 	return nil
 }
 
-func (m *mockService) ListFaculties(_ context.Context) ([]Faculty, error) {
+func (m *mockService) ListFaculties(ctx context.Context) ([]Faculty, error) {
+	if m.listFacultiesFn != nil {
+		return m.listFacultiesFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockService) GetFaculty(ctx context.Context, id int) (*Faculty, error) {
+	if m.getFacultyFn != nil {
+		return m.getFacultyFn(ctx, id)
+	}
 	return nil, nil
 }
 
@@ -74,7 +96,17 @@ func (m *mockService) DeleteFaculty(_ context.Context, _ int) error {
 	return nil
 }
 
-func (m *mockService) ListGroups(_ context.Context) ([]Group, error) {
+func (m *mockService) ListGroups(ctx context.Context) ([]Group, error) {
+	if m.listGroupsFn != nil {
+		return m.listGroupsFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockService) GetGroup(ctx context.Context, id int) (*Group, error) {
+	if m.getGroupFn != nil {
+		return m.getGroupFn(ctx, id)
+	}
 	return nil, nil
 }
 
@@ -157,9 +189,14 @@ func setupRouterWithService(svc ServiceInterface, withUser bool) *gin.Engine {
 	}
 	h := NewHandler(svc)
 	r.GET("/schedule/lessons", h.GetLessons)
+	r.GET("/schedule/lessons/:id", h.GetLesson)
 	r.POST("/admin/lesson", h.AddLesson)
 	r.PUT("/admin/lesson/:id", h.UpdateLesson)
 	r.DELETE("/admin/lesson/:id", h.DeleteLesson)
+	r.GET("/schedule/faculties", h.ListFaculties)
+	r.GET("/schedule/faculties/:id", h.GetFaculty)
+	r.GET("/schedule/groups", h.ListGroups)
+	r.GET("/schedule/groups/:id", h.GetGroup)
 	r.GET("/schedule/lessons/:id/note", h.GetNote)
 	r.POST("/schedule/lessons/:id/note", h.AddNote)
 	r.PUT("/schedule/lessons/:id/note", h.UpdateNote)
@@ -551,4 +588,48 @@ func TestGetClassroomsHandler(t *testing.T) {
 	r.ServeHTTP(w, failReq)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Contains(t, w.Body.String(), "failed to get classrooms")
+}
+
+func TestGetByIDHandlers(t *testing.T) {
+	svc := &mockService{
+		getLessonFn: func(_ context.Context, id int) (*LessonResponse, error) {
+			assert.Equal(t, 1, id)
+			return &LessonResponse{ID: id, Subject: "Math"}, nil
+		},
+		getFacultyFn: func(_ context.Context, id int) (*Faculty, error) {
+			assert.Equal(t, 2, id)
+			return &Faculty{ID: id, Name: "F"}, nil
+		},
+		getGroupFn: func(_ context.Context, id int) (*Group, error) {
+			assert.Equal(t, 3, id)
+			return &Group{ID: id, Name: "G"}, nil
+		},
+	}
+	r := setupRouterWithService(svc, false)
+
+	cases := []string{
+		"/schedule/lessons/1",
+		"/schedule/faculties/2",
+		"/schedule/groups/3",
+	}
+
+	for _, url := range cases {
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+	}
+
+	badCases := []string{
+		"/schedule/lessons/abc",
+		"/schedule/faculties/abc",
+		"/schedule/groups/abc",
+	}
+
+	for _, url := range badCases {
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	}
 }

@@ -151,6 +151,19 @@ definitions:
         example: Doe
         type: string
     type: object
+  maps.AddBuildingRequest:
+    properties:
+      address:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    required:
+    - address
+    - id
+    - name
+    type: object
   maps.Building:
     properties:
       address:
@@ -158,6 +171,20 @@ definitions:
       id:
         type: integer
       name:
+        type: string
+    type: object
+  maps.Connection:
+    properties:
+      distance:
+        type: number
+      id:
+        type: integer
+      room_from:
+        type: string
+      room_to:
+        type: string
+      type:
+        description: corridor / stairs
         type: string
     type: object
   maps.GetPathResponse:
@@ -179,6 +206,16 @@ definitions:
         type: integer
       name:
         type: string
+    type: object
+  maps.UpdateBuildingRequest:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+    required:
+    - address
+    - name
     type: object
   schedule.Faculty:
     properties:
@@ -319,6 +356,13 @@ definitions:
         type: string
       updated_at:
         type: string
+    type: object
+  schedule.NoteTextRequest:
+    properties:
+      text:
+        type: string
+    required:
+    - text
     type: object
   schedule.TeacherDTO:
     properties:
@@ -1186,6 +1230,213 @@ paths:
       summary: Get all buildings
       tags:
       - map
+    post:
+      consumes:
+      - application/json
+      description: Creates a new building
+      parameters:
+      - description: Building data
+        in: body
+        name: building
+        required: true
+        schema:
+          $ref: '#/definitions/maps.AddBuildingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/maps.Building'
+        "400":
+          description: Bad Request
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Add a new building
+      tags:
+      - map
+  /buildings/{id}:
+    delete:
+      description: Deletes a building by its ID
+      parameters:
+      - description: Building ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Delete a building
+      tags:
+      - map
+    get:
+      description: Returns a building by its ID
+      parameters:
+      - description: Building ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/maps.Building'
+        "400":
+          description: Bad Request
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get a building by ID
+      tags:
+      - map
+    put:
+      consumes:
+      - application/json
+      description: Updates a building by its ID
+      parameters:
+      - description: Building ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated building data
+        in: body
+        name: building
+        required: true
+        schema:
+          $ref: '#/definitions/maps.UpdateBuildingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/maps.Building'
+        "400":
+          description: Bad Request
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Update an existing building
+      tags:
+      - map
+  /connections:
+    get:
+      description: Returns a list of all connections
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/maps.Connection'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get all connections
+      tags:
+      - map
+  /connections/{id}:
+    get:
+      description: Returns a connection by its ID
+      parameters:
+      - description: Connection ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/maps.Connection'
+        "400":
+          description: Bad Request
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get a connection by ID
+      tags:
+      - map
+  /rooms:
+    get:
+      description: Returns a list of all rooms
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/maps.Room'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get all rooms
+      tags:
+      - map
+  /rooms/{id}:
+    get:
+      description: Returns a room by its ID
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/maps.Room'
+        "400":
+          description: Bad Request
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get a room by ID
+      tags:
+      - map
   /schedule/classrooms:
     get:
       description: Return all available classrooms.
@@ -1228,6 +1479,43 @@ paths:
       summary: List faculties
       tags:
       - Schedule
+  /schedule/faculties/{id}:
+    get:
+      description: Return faculty by ID.
+      parameters:
+      - description: Faculty ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Faculty
+          schema:
+            $ref: '#/definitions/schedule.Faculty'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Faculty not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to load faculty
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get faculty by ID
+      tags:
+      - Schedule
   /schedule/groups:
     get:
       description: Return all groups.
@@ -1247,6 +1535,43 @@ paths:
               type: string
             type: object
       summary: List groups
+      tags:
+      - Schedule
+  /schedule/groups/{id}:
+    get:
+      description: Return group by ID.
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Group
+          schema:
+            $ref: '#/definitions/schedule.Group'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Group not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to load group
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get group by ID
       tags:
       - Schedule
   /schedule/lessons:
@@ -1290,6 +1615,43 @@ paths:
               type: string
             type: object
       summary: List lessons for a group and date range
+      tags:
+      - Schedule
+  /schedule/lessons/{id}:
+    get:
+      description: Return a single lesson by ID.
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lesson
+          schema:
+            $ref: '#/definitions/schedule.LessonResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Lesson not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to load lesson
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get lesson by ID
       tags:
       - Schedule
   /schedule/lessons/{id}/note:
@@ -1389,9 +1751,7 @@ paths:
         name: note
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/schedule.NoteTextRequest'
       produces:
       - application/json
       responses:
@@ -1437,9 +1797,7 @@ paths:
         name: note
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/schedule.NoteTextRequest'
       produces:
       - application/json
       responses:
