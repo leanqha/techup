@@ -24,10 +24,10 @@ type ServiceInterface interface {
 	AddGroup(ctx context.Context, g Group) error
 	UpdateGroup(ctx context.Context, g Group) error
 	DeleteGroup(ctx context.Context, id int) error
-	GetNote(ctx context.Context, userID, lessonID int) (*Note, error)
-	AddNote(ctx context.Context, userID, lessonID int, text string) error
-	UpdateNote(ctx context.Context, userID, lessonID int, text string) error
-	DeleteNote(ctx context.Context, userID, lessonID int) error
+	GetNote(ctx context.Context, note Note) (*Note, error)
+	AddNote(ctx context.Context, note Note) error
+	UpdateNote(ctx context.Context, note Note) error
+	DeleteNote(ctx context.Context, note Note) error
 	ImportSchedule(ctx context.Context, lessons []LessonImport) error
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	GetTeachers(ctx context.Context) ([]account.ProfileResponse, error)
@@ -437,7 +437,7 @@ func (h *Handler) GetNote(c *gin.Context) {
 		return
 	}
 
-	note, err := h.service.GetNote(c.Request.Context(), userID, lessonID)
+	note, err := h.service.GetNote(c.Request.Context(), Note{UserID: userID, LessonID: lessonID})
 	if err != nil {
 		respondError(c, err)
 		return
@@ -459,7 +459,7 @@ func (h *Handler) GetNote(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path int true "Lesson ID"
-// @Param        note body map[string]string true "Note payload (text)"
+// @Param        note body NoteTextRequest true "Note payload (text)"
 // @Success      200 {string} string "OK"
 // @Failure      400 {object} map[string]string "Invalid input"
 // @Failure      401 {object} map[string]string "Unauthorized"
@@ -478,16 +478,14 @@ func (h *Handler) AddNote(c *gin.Context) {
 		return
 	}
 
-	var req struct {
-		Text string `json:"text" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var req NoteTextRequest
+	if err = c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.service.AddNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
+	note := Note{UserID: userID, LessonID: lessonID, Text: req.Text}
+	if err := h.service.AddNote(c.Request.Context(), note); err != nil {
 		respondError(c, err)
 		return
 	}
@@ -503,7 +501,7 @@ func (h *Handler) AddNote(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path int true "Lesson ID"
-// @Param        note body map[string]string true "Note payload (text)"
+// @Param        note body NoteTextRequest true "Note payload (text)"
 // @Success      200 {string} string "OK"
 // @Failure      400 {object} map[string]string "Invalid input"
 // @Failure      401 {object} map[string]string "Unauthorized"
@@ -523,16 +521,13 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 		return
 	}
 
-	var req struct {
-		Text string `json:"text" binding:"required"`
-	}
-
+	var req NoteTextRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.service.UpdateNote(c.Request.Context(), userID, lessonID, req.Text); err != nil {
+	if err := h.service.UpdateNote(c.Request.Context(), Note{UserID: userID, LessonID: lessonID, Text: req.Text}); err != nil {
 		respondError(c, err)
 		return
 	}
@@ -566,7 +561,8 @@ func (h *Handler) DeleteNote(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteNote(c.Request.Context(), userID, lessonID); err != nil {
+	note := Note{UserID: userID, LessonID: lessonID}
+	if err := h.service.DeleteNote(c.Request.Context(), note); err != nil {
 		respondError(c, err)
 		return
 	}

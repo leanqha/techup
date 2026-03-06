@@ -385,7 +385,7 @@ func (r *Repository) LessonExists(ctx context.Context, lessonID int) (bool, erro
 
 func (r *Repository) GetNote(
 	ctx context.Context,
-	userID, lessonID int,
+	note Note,
 ) (*Note, error) {
 
 	query := `
@@ -394,7 +394,7 @@ func (r *Repository) GetNote(
 	WHERE user_id=$1 AND lesson_id=$2`
 
 	var n Note
-	err := r.db.QueryRow(ctx, query, userID, lessonID).
+	err := r.db.QueryRow(ctx, query, note.UserID, note.LessonID).
 		Scan(&n.ID, &n.UserID, &n.LessonID, &n.Text, &n.CreatedAt, &n.UpdatedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -402,7 +402,7 @@ func (r *Repository) GetNote(
 	}
 
 	if err != nil {
-		logger.LogSQLError(err, query, userID, lessonID)
+		logger.LogSQLError(err, query, note.UserID, note.LessonID)
 	}
 
 	return &n, err
@@ -410,8 +410,7 @@ func (r *Repository) GetNote(
 
 func (r *Repository) AddNote(
 	ctx context.Context,
-	userID, lessonID int,
-	text string,
+	note Note,
 ) error {
 
 	query := `
@@ -420,9 +419,9 @@ func (r *Repository) AddNote(
 	ON CONFLICT (user_id, lesson_id)
 	DO UPDATE SET content=EXCLUDED.content, updated_at=now()`
 
-	_, err := r.db.Exec(ctx, query, userID, lessonID, text)
+	_, err := r.db.Exec(ctx, query, note.UserID, note.LessonID, note.Text)
 	if err != nil {
-		logger.LogSQLError(err, query, userID, lessonID)
+		logger.LogSQLError(err, query, note.UserID, note.LessonID)
 	}
 
 	return err
@@ -430,17 +429,16 @@ func (r *Repository) AddNote(
 
 func (r *Repository) UpdateNote(
 	ctx context.Context,
-	userID, lessonID int,
-	text string,
+	note Note,
 ) error {
 	query := `
 	UPDATE notes
 	SET content = $3, updated_at = now()
 	WHERE user_id = $1 AND lesson_id = $2`
 
-	result, err := r.db.Exec(ctx, query, userID, lessonID, text)
+	result, err := r.db.Exec(ctx, query, note.UserID, note.LessonID, note.Text)
 	if err != nil {
-		logger.LogSQLError(err, query, userID, lessonID)
+		logger.LogSQLError(err, query, note.UserID, note.LessonID)
 		return err
 	}
 
@@ -453,13 +451,13 @@ func (r *Repository) UpdateNote(
 
 func (r *Repository) DeleteNote(
 	ctx context.Context,
-	userID, lessonID int,
+	note Note,
 ) error {
 	query := `DELETE FROM notes WHERE user_id = $1 AND lesson_id = $2`
 
-	result, err := r.db.Exec(ctx, query, userID, lessonID)
+	result, err := r.db.Exec(ctx, query, note.UserID, note.LessonID)
 	if err != nil {
-		logger.LogSQLError(err, query, userID, lessonID)
+		logger.LogSQLError(err, query, note.UserID, note.LessonID)
 		return err
 	}
 

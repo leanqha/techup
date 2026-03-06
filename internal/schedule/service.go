@@ -28,10 +28,10 @@ type RepositoryInterface interface {
 	UpdateLesson(ctx context.Context, lesson Lesson) error
 	DeleteLesson(ctx context.Context, id int) error
 	GetLessons(ctx context.Context, groupID int, from, to time.Time) ([]LessonResponse, error)
-	GetNote(ctx context.Context, userID, lessonID int) (*Note, error)
-	AddNote(ctx context.Context, userID, lessonID int, text string) error
-	UpdateNote(ctx context.Context, userID, lessonID int, text string) error
-	DeleteNote(ctx context.Context, userID, lessonID int) error
+	GetNote(ctx context.Context, note Note) (*Note, error)
+	AddNote(ctx context.Context, note Note) error
+	UpdateNote(ctx context.Context, note Note) error
+	DeleteNote(ctx context.Context, note Note) error
 	LessonExists(ctx context.Context, lessonID int) (bool, error)
 	GetGroupIDByName(ctx context.Context, name string) (int, error)
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
@@ -123,8 +123,8 @@ var ErrNoteTooLong = apperrors.InvalidArgument("note is too long")
 var ErrLessonNotFound = apperrors.NotFound("lesson not found")
 var ErrNoteNotFound = apperrors.NotFound("note not found")
 
-func (s *Service) GetNote(ctx context.Context, userID, lessonID int) (*Note, error) {
-	exists, err := s.repo.LessonExists(ctx, lessonID)
+func (s *Service) GetNote(ctx context.Context, note Note) (*Note, error) {
+	exists, err := s.repo.LessonExists(ctx, note.LessonID)
 	if err != nil {
 		return nil, err
 	}
@@ -132,15 +132,15 @@ func (s *Service) GetNote(ctx context.Context, userID, lessonID int) (*Note, err
 		return nil, ErrLessonNotFound
 	}
 
-	return s.repo.GetNote(ctx, userID, lessonID)
+	return s.repo.GetNote(ctx, note)
 }
 
-func (s *Service) AddNote(ctx context.Context, userID, lessonID int, text string) error {
-	if len(text) > 5000 {
+func (s *Service) AddNote(ctx context.Context, note Note) error {
+	if len(note.Text) > 5000 {
 		return ErrNoteTooLong
 	}
 
-	exists, err := s.repo.LessonExists(ctx, lessonID)
+	exists, err := s.repo.LessonExists(ctx, note.LessonID)
 	if err != nil {
 		return err
 	}
@@ -148,15 +148,15 @@ func (s *Service) AddNote(ctx context.Context, userID, lessonID int, text string
 		return ErrLessonNotFound
 	}
 
-	return s.repo.AddNote(ctx, userID, lessonID, text)
+	return s.repo.AddNote(ctx, note)
 }
 
-func (s *Service) UpdateNote(ctx context.Context, userID, lessonID int, text string) error {
-	if len(text) > 5000 {
+func (s *Service) UpdateNote(ctx context.Context, note Note) error {
+	if len(note.Text) > 5000 {
 		return ErrNoteTooLong
 	}
 
-	exists, err := s.repo.LessonExists(ctx, lessonID)
+	exists, err := s.repo.LessonExists(ctx, note.LessonID)
 	if err != nil {
 		return err
 	}
@@ -164,15 +164,15 @@ func (s *Service) UpdateNote(ctx context.Context, userID, lessonID int, text str
 		return ErrLessonNotFound
 	}
 
-	err = s.repo.UpdateNote(ctx, userID, lessonID, text)
+	err = s.repo.UpdateNote(ctx, note)
 	if errors.Is(err, pgx.ErrNoRows) || apperrors.IsCode(err, apperrors.CodeNotFound) {
 		return ErrNoteNotFound
 	}
 	return err
 }
 
-func (s *Service) DeleteNote(ctx context.Context, userID, lessonID int) error {
-	exists, err := s.repo.LessonExists(ctx, lessonID)
+func (s *Service) DeleteNote(ctx context.Context, note Note) error {
+	exists, err := s.repo.LessonExists(ctx, note.LessonID)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func (s *Service) DeleteNote(ctx context.Context, userID, lessonID int) error {
 		return ErrLessonNotFound
 	}
 
-	err = s.repo.DeleteNote(ctx, userID, lessonID)
+	err = s.repo.DeleteNote(ctx, note)
 	if errors.Is(err, pgx.ErrNoRows) || apperrors.IsCode(err, apperrors.CodeNotFound) {
 		return ErrNoteNotFound
 	}
