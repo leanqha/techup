@@ -2,33 +2,87 @@ package notification
 
 import (
 	"context"
-	"encoding/json"
+	"sync"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-// Worker is an application-level consumer use-case.
-type Worker struct {
-	consumer Consumer
-	router   Router
+type MessageDeduplicator interface {
+	Seen(ctx context.Context, messageID string) (bool, error)
+	MarkProcessed(ctx context.Context, messageID string) error
 }
 
-func NewWorker(consumer Consumer, router Router) *Worker {
-	return &Worker{consumer: consumer, router: router}
+type MessageHandler func(context.Context, amqp.Delivery) error
+
+type NoopDeduplicator struct{}
+
+func (NoopDeduplicator) Seen(context.Context, string) (bool, error) {
+	return false, nil
 }
 
-// Run starts queue consumption and routes each decoded event envelope.
-func (w *Worker) Run(ctx context.Context, queue string) error {
-	return w.consumer.Consume(ctx, queue, func(ctx context.Context, message RawMessage) error {
-		var event Envelope
-		if err := json.Unmarshal(message.Body, &event); err != nil {
-			return err
-		}
-		return w.router.Route(ctx, event)
-	})
+func (NoopDeduplicator) MarkProcessed(context.Context, string) error {
+	return nil
 }
 
-func (w *Worker) Close() error {
-	if w == nil || w.consumer == nil {
+type InMemoryDeduplicator struct {
+	mu   sync.RWMutex
+	seen map[string]struct{}
+}
+
+func NewInMemoryDeduplicator() *InMemoryDeduplicator {
+	return &InMemoryDeduplicator{
+		seen: map[string]struct{}{},
+	}
+}
+
+func (d *InMemoryDeduplicator) Seen(_ context.Context, messageID string) (bool, error) {
+	if messageID == "" {
+		return false, nil
+	}
+
+	d.mu.RLock()
+	_, ok := d.seen[messageID]
+	d.mu.RUnlock()
+	return ok, nil
+}
+
+func (d *InMemoryDeduplicator) MarkProcessed(_ context.Context, messageID string) error {
+	if messageID == "" {
 		return nil
 	}
-	return w.consumer.Close()
+
+	d.mu.Lock()
+	d.seen[messageID] = struct{}{}
+	d.mu.Unlock()
+	return nil
+}
+
+func HandleWithDedup(ctx context.Context, deduplicator MessageDeduplicator, msg amqp.Delivery, handler MessageHandler) error {
+	if deduplicator == nil {
+		deduplicator = NoopDeduplicator{}
+	}
+
+	if handler == nil {
+		return nil
+	}
+
+	if msg.MessageId != "" {
+		seen, err := deduplicator.Seen(ctx, msg.MessageId)
+		if err != nil {
+			return err
+		}
+		if seen {
+			return nil
+		}
+	}
+
+	if err := handler(ctx, msg); err != nil {
+		return err
+	}
+
+	if msg.MessageId == "" {
+		return nil
+	}
+
+	return deduplicator.MarkProcessed(ctx, msg.MessageId)
 }

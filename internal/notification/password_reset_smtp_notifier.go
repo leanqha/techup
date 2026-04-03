@@ -1,4 +1,4 @@
-package account
+package notification
 
 import (
 	"context"
@@ -8,43 +8,9 @@ import (
 	"net/smtp"
 	"net/url"
 	"strings"
+
 	"techup/internal/apperrors"
-	"techup/internal/logger"
 )
-
-type PasswordResetNotifier interface {
-	SendPasswordReset(ctx context.Context, email, token string) error
-}
-
-type NoopPasswordResetNotifier struct{}
-
-func NewNoopPasswordResetNotifier() *NoopPasswordResetNotifier {
-	return &NoopPasswordResetNotifier{}
-}
-
-func (n *NoopPasswordResetNotifier) SendPasswordReset(_ context.Context, _ string, _ string) error {
-	return nil
-}
-
-type LogPasswordResetNotifier struct {
-	baseURL string
-}
-
-func NewLogPasswordResetNotifier(baseURL string) *LogPasswordResetNotifier {
-	return &LogPasswordResetNotifier{baseURL: strings.TrimRight(baseURL, "/")}
-}
-
-func (n *LogPasswordResetNotifier) SendPasswordReset(_ context.Context, email, token string) error {
-	resetTarget := token
-	if n.baseURL != "" {
-		resetTarget = fmt.Sprintf("%s/reset-password?token=%s", n.baseURL, url.QueryEscape(token))
-	}
-	logger.Log.Info().
-		Str("email", email).
-		Str("reset", resetTarget).
-		Msg("password reset requested")
-	return nil
-}
 
 type EmailSender interface {
 	SendMail(to, subject, body string) error

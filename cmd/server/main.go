@@ -13,6 +13,7 @@ import (
 	"techup/internal/health"
 	"techup/internal/logger"
 	maps "techup/internal/map"
+	"techup/internal/notification"
 	"techup/internal/schedule"
 
 	"github.com/gin-contrib/cors"
@@ -38,21 +39,34 @@ func main() {
 	logger.Log.Info().Msg("database connected")
 
 	accountRepo := account.NewRepository(db)
-	var accountNotifier account.PasswordResetNotifier
-	accountNotifier = account.NewLogPasswordResetNotifier(config.GetAppBaseURL())
-	if config.GetSMTPHost() != "" && config.GetSMTPFrom() != "" {
-		accountNotifier = account.NewSMTPPasswordResetNotifier(account.SMTPConfig{
-			Host:       config.GetSMTPHost(),
-			Port:       config.GetSMTPPort(),
-			Username:   config.GetSMTPUser(),
-			Password:   config.GetSMTPPassword(),
-			From:       config.GetSMTPFrom(),
-			UseTLS:     config.GetSMTPUseTLS(),
-			SkipVerify: config.GetSMTPSkipVerify(),
-			BaseURL:    config.GetAppBaseURL(),
-		}, nil)
+
+	topology := notification.TopologyConfig{
+		Exchange:        config.GetRabbitMQExchange(),
+		MainQueue:       config.GetRabbitMQMainQueue(),
+		RetryQueue:      config.GetRabbitMQRetryQueue(),
+		DLQQueue:        config.GetRabbitMQDLQ(),
+		MainRoutingKey:  config.GetRabbitMQMainRoutingKey(),
+		RetryRoutingKey: config.GetRabbitMQRetryRoutingKey(),
+		DLQRoutingKey:   config.GetRabbitMQDLQRoutingKey(),
+		RetryDelay:      config.GetRabbitMQRetryDelay(),
 	}
-	accountSvc := account.NewService(accountRepo, accountNotifier)
+
+	producer, err := notification.NewProducerWithOptions(config.GetRabbitMQURL(), notification.ProducerOptions{Topology: topology})
+	if err != nil {
+		logger.Log.Warn().Err(err).Msg("rabbitmq producer is unavailable, fallback notifier is used")
+	} else {
+		defer func() {
+			if closeErr := producer.Close(); closeErr != nil {
+				logger.Log.Error().Err(closeErr).Msg("failed to close rabbitmq producer")
+			}
+		}()
+		logger.Log.Info().
+			Str("exchange", topology.Exchange).
+			Str("routing_key", topology.MainRoutingKey).
+			Msg("rabbitmq producer connected")
+	}
+
+	accountSvc := account.NewService(accountRepo)
 	accountHandler := account.NewHandler(accountSvc)
 
 	scheduleRepo := schedule.NewRepository(db)

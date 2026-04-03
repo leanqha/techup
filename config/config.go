@@ -116,3 +116,91 @@ func GetSMTPSkipVerify() bool {
 	val, _ := strconv.ParseBool(os.Getenv("SMTP_SKIP_VERIFY"))
 	return val
 }
+
+func GetRabbitMQURL() string {
+	url := os.Getenv("RABBITMQ_URL")
+	if url == "" {
+		url = "amqp://guest:guest@localhost:5672/"
+	}
+	return url
+}
+
+func GetRabbitMQExchange() string {
+	v := os.Getenv("RABBITMQ_EXCHANGE")
+	if v == "" {
+		v = "notifications"
+	}
+	return v
+}
+
+func GetRabbitMQMainQueue() string {
+	v := os.Getenv("RABBITMQ_MAIN_QUEUE")
+	if v == "" {
+		v = "notifications.main"
+	}
+	return v
+}
+
+func GetRabbitMQRetryQueue() string {
+	v := os.Getenv("RABBITMQ_RETRY_QUEUE")
+	if v == "" {
+		v = "notifications.retry"
+	}
+	return v
+}
+
+func GetRabbitMQDLQ() string {
+	v := os.Getenv("RABBITMQ_DLQ")
+	if v == "" {
+		v = "notifications.dlq"
+	}
+	return v
+}
+
+func GetRabbitMQMainRoutingKey() string {
+	v := os.Getenv("RABBITMQ_MAIN_ROUTING_KEY")
+	if v == "" {
+		v = GetRabbitMQMainQueue()
+	}
+	return v
+}
+
+func GetRabbitMQRetryRoutingKey() string {
+	v := os.Getenv("RABBITMQ_RETRY_ROUTING_KEY")
+	if v == "" {
+		v = GetRabbitMQRetryQueue()
+	}
+	return v
+}
+
+func GetRabbitMQDLQRoutingKey() string {
+	v := os.Getenv("RABBITMQ_DLQ_ROUTING_KEY")
+	if v == "" {
+		v = GetRabbitMQDLQ()
+	}
+	return v
+}
+
+func GetRabbitMQPrefetch() int {
+	v, _ := strconv.Atoi(os.Getenv("RABBITMQ_PREFETCH"))
+	if v <= 0 {
+		v = 10
+	}
+	return v
+}
+
+func GetRabbitMQRetryDelay() time.Duration {
+	v, _ := strconv.Atoi(os.Getenv("RABBITMQ_RETRY_DELAY_MS"))
+	if v <= 0 {
+		v = 15000
+	}
+	return time.Duration(v) * time.Millisecond
+}
+
+func GetRabbitMQMaxRetries() int {
+	v, _ := strconv.Atoi(os.Getenv("RABBITMQ_MAX_RETRIES"))
+	if v <= 0 {
+		v = 5
+	}
+	return v
+}
