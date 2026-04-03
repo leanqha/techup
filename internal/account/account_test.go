@@ -11,11 +11,13 @@ import (
 	"techup/config"
 	"techup/internal/account"
 	"testing"
+	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var svc *account.Service
@@ -25,6 +27,11 @@ func TestMain(m *testing.M) {
 	if err := godotenv.Load("../../.env"); err != nil {
 		fmt.Printf("No .env.test file found: %v", err)
 	}
+
+	if os.Getenv("DB_HOST") == "db" {
+		_ = os.Setenv("DB_HOST", "localhost")
+	}
+
 	db, err := config.NewPostgresPool()
 	if err != nil {
 		fmt.Println("Failed to connect to DB:", err)
@@ -33,13 +40,13 @@ func TestMain(m *testing.M) {
 	defer db.Close()
 
 	repo = account.NewRepository(db)
+	svc = account.NewService(repo)
 
 	os.Exit(m.Run())
 }
 
 func TestRegisterLoginRefreshLogout(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	_ = gofakeit.Seed(0)
 
 	h := account.NewHandler(svc)
 	r := gin.New()
@@ -48,8 +55,10 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	r.POST("/api/v1/account/refresh", h.Refresh)
 	r.POST("/api/v1/account/logout", account.AuthMiddleware(), h.Logout)
 
-	email := gofakeit.Email()
+	email := fmt.Sprintf("local.account.%d@example.com", time.Now().UnixNano())
 	password := "password123"
+	firstName := "Local"
+	lastName := "Smoke"
 
 	// -----------------------------
 	// REGISTER
@@ -59,7 +68,7 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
         "password": "%s",
         "first_name": "%s",
         "last_name": "%s"
-    }`, email, password, gofakeit.FirstName(), gofakeit.LastName())
+			}`, email, password, firstName, lastName)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/api/v1/account/register",
@@ -67,14 +76,14 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 
 	cookies := w.Result().Cookies()
-	assert.NotEmpty(t, cookies, "cookies should be set on registration")
+	require.NotEmpty(t, cookies, "cookies should be set on registration")
 
 	registerAccessToken, registerRefreshToken := extractTokensFromResponse(w.Result())
-	assert.NotEmpty(t, registerAccessToken)
-	assert.NotEmpty(t, registerRefreshToken)
+	require.NotEmpty(t, registerAccessToken)
+	require.NotEmpty(t, registerRefreshToken)
 
 	// -----------------------------
 	// LOGIN
@@ -102,11 +111,11 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: registerRefreshToken})
 
 	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 
 	newAccessToken, newRefreshToken := extractTokensFromResponse(w.Result())
-	assert.NotEmpty(t, newAccessToken)
-	assert.NotEmpty(t, newRefreshToken)
+	require.NotEmpty(t, newAccessToken)
+	require.NotEmpty(t, newRefreshToken)
 
 	// -----------------------------
 	// LOGOUT
@@ -117,7 +126,7 @@ func TestRegisterLoginRefreshLogout(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: newRefreshToken})
 
 	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
 
 func extractTokensFromResponse(resp *http.Response) (string, string) {

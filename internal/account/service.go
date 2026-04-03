@@ -34,16 +34,11 @@ type RepositoryInterface interface {
 }
 
 type Service struct {
-	repo     RepositoryInterface
-	notifier PasswordResetNotifier
+	repo RepositoryInterface
 }
 
-func NewService(repo RepositoryInterface, notifier ...PasswordResetNotifier) *Service {
-	var n PasswordResetNotifier
-	if len(notifier) > 0 {
-		n = notifier[0]
-	}
-	return &Service{repo: repo, notifier: n}
+func NewService(repo RepositoryInterface) *Service {
+	return &Service{repo: repo}
 }
 
 func (s *Service) GetByID(ctx context.Context, id int) (*Account, error) {
@@ -328,12 +323,6 @@ func (s *Service) RequestPasswordReset(ctx context.Context, email string) error 
 		ExpiresAt: expiresAt,
 	}); err != nil {
 		return err
-	}
-
-	if s.notifier != nil {
-		if err := s.notifier.SendPasswordReset(ctx, acc.Email, resetToken); err != nil {
-			return err
-		}
 	}
 
 	return nil
