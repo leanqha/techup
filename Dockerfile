@@ -14,8 +14,9 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build app
+# Build app binaries
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o notification-worker ./cmd/notification-worker
 
 # 2️⃣ Runtime
 FROM alpine:latest
@@ -23,8 +24,9 @@ WORKDIR /app
 
 RUN apk add --no-cache tzdata ca-certificates bash
 
-# Copy binary only; runtime secrets are injected via environment variables.
+# Copy binaries only; runtime secrets are injected via environment variables.
 COPY --from=builder /app/server .
+COPY --from=builder /app/notification-worker .
 
 EXPOSE 3000
 CMD ["./server"]

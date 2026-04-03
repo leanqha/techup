@@ -13,6 +13,18 @@ services:
     depends_on:
       - rabbitmq
 
+  notification-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: techup-notification-worker
+    env_file:
+      - ${ENV_FILE:-.env}
+    restart: unless-stopped
+    command: ["./notification-worker"]
+    depends_on:
+      - rabbitmq
+
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: techup-rabbitmq
