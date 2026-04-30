@@ -469,11 +469,11 @@ func (h *Handler) UpdateConnection(c *gin.Context) {
 // @Tags map
 // @Produce json
 // @Param id path int true "Connection ID"
-// @Success 204 {object} nil
+// @Success 204 "No Content"
 // @Failure 400 {object} error
 // @Failure 404 {object} error
 // @Failure 500 {object} error
-// @Router /connections/{id} [delete]
+// @Router /api/v1/admin/connection/{id} [delete]
 func (h *Handler) DeleteConnection(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
