@@ -155,13 +155,13 @@ func TestServiceSearchRooms_PropagatesFilters(t *testing.T) {
 	svc := NewService(repo)
 
 	buildingID := 7
-	floor := 2
-	rooms, err := svc.SearchRooms(context.Background(), &buildingID, &floor)
+	floorID := 2
+	rooms, err := svc.SearchRooms(context.Background(), &buildingID, &floorID)
 
 	assert.NoError(t, err)
 	assert.Len(t, rooms, 1)
 	assert.Equal(t, 7, gotRoom.BuildingID)
-	assert.Equal(t, 2, gotRoom.Floor)
+	assert.Equal(t, 2, gotRoom.FloorID)
 	assert.True(t, gotHasBuildingID)
 	assert.True(t, gotHasFloor)
 }
@@ -170,18 +170,18 @@ func TestServiceFindPath_Success(t *testing.T) {
 	repo := &mockMapRepo{
 		getConnectionsFn: func(context.Context) ([]Connection, error) {
 			return []Connection{
-				{RoomFrom: "A", RoomTo: "B", Distance: 1},
-				{RoomFrom: "B", RoomTo: "C", Distance: 2},
-				{RoomFrom: "A", RoomTo: "C", Distance: 10},
+				{FromID: 1, ToID: 2, Distance: 1},
+				{FromID: 2, ToID: 3, Distance: 2},
+				{FromID: 1, ToID: 3, Distance: 10},
 			}, nil
 		},
 	}
 	svc := NewService(repo)
 
-	path, dist, err := svc.FindPath(context.Background(), "A", "C")
+	path, dist, err := svc.FindPath(context.Background(), "1", "3")
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"A", "B", "C"}, path)
+	assert.Equal(t, []string{"1", "2", "3"}, path)
 	assert.Equal(t, 3.0, dist)
 }
 
@@ -201,14 +201,14 @@ func TestServiceFindPath_RepoError(t *testing.T) {
 func TestServiceFindPath_MissingRoom(t *testing.T) {
 	repo := &mockMapRepo{
 		getConnectionsFn: func(context.Context) ([]Connection, error) {
-			return []Connection{{RoomFrom: "A", RoomTo: "B", Distance: 1}}, nil
+			return []Connection{{FromID: 1, ToID: 2, Distance: 1}}, nil
 		},
 	}
 	svc := NewService(repo)
 
-	_, _, err := svc.FindPath(context.Background(), "A", "Z")
+	_, _, err := svc.FindPath(context.Background(), "1", "9")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "end room Z not found")
+	assert.Contains(t, err.Error(), "end node 9 not found")
 }
 
 func TestServiceCRUD_PassesValuesToRepo(t *testing.T) {
@@ -227,19 +227,19 @@ func TestServiceCRUD_PassesValuesToRepo(t *testing.T) {
 	}
 	svc := NewService(repo)
 
-	err := svc.AddRoom(context.Background(), "201", 1, 2, "Lecture hall")
+	err := svc.AddRoom(context.Background(), "201", "Lecture", 1, 2, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "201", gotRoom.Name)
+	assert.Equal(t, "Lecture", gotRoom.Title)
 	assert.Equal(t, 1, gotRoom.BuildingID)
-	assert.Equal(t, 2, gotRoom.Floor)
-	assert.Equal(t, "Lecture hall", gotRoom.Description)
+	assert.Equal(t, 2, gotRoom.FloorID)
+	assert.Nil(t, gotRoom.DoorNodeID)
 
-	err = svc.AddConnection(context.Background(), Connection{RoomFrom: "A", RoomTo: "B", Distance: 4.5, Type: "stairs"})
+	err = svc.AddConnection(context.Background(), Connection{FromID: 1, ToID: 2, Distance: 4.5})
 	assert.NoError(t, err)
-	assert.Equal(t, "A", gotConnection.RoomFrom)
-	assert.Equal(t, "B", gotConnection.RoomTo)
+	assert.Equal(t, 1, gotConnection.FromID)
+	assert.Equal(t, 2, gotConnection.ToID)
 	assert.Equal(t, 4.5, gotConnection.Distance)
-	assert.Equal(t, "stairs", gotConnection.Type)
 }
 
 func TestServiceGetByIDDelegatesToRepo(t *testing.T) {
@@ -290,14 +290,16 @@ func TestServiceBuildingCRUD_PassesValuesToRepo(t *testing.T) {
 	}
 	svc := NewService(repo)
 
-	err := svc.AddBuilding(context.Background(), Building{ID: 10, Name: "Main", Address: "Addr"})
+	err := svc.AddBuilding(context.Background(), Building{ID: 10, Name: "Main", Title: "Title"})
 	assert.NoError(t, err)
 	assert.Equal(t, 10, got.ID)
 	assert.Equal(t, "Main", got.Name)
+	assert.Equal(t, "Title", got.Title)
 
-	err = svc.UpdateBuilding(context.Background(), Building{ID: 10, Name: "New", Address: "NewAddr"})
+	err = svc.UpdateBuilding(context.Background(), Building{ID: 10, Name: "New", Title: "NewTitle"})
 	assert.NoError(t, err)
 	assert.Equal(t, "New", got.Name)
+	assert.Equal(t, "NewTitle", got.Title)
 
 	err = svc.DeleteBuilding(context.Background(), 10)
 	assert.NoError(t, err)

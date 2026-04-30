@@ -20,8 +20,8 @@ type ServiceInterface interface {
 	GetRooms(ctx context.Context) ([]Room, error)
 	GetRoomByID(ctx context.Context, id int) (*Room, error)
 	FindPath(ctx context.Context, startRoom, endRoom string) ([]string, float64, error)
-	SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error)
-	AddRoom(ctx context.Context, name string, buildingID int, floor int, description string) error
+	SearchRooms(ctx context.Context, buildingID *int, floorID *int) ([]Room, error)
+	AddRoom(ctx context.Context, name string, title string, buildingID int, floorID int, doorNodeID *int) error
 	UpdateRoom(ctx context.Context, room Room) error
 	DeleteRoom(ctx context.Context, id int) error
 
@@ -104,9 +104,9 @@ func (h *Handler) AddBuilding(c *gin.Context) {
 	}
 
 	if err := h.service.AddBuilding(c.Request.Context(), Building{
-		ID:      req.ID,
-		Name:    req.Name,
-		Address: req.Address,
+		ID:    req.ID,
+		Name:  req.Name,
+		Title: req.Title,
 	}); err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
@@ -142,9 +142,9 @@ func (h *Handler) UpdateBuilding(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateBuilding(c.Request.Context(), Building{
-		ID:      id,
-		Name:    req.Name,
-		Address: req.Address,
+		ID:    id,
+		Name:  req.Name,
+		Title: req.Title,
 	}); err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
@@ -251,11 +251,11 @@ func (h *Handler) GetPath(c *gin.Context) {
 
 // SearchRooms godoc
 // @Summary Search rooms
-// @Description Returns rooms filtered by building_id and/or floor
+// @Description Returns rooms filtered by building_id and/or floor_id
 // @Tags map
 // @Produce json
 // @Param building_id query int false "Building ID"
-// @Param floor query int false "Floor number"
+// @Param floor_id query int false "Floor ID"
 // @Success 200 {array} Room
 // @Failure 400 {object} map[string]string "Invalid query parameters"
 // @Failure 500 {object} map[string]string "Server error"
@@ -263,7 +263,7 @@ func (h *Handler) GetPath(c *gin.Context) {
 func (h *Handler) SearchRooms(c *gin.Context) {
 	var (
 		buildingID *int
-		floor      *int
+		floorID    *int
 	)
 
 	if b := c.Query("building_id"); b != "" {
@@ -275,16 +275,16 @@ func (h *Handler) SearchRooms(c *gin.Context) {
 		buildingID = &id
 	}
 
-	if f := c.Query("floor"); f != "" {
+	if f := c.Query("floor_id"); f != "" {
 		var fl int
 		if _, err := fmt.Sscanf(f, "%d", &fl); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid floor"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid floor_id"})
 			return
 		}
-		floor = &fl
+		floorID = &fl
 	}
 
-	rooms, err := h.service.SearchRooms(c.Request.Context(), buildingID, floor)
+	rooms, err := h.service.SearchRooms(c.Request.Context(), buildingID, floorID)
 	if err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
@@ -300,7 +300,7 @@ func (h *Handler) AddRoom(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.AddRoom(c.Request.Context(), req.Name, req.BuildingID, req.Floor, req.Description); err != nil {
+	if err := h.service.AddRoom(c.Request.Context(), req.Name, req.Title, req.BuildingID, req.FloorID, req.DoorNodeID); err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
 	}
@@ -322,11 +322,12 @@ func (h *Handler) UpdateRoom(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateRoom(c.Request.Context(), Room{
-		ID:          id,
-		Name:        req.Name,
-		BuildingID:  req.BuildingID,
-		Floor:       req.Floor,
-		Description: req.Description,
+		ID:         id,
+		Name:       req.Name,
+		Title:      req.Title,
+		BuildingID: req.BuildingID,
+		FloorID:    req.FloorID,
+		DoorNodeID: req.DoorNodeID,
 	}); err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
@@ -393,6 +394,17 @@ func (h *Handler) GetConnection(c *gin.Context) {
 	c.JSON(http.StatusOK, connection)
 }
 
+// AddConnection godoc
+// @Summary Add a new connection
+// @Description Creates a new connection
+// @Tags map
+// @Accept json
+// @Produce json
+// @Param connection body AddConnectionRequest true "Connection data"
+// @Success 201
+// @Failure 400 {object} error
+// @Failure 500 {object} error
+// @Router /admin/connection [post]
 func (h *Handler) AddConnection(c *gin.Context) {
 	var req AddConnectionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -401,10 +413,9 @@ func (h *Handler) AddConnection(c *gin.Context) {
 	}
 
 	if err := h.service.AddConnection(c.Request.Context(), Connection{
-		RoomFrom: req.RoomFrom,
-		RoomTo:   req.RoomTo,
+		FromID:   req.FromID,
+		ToID:     req.ToID,
 		Distance: req.Distance,
-		Type:     req.Type,
 	}); err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
@@ -413,6 +424,19 @@ func (h *Handler) AddConnection(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
+// UpdateConnection godoc
+// @Summary Update an existing connection
+// @Description Updates a connection by its ID
+// @Tags map
+// @Accept json
+// @Produce json
+// @Param id path int true "Connection ID"
+// @Param connection body AddConnectionRequest true "Updated connection data"
+// @Success 200 "OK"
+// @Failure 400 {object} error
+// @Failure 404 {object} error
+// @Failure 500 {object} error
+// @Router /api/v1/admin/connection/{id} [put]
 func (h *Handler) UpdateConnection(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -428,10 +452,9 @@ func (h *Handler) UpdateConnection(c *gin.Context) {
 
 	if err := h.service.UpdateConnection(c.Request.Context(), Connection{
 		ID:       id,
-		RoomFrom: req.RoomFrom,
-		RoomTo:   req.RoomTo,
+		FromID:   req.FromID,
+		ToID:     req.ToID,
 		Distance: req.Distance,
-		Type:     req.Type,
 	}); err != nil {
 		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
 		return
@@ -440,6 +463,17 @@ func (h *Handler) UpdateConnection(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// DeleteConnection godoc
+// @Summary Delete a connection
+// @Description Deletes a connection by its ID
+// @Tags map
+// @Produce json
+// @Param id path int true "Connection ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} error
+// @Failure 404 {object} error
+// @Failure 500 {object} error
+// @Router /api/v1/admin/connection/{id} [delete]
 func (h *Handler) DeleteConnection(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
