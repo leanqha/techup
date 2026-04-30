@@ -116,7 +116,7 @@ func (r *Repository) AddRoom(ctx context.Context, room *Room) error {
 func (r *Repository) UpdateRoom(ctx context.Context, room *Room) error {
 	query := `
 		UPDATE rooms
-		SET name = $1, title = $2, building_id = $3, floor_id = $4, door_node_id = $5, updated_at = NOW()
+		SET name = $1, title = $2, building_id = $3, floor_id = $4, door_node_id = $5
 		WHERE id = $6
 	`
 	ct, err := r.db.Exec(ctx, query, room.Name, room.Title, room.BuildingID, room.FloorID, ptrToNullInt(room.DoorNodeID), room.ID)
