@@ -432,11 +432,11 @@ func (h *Handler) AddConnection(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Connection ID"
 // @Param connection body AddConnectionRequest true "Updated connection data"
-// @Success 200 {object} Connection
+// @Success 200 "OK"
 // @Failure 400 {object} error
 // @Failure 404 {object} error
 // @Failure 500 {object} error
-// @Router /connections/{id} [put]
+// @Router /api/v1/admin/connection/{id} [put]
 func (h *Handler) UpdateConnection(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
