@@ -54,6 +54,15 @@ ALTER TABLE connections
 ALTER TABLE connections
     ADD COLUMN IF NOT EXISTS "to" INT REFERENCES nodes(id) ON DELETE CASCADE;
 
+DELETE FROM connections
+WHERE "from" IS NULL OR "to" IS NULL;
+
+ALTER TABLE connections
+    ALTER COLUMN "from" SET NOT NULL;
+
+ALTER TABLE connections
+    ALTER COLUMN "to" SET NOT NULL;
+
 ALTER TABLE connections
     ADD COLUMN IF NOT EXISTS distance FLOAT NOT NULL DEFAULT 0;
 
