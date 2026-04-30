@@ -215,7 +215,7 @@ func (r *Repository) AddBuilding(ctx context.Context, building *Building) error 
 func (r *Repository) UpdateBuilding(ctx context.Context, building *Building) error {
 	query := `
 		UPDATE buildings
-		SET name = $1, title = $2, updated_at = NOW()
+		SET name = $1, title = $2
 		WHERE id = $3
 	`
 	ct, err := r.db.Exec(ctx, query, building.Name, building.Title, building.ID)
