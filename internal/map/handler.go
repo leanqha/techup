@@ -401,10 +401,10 @@ func (h *Handler) GetConnection(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param connection body AddConnectionRequest true "Connection data"
-// @Success 201 {object} Connection
+// @Success 201
 // @Failure 400 {object} error
 // @Failure 500 {object} error
-// @Router /connections [post]
+// @Router /admin/connection [post]
 func (h *Handler) AddConnection(c *gin.Context) {
 	var req AddConnectionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
