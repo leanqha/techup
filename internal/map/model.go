@@ -1,26 +1,43 @@
 package maps
 
-// Building represents a university building
+// Building represents a university building.
 type Building struct {
-	ID      int    `db:"id" json:"id"`
-	Name    string `db:"name" json:"name"`
-	Address string `db:"address" json:"address"`
+	ID    int    `db:"id" json:"id"`
+	Name  string `db:"name" json:"name"`
+	Title string `db:"title" json:"title"`
 }
 
-// Room represents a specific classroom, office, or corridor
+// Floor represents a building floor.
+type Floor struct {
+	ID         int `db:"id" json:"id"`
+	BuildingID int `db:"building_id" json:"building_id"`
+	Number     int `db:"number" json:"number"`
+}
+
+// Node represents a routing point on a floor map.
+type Node struct {
+	ID         int    `db:"id" json:"id"`
+	BuildingID int    `db:"building_id" json:"building_id"`
+	FloorID    int    `db:"floor_id" json:"floor_id"`
+	X          int    `db:"x" json:"x"`
+	Y          int    `db:"y" json:"y"`
+	Type       string `db:"type" json:"type"`
+}
+
+// Room represents a specific classroom or office.
 type Room struct {
-	ID          int    `db:"id" json:"id"`
-	BuildingID  int    `db:"building_id" json:"building_id"`
-	Floor       int    `db:"floor" json:"floor"`
-	Name        string `db:"name" json:"name"`
-	Description string `db:"description" json:"description"`
+	ID         int    `db:"id" json:"id"`
+	Name       string `db:"name" json:"name"`
+	Title      string `db:"title" json:"title"`
+	BuildingID int    `db:"building_id" json:"building_id"`
+	FloorID    int    `db:"floor_id" json:"floor_id"`
+	DoorNodeID *int   `db:"door_node_id" json:"door_node_id,omitempty"`
 }
 
-// Connection represents a link between two rooms (corridor, stairs, etc.)
+// Connection represents a link between two nodes.
 type Connection struct {
 	ID       int     `db:"id" json:"id"`
-	RoomFrom string  `db:"room_from" json:"room_from"`
-	RoomTo   string  `db:"room_to" json:"room_to"`
+	FromID   int     `db:"from" json:"from"`
+	ToID     int     `db:"to" json:"to"`
 	Distance float64 `db:"distance" json:"distance"`
-	Type     string  `db:"type" json:"type"` // corridor / stairs
 }

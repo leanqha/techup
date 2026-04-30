@@ -22,8 +22,8 @@ type mockMapService struct {
 	getRoomsFn          func(ctx context.Context) ([]Room, error)
 	getRoomByIDFn       func(ctx context.Context, id int) (*Room, error)
 	findPathFn          func(ctx context.Context, startRoom, endRoom string) ([]string, float64, error)
-	searchRoomsFn       func(ctx context.Context, buildingID *int, floor *int) ([]Room, error)
-	addRoomFn           func(ctx context.Context, name string, buildingID int, floor int, description string) error
+	searchRoomsFn       func(ctx context.Context, buildingID *int, floorID *int) ([]Room, error)
+	addRoomFn           func(ctx context.Context, name string, title string, buildingID int, floorID int, doorNodeID *int) error
 	updateRoomFn        func(ctx context.Context, room Room) error
 	deleteRoomFn        func(ctx context.Context, id int) error
 	getConnectionsFn    func(ctx context.Context) ([]Connection, error)
@@ -89,16 +89,16 @@ func (m *mockMapService) FindPath(ctx context.Context, startRoom, endRoom string
 	return nil, 0, nil
 }
 
-func (m *mockMapService) SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error) {
+func (m *mockMapService) SearchRooms(ctx context.Context, buildingID *int, floorID *int) ([]Room, error) {
 	if m.searchRoomsFn != nil {
-		return m.searchRoomsFn(ctx, buildingID, floor)
+		return m.searchRoomsFn(ctx, buildingID, floorID)
 	}
 	return nil, nil
 }
 
-func (m *mockMapService) AddRoom(ctx context.Context, name string, buildingID int, floor int, description string) error {
+func (m *mockMapService) AddRoom(ctx context.Context, name string, title string, buildingID int, floorID int, doorNodeID *int) error {
 	if m.addRoomFn != nil {
-		return m.addRoomFn(ctx, name, buildingID, floor, description)
+		return m.addRoomFn(ctx, name, title, buildingID, floorID, doorNodeID)
 	}
 	return nil
 }
@@ -228,28 +228,28 @@ func TestGetPathHandler(t *testing.T) {
 
 func TestSearchRoomsHandler(t *testing.T) {
 	var gotBuildingID *int
-	var gotFloor *int
+	var gotFloorID *int
 	svc := &mockMapService{
-		searchRoomsFn: func(_ context.Context, buildingID *int, floor *int) ([]Room, error) {
+		searchRoomsFn: func(_ context.Context, buildingID *int, floorID *int) ([]Room, error) {
 			gotBuildingID = buildingID
-			gotFloor = floor
+			gotFloorID = floorID
 			return []Room{{ID: 1, Name: "101"}}, nil
 		},
 	}
 	r := setupMapRouter(svc)
 
-	req := httptest.NewRequest(http.MethodGet, "/map/search?building_id=2&floor=3", nil)
+	req := httptest.NewRequest(http.MethodGet, "/map/search?building_id=2&floor_id=3", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 	if assert.NotNil(t, gotBuildingID) {
 		assert.Equal(t, 2, *gotBuildingID)
 	}
-	if assert.NotNil(t, gotFloor) {
-		assert.Equal(t, 3, *gotFloor)
+	if assert.NotNil(t, gotFloorID) {
+		assert.Equal(t, 3, *gotFloorID)
 	}
 
-	badReq := httptest.NewRequest(http.MethodGet, "/map/search?building_id=x", nil)
+	badReq := httptest.NewRequest(http.MethodGet, "/map/search?floor_id=x", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, badReq)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -267,14 +267,17 @@ func TestRoomHandlers(t *testing.T) {
 	svc := &mockMapService{}
 	r := setupMapRouter(svc)
 
-	payload := AddRoomRequest{Name: "201", BuildingID: 1, Floor: 2, Description: "Lecture hall"}
+	payload := AddRoomRequest{Name: "201", Title: "Lecture", BuildingID: 1, FloorID: 2, DoorNodeID: intPtr(9)}
 	body, _ := json.Marshal(payload)
 
-	svc.addRoomFn = func(_ context.Context, name string, buildingID int, floor int, description string) error {
+	svc.addRoomFn = func(_ context.Context, name string, title string, buildingID int, floorID int, doorNodeID *int) error {
 		assert.Equal(t, "201", name)
+		assert.Equal(t, "Lecture", title)
 		assert.Equal(t, 1, buildingID)
-		assert.Equal(t, 2, floor)
-		assert.Equal(t, "Lecture hall", description)
+		assert.Equal(t, 2, floorID)
+		if assert.NotNil(t, doorNodeID) {
+			assert.Equal(t, 9, *doorNodeID)
+		}
 		return nil
 	}
 	req := httptest.NewRequest(http.MethodPost, "/admin/room", bytes.NewBuffer(body))
@@ -313,7 +316,7 @@ func TestConnectionHandlers(t *testing.T) {
 	svc := &mockMapService{}
 	r := setupMapRouter(svc)
 
-	payload := AddConnectionRequest{RoomFrom: "A", RoomTo: "B", Distance: 2.5, Type: "corridor"}
+	payload := AddConnectionRequest{FromID: 1, ToID: 2, Distance: 2.5}
 	body, _ := json.Marshal(payload)
 
 	svc.addConnectionFn = func(context.Context, Connection) error { return nil }
@@ -360,7 +363,7 @@ func TestGetEntityByIDHandlers(t *testing.T) {
 		},
 		getConnectionByIDFn: func(_ context.Context, id int) (*Connection, error) {
 			assert.Equal(t, 3, id)
-			return &Connection{ID: 3, RoomFrom: "A", RoomTo: "B", Distance: 1}, nil
+			return &Connection{ID: 3, FromID: 1, ToID: 2, Distance: 1}, nil
 		},
 	}
 	r := setupMapRouter(svc)
@@ -390,7 +393,7 @@ func TestBuildingHandlers(t *testing.T) {
 	svc := &mockMapService{}
 	r := setupMapRouter(svc)
 
-	payload := AddBuildingRequest{ID: 9, Name: "X", Address: "Addr"}
+	payload := AddBuildingRequest{ID: 9, Name: "X", Title: "Title"}
 	body, _ := json.Marshal(payload)
 
 	svc.addBuildingFn = func(context.Context, Building) error { return nil }
@@ -401,7 +404,7 @@ func TestBuildingHandlers(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	svc.updateBuildingFn = func(context.Context, Building) error { return nil }
-	req = httptest.NewRequest(http.MethodPut, "/admin/building/9", bytes.NewBufferString(`{"name":"N","address":"A"}`))
+	req = httptest.NewRequest(http.MethodPut, "/admin/building/9", bytes.NewBufferString(`{"name":"N","title":"T"}`))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -412,4 +415,8 @@ func TestBuildingHandlers(t *testing.T) {
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func intPtr(value int) *int {
+	return &value
 }

@@ -2,6 +2,7 @@ package maps
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"techup/internal/apperrors"
 	"techup/internal/logger"
@@ -20,7 +21,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 // GetAllBuildings retrieves all buildings from the database
 func (r *Repository) GetAllBuildings(ctx context.Context) ([]Building, error) {
-	query := `SELECT id, name, address FROM buildings`
+	query := `SELECT id, name, title FROM buildings`
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		logger.LogSQLError(err, query, "GetAllBuildings")
@@ -31,7 +32,7 @@ func (r *Repository) GetAllBuildings(ctx context.Context) ([]Building, error) {
 	var buildings []Building
 	for rows.Next() {
 		var b Building
-		if err := rows.Scan(&b.ID, &b.Name, &b.Address); err != nil {
+		if err := rows.Scan(&b.ID, &b.Name, &b.Title); err != nil {
 			return nil, err
 		}
 		buildings = append(buildings, b)
@@ -41,7 +42,7 @@ func (r *Repository) GetAllBuildings(ctx context.Context) ([]Building, error) {
 
 // SearchRooms позволяет искать комнаты по building_id и/или floor
 func (r *Repository) SearchRooms(ctx context.Context, room *Room, hasBuildingID, hasFloor bool) ([]Room, error) {
-	query := `SELECT id, building_id, floor, name, description FROM rooms WHERE 1=1`
+	query := `SELECT id, name, title, building_id, floor_id, door_node_id FROM rooms WHERE 1=1`
 	var args []interface{}
 	argIndex := 1
 
@@ -52,8 +53,8 @@ func (r *Repository) SearchRooms(ctx context.Context, room *Room, hasBuildingID,
 	}
 
 	if hasFloor {
-		query += fmt.Sprintf(" AND floor=$%d", argIndex)
-		args = append(args, room.Floor)
+		query += fmt.Sprintf(" AND floor_id=$%d", argIndex)
+		args = append(args, room.FloorID)
 		argIndex++
 	}
 
@@ -67,9 +68,11 @@ func (r *Repository) SearchRooms(ctx context.Context, room *Room, hasBuildingID,
 	var rooms []Room
 	for rows.Next() {
 		var room Room
-		if err := rows.Scan(&room.ID, &room.BuildingID, &room.Floor, &room.Name, &room.Description); err != nil {
+		var doorNodeID sql.NullInt64
+		if err := rows.Scan(&room.ID, &room.Name, &room.Title, &room.BuildingID, &room.FloorID, &doorNodeID); err != nil {
 			return nil, err
 		}
+		room.DoorNodeID = nullIntToPtr(doorNodeID)
 		rooms = append(rooms, room)
 	}
 
@@ -78,7 +81,7 @@ func (r *Repository) SearchRooms(ctx context.Context, room *Room, hasBuildingID,
 
 // GetConnections retrieves all connections from the database
 func (r *Repository) GetConnections(ctx context.Context) ([]Connection, error) {
-	query := `SELECT id, room_from, room_to, distance, type FROM connections`
+	query := `SELECT id, "from", "to", distance FROM connections`
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		logger.LogSQLError(err, query, "GetConnections")
@@ -89,7 +92,7 @@ func (r *Repository) GetConnections(ctx context.Context) ([]Connection, error) {
 	var connections []Connection
 	for rows.Next() {
 		var conn Connection
-		if err := rows.Scan(&conn.ID, &conn.RoomFrom, &conn.RoomTo, &conn.Distance, &conn.Type); err != nil {
+		if err := rows.Scan(&conn.ID, &conn.FromID, &conn.ToID, &conn.Distance); err != nil {
 			return nil, err
 		}
 		connections = append(connections, conn)
@@ -100,12 +103,12 @@ func (r *Repository) GetConnections(ctx context.Context) ([]Connection, error) {
 // AddRoom inserts a new room into the database
 func (r *Repository) AddRoom(ctx context.Context, room *Room) error {
 	query := `
-		INSERT INTO rooms (building_id, floor, name, description)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO rooms (name, title, building_id, floor_id, door_node_id)
+		VALUES ($1, $2, $3, $4, $5)
 	`
-	_, err := r.db.Exec(ctx, query, room.BuildingID, room.Floor, room.Name, room.Description)
+	_, err := r.db.Exec(ctx, query, room.Name, room.Title, room.BuildingID, room.FloorID, ptrToNullInt(room.DoorNodeID))
 	if err != nil {
-		logger.LogSQLError(err, query, room.BuildingID, room.Floor, room.Name, room.Description)
+		logger.LogSQLError(err, query, room.Name, room.Title, room.BuildingID, room.FloorID, room.DoorNodeID)
 	}
 	return err
 }
@@ -113,12 +116,12 @@ func (r *Repository) AddRoom(ctx context.Context, room *Room) error {
 func (r *Repository) UpdateRoom(ctx context.Context, room *Room) error {
 	query := `
 		UPDATE rooms
-		SET building_id = $1, floor = $2, name = $3, description = $4, updated_at = NOW()
-		WHERE id = $5
+		SET name = $1, title = $2, building_id = $3, floor_id = $4, door_node_id = $5, updated_at = NOW()
+		WHERE id = $6
 	`
-	ct, err := r.db.Exec(ctx, query, room.BuildingID, room.Floor, room.Name, room.Description, room.ID)
+	ct, err := r.db.Exec(ctx, query, room.Name, room.Title, room.BuildingID, room.FloorID, ptrToNullInt(room.DoorNodeID), room.ID)
 	if err != nil {
-		logger.LogSQLError(err, query, room.BuildingID, room.Floor, room.Name, room.Description, room.ID)
+		logger.LogSQLError(err, query, room.Name, room.Title, room.BuildingID, room.FloorID, room.DoorNodeID, room.ID)
 		return err
 	}
 	if ct.RowsAffected() == 0 {
@@ -127,15 +130,15 @@ func (r *Repository) UpdateRoom(ctx context.Context, room *Room) error {
 	return nil
 }
 
-// AddConnection inserts a new connection between rooms
+// AddConnection inserts a new connection between nodes
 func (r *Repository) AddConnection(ctx context.Context, conn *Connection) error {
 	query := `
-		INSERT INTO connections (room_from, room_to, distance, type)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO connections ("from", "to", distance)
+		VALUES ($1, $2, $3)
 	`
-	_, err := r.db.Exec(ctx, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type)
+	_, err := r.db.Exec(ctx, query, conn.FromID, conn.ToID, conn.Distance)
 	if err != nil {
-		logger.LogSQLError(err, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type)
+		logger.LogSQLError(err, query, conn.FromID, conn.ToID, conn.Distance)
 	}
 	return err
 }
@@ -143,12 +146,12 @@ func (r *Repository) AddConnection(ctx context.Context, conn *Connection) error 
 func (r *Repository) UpdateConnection(ctx context.Context, conn *Connection) error {
 	query := `
 		UPDATE connections
-		SET room_from = $1, room_to = $2, distance = $3, type = $4, updated_at = NOW()
-		WHERE id = $5
+		SET "from" = $1, "to" = $2, distance = $3, updated_at = NOW()
+		WHERE id = $4
 	`
-	ct, err := r.db.Exec(ctx, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type, conn.ID)
+	ct, err := r.db.Exec(ctx, query, conn.FromID, conn.ToID, conn.Distance, conn.ID)
 	if err != nil {
-		logger.LogSQLError(err, query, conn.RoomFrom, conn.RoomTo, conn.Distance, conn.Type, conn.ID)
+		logger.LogSQLError(err, query, conn.FromID, conn.ToID, conn.Distance, conn.ID)
 		return err
 	}
 	if ct.RowsAffected() == 0 {
@@ -185,9 +188,9 @@ func (r *Repository) DeleteConnection(ctx context.Context, id int) error {
 }
 
 func (r *Repository) GetBuildingByID(ctx context.Context, id int) (*Building, error) {
-	query := `SELECT id, name, address FROM buildings WHERE id = $1`
+	query := `SELECT id, name, title FROM buildings WHERE id = $1`
 	var b Building
-	if err := r.db.QueryRow(ctx, query, id).Scan(&b.ID, &b.Name, &b.Address); err != nil {
+	if err := r.db.QueryRow(ctx, query, id).Scan(&b.ID, &b.Name, &b.Title); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, apperrors.NotFound("building not found")
 		}
@@ -199,12 +202,12 @@ func (r *Repository) GetBuildingByID(ctx context.Context, id int) (*Building, er
 
 func (r *Repository) AddBuilding(ctx context.Context, building *Building) error {
 	query := `
-		INSERT INTO buildings (id, name, address)
+		INSERT INTO buildings (id, name, title)
 		VALUES ($1, $2, $3)
 	`
-	_, err := r.db.Exec(ctx, query, building.ID, building.Name, building.Address)
+	_, err := r.db.Exec(ctx, query, building.ID, building.Name, building.Title)
 	if err != nil {
-		logger.LogSQLError(err, query, building.ID, building.Name, building.Address)
+		logger.LogSQLError(err, query, building.ID, building.Name, building.Title)
 	}
 	return err
 }
@@ -212,12 +215,12 @@ func (r *Repository) AddBuilding(ctx context.Context, building *Building) error 
 func (r *Repository) UpdateBuilding(ctx context.Context, building *Building) error {
 	query := `
 		UPDATE buildings
-		SET name = $1, address = $2, updated_at = NOW()
+		SET name = $1, title = $2, updated_at = NOW()
 		WHERE id = $3
 	`
-	ct, err := r.db.Exec(ctx, query, building.Name, building.Address, building.ID)
+	ct, err := r.db.Exec(ctx, query, building.Name, building.Title, building.ID)
 	if err != nil {
-		logger.LogSQLError(err, query, building.Name, building.Address, building.ID)
+		logger.LogSQLError(err, query, building.Name, building.Title, building.ID)
 		return err
 	}
 	if ct.RowsAffected() == 0 {
@@ -240,7 +243,7 @@ func (r *Repository) DeleteBuilding(ctx context.Context, id int) error {
 }
 
 func (r *Repository) GetRooms(ctx context.Context) ([]Room, error) {
-	query := `SELECT id, building_id, floor, name, description FROM rooms`
+	query := `SELECT id, name, title, building_id, floor_id, door_node_id FROM rooms`
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		logger.LogSQLError(err, query, "GetRooms")
@@ -251,31 +254,35 @@ func (r *Repository) GetRooms(ctx context.Context) ([]Room, error) {
 	var rooms []Room
 	for rows.Next() {
 		var room Room
-		if err := rows.Scan(&room.ID, &room.BuildingID, &room.Floor, &room.Name, &room.Description); err != nil {
+		var doorNodeID sql.NullInt64
+		if err := rows.Scan(&room.ID, &room.Name, &room.Title, &room.BuildingID, &room.FloorID, &doorNodeID); err != nil {
 			return nil, err
 		}
+		room.DoorNodeID = nullIntToPtr(doorNodeID)
 		rooms = append(rooms, room)
 	}
 	return rooms, nil
 }
 
 func (r *Repository) GetRoomByID(ctx context.Context, id int) (*Room, error) {
-	query := `SELECT id, building_id, floor, name, description FROM rooms WHERE id = $1`
+	query := `SELECT id, name, title, building_id, floor_id, door_node_id FROM rooms WHERE id = $1`
 	var room Room
-	if err := r.db.QueryRow(ctx, query, id).Scan(&room.ID, &room.BuildingID, &room.Floor, &room.Name, &room.Description); err != nil {
+	var doorNodeID sql.NullInt64
+	if err := r.db.QueryRow(ctx, query, id).Scan(&room.ID, &room.Name, &room.Title, &room.BuildingID, &room.FloorID, &doorNodeID); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, apperrors.NotFound("room not found")
 		}
 		logger.LogSQLError(err, query, id)
 		return nil, err
 	}
+	room.DoorNodeID = nullIntToPtr(doorNodeID)
 	return &room, nil
 }
 
 func (r *Repository) GetConnectionByID(ctx context.Context, id int) (*Connection, error) {
-	query := `SELECT id, room_from, room_to, distance, type FROM connections WHERE id = $1`
+	query := `SELECT id, "from", "to", distance FROM connections WHERE id = $1`
 	var conn Connection
-	if err := r.db.QueryRow(ctx, query, id).Scan(&conn.ID, &conn.RoomFrom, &conn.RoomTo, &conn.Distance, &conn.Type); err != nil {
+	if err := r.db.QueryRow(ctx, query, id).Scan(&conn.ID, &conn.FromID, &conn.ToID, &conn.Distance); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, apperrors.NotFound("connection not found")
 		}
@@ -283,4 +290,19 @@ func (r *Repository) GetConnectionByID(ctx context.Context, id int) (*Connection
 		return nil, err
 	}
 	return &conn, nil
+}
+
+func nullIntToPtr(value sql.NullInt64) *int {
+	if !value.Valid {
+		return nil
+	}
+	v := int(value.Int64)
+	return &v
+}
+
+func ptrToNullInt(value *int) sql.NullInt64 {
+	if value == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: int64(*value), Valid: true}
 }

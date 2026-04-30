@@ -2,6 +2,7 @@ package maps
 
 import (
 	"context"
+	"strconv"
 	"techup/internal/apperrors"
 )
 
@@ -56,59 +57,59 @@ func (s *Service) DeleteBuilding(ctx context.Context, id int) error {
 	return s.repo.DeleteBuilding(ctx, id)
 }
 
-// SearchRooms returns rooms filtered by building_id and/or floor
-func (s *Service) SearchRooms(ctx context.Context, buildingID *int, floor *int) ([]Room, error) {
+// SearchRooms returns rooms filtered by building_id and/or floor_id
+func (s *Service) SearchRooms(ctx context.Context, buildingID *int, floorID *int) ([]Room, error) {
 	var room Room
 	if buildingID != nil {
 		room.BuildingID = *buildingID
 	}
-	if floor != nil {
-		room.Floor = *floor
+	if floorID != nil {
+		room.FloorID = *floorID
 	}
-	return s.repo.SearchRooms(ctx, &room, buildingID != nil, floor != nil)
+	return s.repo.SearchRooms(ctx, &room, buildingID != nil, floorID != nil)
 }
 
-// FindPath finds the shortest path between two rooms by room names
-func (s *Service) FindPath(ctx context.Context, startRoom, endRoom string) ([]string, float64, error) {
+// FindPath finds the shortest path between two nodes by ID
+func (s *Service) FindPath(ctx context.Context, startNode, endNode string) ([]string, float64, error) {
 	conns, err := s.repo.GetConnections(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Строим граф
 	graph := make(map[string][]struct {
 		to       string
 		distance float64
 	})
 	for _, c := range conns {
-		graph[c.RoomFrom] = append(graph[c.RoomFrom], struct {
+		fromKey := strconv.Itoa(c.FromID)
+		toKey := strconv.Itoa(c.ToID)
+		graph[fromKey] = append(graph[fromKey], struct {
 			to       string
 			distance float64
-		}{to: c.RoomTo, distance: c.Distance})
-		graph[c.RoomTo] = append(graph[c.RoomTo], struct {
+		}{to: toKey, distance: c.Distance})
+		graph[toKey] = append(graph[toKey], struct {
 			to       string
 			distance float64
-		}{to: c.RoomFrom, distance: c.Distance})
+		}{to: fromKey, distance: c.Distance})
 	}
 
-	// Проверка существования комнат
-	if _, ok := graph[startRoom]; !ok {
-		return nil, 0, apperrors.NotFound("start room " + startRoom + " not found in graph")
+	if _, ok := graph[startNode]; !ok {
+		return nil, 0, apperrors.NotFound("start node " + startNode + " not found in graph")
 	}
-	if _, ok := graph[endRoom]; !ok {
-		return nil, 0, apperrors.NotFound("end room " + endRoom + " not found in graph")
+	if _, ok := graph[endNode]; !ok {
+		return nil, 0, apperrors.NotFound("end node " + endNode + " not found in graph")
 	}
 
-	// Используем A* (с нулевой эвристикой эквивалентно Дейкстре).
-	return AStarAlgorithm(graph, startRoom, endRoom, nil)
+	return AStarAlgorithm(graph, startNode, endNode, nil)
 }
 
-func (s *Service) AddRoom(ctx context.Context, name string, buildingID int, floor int, description string) error {
+func (s *Service) AddRoom(ctx context.Context, name string, title string, buildingID int, floorID int, doorNodeID *int) error {
 	room := &Room{
-		Name:        name,
-		BuildingID:  buildingID,
-		Floor:       floor,
-		Description: description,
+		Name:       name,
+		Title:      title,
+		BuildingID: buildingID,
+		FloorID:    floorID,
+		DoorNodeID: doorNodeID,
 	}
 	return s.repo.AddRoom(ctx, room)
 }
