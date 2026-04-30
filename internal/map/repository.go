@@ -146,7 +146,7 @@ func (r *Repository) AddConnection(ctx context.Context, conn *Connection) error 
 func (r *Repository) UpdateConnection(ctx context.Context, conn *Connection) error {
 	query := `
 		UPDATE connections
-		SET "from" = $1, "to" = $2, distance = $3, updated_at = NOW()
+		SET "from" = $1, "to" = $2, distance = $3
 		WHERE id = $4
 	`
 	ct, err := r.db.Exec(ctx, query, conn.FromID, conn.ToID, conn.Distance, conn.ID)
