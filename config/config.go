@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -9,6 +10,27 @@ import (
 
 	"github.com/joho/godotenv"
 )
+
+// IsDevMode reports whether the app runs in development (GIN_MODE != release).
+func IsDevMode() bool {
+	return !strings.EqualFold(strings.TrimSpace(os.Getenv("GIN_MODE")), "release")
+}
+
+// CookieSecure returns the Secure flag for auth cookies: off in dev so they
+// work over http://localhost, on in production (HTTPS).
+func CookieSecure() bool {
+	return !IsDevMode()
+}
+
+// CookieSameSite returns the SameSite policy for auth cookies. Production uses
+// None (cross-site over HTTPS); dev uses Lax, which Secure=false requires and
+// which works for the same-origin dev proxy.
+func CookieSameSite() http.SameSite {
+	if IsDevMode() {
+		return http.SameSiteLaxMode
+	}
+	return http.SameSiteNoneMode
+}
 
 func LoadEnv() error {
 	envFile := strings.TrimSpace(os.Getenv("ENV_FILE"))

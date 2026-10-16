@@ -82,8 +82,8 @@ func (h *Handler) Register(c *gin.Context) {
 		Path:     "/",
 		MaxAge:   config.GetAccessTokenTTLSeconds(),
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   config.CookieSecure(),
+		SameSite: config.CookieSameSite(),
 	})
 
 	http.SetCookie(c.Writer, &http.Cookie{
@@ -92,8 +92,8 @@ func (h *Handler) Register(c *gin.Context) {
 		Path:     "/",
 		MaxAge:   config.GetRefreshTokenTTLSeconds(),
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   config.CookieSecure(),
+		SameSite: config.CookieSameSite(),
 	})
 
 	c.JSON(http.StatusOK, gin.H{
@@ -143,8 +143,8 @@ func (h *Handler) Login(c *gin.Context) {
 		Path:     "/",
 		MaxAge:   config.GetAccessTokenTTLSeconds(),
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   config.CookieSecure(),
+		SameSite: config.CookieSameSite(),
 	})
 
 	http.SetCookie(c.Writer, &http.Cookie{
@@ -153,8 +153,8 @@ func (h *Handler) Login(c *gin.Context) {
 		Path:     "/",
 		MaxAge:   config.GetRefreshTokenTTLSeconds(),
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   config.CookieSecure(),
+		SameSite: config.CookieSameSite(),
 	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "login successful"})
@@ -223,8 +223,8 @@ func (h *Handler) Refresh(c *gin.Context) {
 		Path:     "/",
 		MaxAge:   config.GetAccessTokenTTLSeconds(),
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   config.CookieSecure(),
+		SameSite: config.CookieSameSite(),
 	})
 
 	http.SetCookie(c.Writer, &http.Cookie{
@@ -233,8 +233,8 @@ func (h *Handler) Refresh(c *gin.Context) {
 		Path:     "/",
 		MaxAge:   config.GetRefreshTokenTTLSeconds(),
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   config.CookieSecure(),
+		SameSite: config.CookieSameSite(),
 	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "tokens refreshed"})
@@ -396,8 +396,8 @@ func clearAuthCookie(c *gin.Context, name string) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		Secure:   config.CookieSecure(),
+		SameSite: config.CookieSameSite(),
 	})
 }
 
