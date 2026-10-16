@@ -2,6 +2,29 @@
 
 Production-oriented backend service for the TechUp university application.
 
+## Quick start — local development
+
+Runs the API on your host against a Postgres container, using the committed
+dev env file `.env.dev` (safe, non-secret defaults). Requires Docker Desktop
+running, Go `1.25`, and [`goose`](https://github.com/pressly/goose)
+(`go install github.com/pressly/goose/v3/cmd/goose@latest`).
+
+```bash
+make dev-setup   # start local Postgres + run migrations (with seed data)
+make dev         # run the API on http://localhost:3000
+```
+
+Other helpers: `make db-up` / `make db-down` (Postgres only), `make db-logs`,
+`make migrate ENV_FILE=./.env.dev`. To run the API in a container too:
+`docker compose --profile app up` (run `make dev-setup` first for migrations).
+
+Then start the [frontend](../techup-frontend) with the mock disabled so it
+proxies to this backend:
+
+```bash
+cd ../techup-frontend && VITE_MOCK_API=false npm run dev
+```
+
 ## What This Service Provides
 
 - Account lifecycle: register, login, refresh, logout, profile update, password change
