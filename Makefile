@@ -1,4 +1,4 @@
-.PHONY: build up down logs restart migrate migrate-up migrate-down migrate-status migrate-version psql test test-% cover tidy swagger db-up db-down db-logs dev-setup dev
+.PHONY: build up down logs restart deploy migrate migrate-up migrate-down migrate-status migrate-version psql test test-% cover tidy swagger db-up db-down db-logs dev-setup dev
 
 ENV_FILE ?= ./.env
 
@@ -23,23 +23,25 @@ dev-setup: db-up
 dev:
 	ENV_FILE=./.env.dev go run ./cmd/server
 
+# ---- Full stack in Docker: db + migrations + app ----
+# Deployment / container runs. Pass ENV_FILE=./.env.prod in production.
+
+# Primary deploy command: build images, run migrations, (re)start the stack.
+deploy: up
+
 build:
-	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml build
+	ENV_FILE=$(ENV_FILE) docker compose --profile app build
 
 up:
-	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml up -d
-	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml logs -f
+	ENV_FILE=$(ENV_FILE) docker compose --profile app up -d --build
 
 down:
-	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml down -v
+	ENV_FILE=$(ENV_FILE) docker compose --profile app down
 
 logs:
-	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml logs -f app
+	ENV_FILE=$(ENV_FILE) docker compose --profile app logs -f app
 
-restart:
-	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml down -v
-	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml build
-	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml up -d
+restart: down up
 
 migrate: migrate-up
 

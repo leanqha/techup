@@ -21,6 +21,7 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.dev
+!.env.prod.example
 
 # Кэш go build
 *.test

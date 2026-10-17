@@ -16,20 +16,27 @@ func IsDevMode() bool {
 	return !strings.EqualFold(strings.TrimSpace(os.Getenv("GIN_MODE")), "release")
 }
 
-// CookieSecure returns the Secure flag for auth cookies: off in dev so they
-// work over http://localhost, on in production (HTTPS).
+// CookieSecure returns the Secure flag for auth cookies. COOKIE_SECURE
+// (true/false) overrides when set — e.g. a release deployment served over plain
+// HTTP must set COOKIE_SECURE=false so browsers store the cookie. Otherwise it
+// defaults to on in production (HTTPS) and off in dev (http://localhost).
 func CookieSecure() bool {
+	if v := strings.TrimSpace(os.Getenv("COOKIE_SECURE")); v != "" {
+		if secure, err := strconv.ParseBool(v); err == nil {
+			return secure
+		}
+	}
 	return !IsDevMode()
 }
 
-// CookieSameSite returns the SameSite policy for auth cookies. Production uses
-// None (cross-site over HTTPS); dev uses Lax, which Secure=false requires and
-// which works for the same-origin dev proxy.
+// CookieSameSite returns the SameSite policy for auth cookies: None when the
+// cookie is Secure (cross-site over HTTPS), otherwise Lax (which Secure=false
+// requires and which works for same-origin HTTP).
 func CookieSameSite() http.SameSite {
-	if IsDevMode() {
-		return http.SameSiteLaxMode
+	if CookieSecure() {
+		return http.SameSiteNoneMode
 	}
-	return http.SameSiteNoneMode
+	return http.SameSiteLaxMode
 }
 
 func LoadEnv() error {

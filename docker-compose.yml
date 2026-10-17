@@ -1,5 +1,6 @@
 services:
-  # Local Postgres for development. `make db-up` starts just this.
+  # Postgres. `make db-up` starts just this (local dev); in the full stack
+  # (`--profile app`) the app and migrations talk to it over the compose network.
   db:
     image: postgres:16-alpine
     environment:
@@ -7,7 +8,9 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-techup_db}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      # Bound to localhost so the DB is never exposed to the public interface;
+      # host-based dev migrations (make migrate) still reach it via localhost.
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,10 +20,33 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # Optional: run the API in a container too (`docker compose --profile app up`).
-  # Migrations are applied from the host (`make migrate ENV_FILE=./.env.dev`).
+  # Run DB migrations once, then exit. The app waits for it to finish.
+  # Reuses the image built by the `app` service (below) — only one service
+  # builds the shared image to avoid a duplicate-tag build conflict.
+  migrate:
+    profiles: ["app"]
+    image: techup-api:local
+    env_file:
+      - ${ENV_FILE:-.env.dev}
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint:
+      - sh
+      - -c
+      - >
+        GOOSE_DRIVER=postgres
+        GOOSE_DBSTRING="host=$${DB_HOST} port=$${DB_PORT} user=$${DB_USER} password=$${DB_PASSWORD} dbname=$${DB_NAME} sslmode=$${DB_SSLMODE}"
+        goose -dir ./migrations up
+    restart: "no"
+
+  # The API. Runs the full stack with `docker compose --profile app up -d --build`.
   app:
     profiles: ["app"]
+    image: techup-api:local
     build:
       context: .
       dockerfile: Dockerfile
@@ -33,8 +59,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
-      - "${PORT:-3000}:3000"
+      # Bound to localhost; the public entrypoint is nginx, which proxies /api here.
+      - "127.0.0.1:${PORT:-3000}:3000"
     restart: unless-stopped
     command: ["./server"]
 
