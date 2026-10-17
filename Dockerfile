@@ -2,7 +2,7 @@
 FROM golang:1.25-alpine AS builder
 WORKDIR /app
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates tzdata
 
 ENV GOPATH=/go
 ENV PATH=$PATH:$GOPATH/bin
@@ -25,7 +25,10 @@ RUN CGO_ENABLED=0 go install github.com/pressly/goose/v3/cmd/goose@v3.24.3
 FROM alpine:latest
 WORKDIR /app
 
-RUN apk add --no-cache tzdata ca-certificates bash
+# CA certs + timezone data copied from the builder, so the runtime image needs
+# no `apk` network fetch at build time (avoids flaky Alpine-mirror TLS failures).
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 # Copy binary only; runtime secrets are injected via environment variables.
 COPY --from=builder /app/server .
