@@ -57,6 +57,11 @@ type SetRoleRequest struct {
 	Role   string `json:"role" example:"teacher"`
 }
 
+// DevSetRoleRequest describes the payload for the development-only self role switch.
+type DevSetRoleRequest struct {
+	Role string `json:"role" example:"admin"`
+}
+
 // RefreshRequest describes payload for manual refresh token submission.
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token"`

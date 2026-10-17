@@ -359,6 +359,83 @@ func (h *Handler) SetRole(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "role updated successfully"})
 }
 
+// DevSetRole godoc
+// @Summary      Set own role (development only)
+// @Description  Lets the authenticated user change their own role. Available only when the server runs in development mode (GIN_MODE != release); returns 404 otherwise. Re-issues the access cookie so the new role takes effect immediately.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        role body DevSetRoleRequest true "Role payload"
+// @Success      200 {object} ProfileResponse "Updated profile"
+// @Failure      400 {object} ErrorResponse "Invalid role"
+// @Failure      401 {object} ErrorResponse "Unauthorized"
+// @Failure      404 {object} ErrorResponse "Not available outside development"
+// @Router       /account/secure/dev/role [post]
+func (h *Handler) DevSetRole(c *gin.Context) {
+	if !config.IsDevMode() {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+
+	userID, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req DevSetRoleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	role := strings.TrimSpace(req.Role)
+	switch role {
+	case "student", "teacher", "admin":
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
+		return
+	}
+
+	acc, err := h.service.UpdateAccountAdmin(c.Request.Context(), userID, &AdminUpdateAccountRequest{Role: &role})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Re-issue the access cookie so the role in the JWT (used by RequireRole)
+	// matches immediately; the existing refresh token keeps working because a
+	// refresh reloads the role from the database.
+	accessToken, _, err := GenerateTokens(acc)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to issue token"})
+		return
+	}
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		Path:     "/",
+		MaxAge:   config.GetAccessTokenTTLSeconds(),
+		HttpOnly: true,
+		Secure:   config.CookieSecure(),
+		SameSite: config.CookieSameSite(),
+	})
+
+	c.JSON(http.StatusOK, ProfileResponse{
+		ID:         acc.ID,
+		UID:        acc.UID,
+		Email:      acc.Email,
+		FirstName:  acc.FirstName,
+		MiddleName: acc.MiddleName,
+		LastName:   acc.LastName,
+		GroupID:    acc.GroupID,
+		GroupName:  acc.GroupName,
+		Role:       acc.Role,
+	})
+}
+
 // Logout godoc
 // @Summary      Logout user
 // @Description  Revoke refresh tokens, clear auth cookies, and return a confirmation message.
