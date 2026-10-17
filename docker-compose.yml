@@ -1,13 +1,40 @@
 services:
+  # Local Postgres for development. `make db-up` starts just this.
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-techup_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-techup_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Optional: run the API in a container too (`docker compose --profile app up`).
+  # Migrations are applied from the host (`make migrate ENV_FILE=./.env.dev`).
   app:
+    profiles: ["app"]
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: techup-api
     env_file:
-      - ${ENV_FILE:-.env}
+      - ${ENV_FILE:-.env.dev}
+    environment:
+      # Reach the db service over the compose network instead of localhost.
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
-      - "${PORT}:3000"
+      - "${PORT:-3000}:3000"
     restart: unless-stopped
     command: ["./server"]
 

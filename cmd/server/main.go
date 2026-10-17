@@ -104,6 +104,7 @@ func main() {
 		secureAccount.POST("/change-password", accountHandler.ChangePassword)
 		secureAccount.PUT("/update", accountHandler.UpdateProfile)
 		secureAccount.POST("/logout", accountHandler.Logout)
+		secureAccount.POST("/dev/role", accountHandler.DevSetRole) // dev-only self role switch
 	}
 
 	scheduleGroup := api.Group("/schedule")

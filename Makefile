@@ -1,6 +1,27 @@
-.PHONY: build up down logs restart migrate migrate-up migrate-down migrate-status migrate-version psql test test-% cover tidy swagger
+.PHONY: build up down logs restart migrate migrate-up migrate-down migrate-status migrate-version psql test test-% cover tidy swagger db-up db-down db-logs dev-setup dev
 
 ENV_FILE ?= ./.env
+
+# ---- Local development (Postgres in Docker, API on host) ----
+
+# Start only the local Postgres container and wait until it is healthy.
+db-up:
+	docker compose up -d --wait db
+
+# Stop the local Postgres (keeps the data volume).
+db-down:
+	docker compose down
+
+db-logs:
+	docker compose logs -f db
+
+# One-time setup: start Postgres and apply all migrations (with seed data).
+dev-setup: db-up
+	$(MAKE) migrate ENV_FILE=./.env.dev
+
+# Run the API on the host against the local database (hot env from .env.dev).
+dev:
+	ENV_FILE=./.env.dev go run ./cmd/server
 
 build:
 	ENV_FILE=$(ENV_FILE) docker compose -f docker-compose.yml build

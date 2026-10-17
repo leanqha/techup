@@ -4,20 +4,20 @@ import "time"
 
 // Faculty represents a university faculty
 type Faculty struct {
-	ID   int    `db:"id"`
-	Name string `db:"name"`
+	ID   int    `db:"id" json:"id"`
+	Name string `db:"name" json:"name"`
 }
 
 // Group represents a student group within a faculty
 type Group struct {
-	ID             int    `db:"id"`
-	FacultyID      int    `db:"faculty_id"`
-	Name           string `db:"name"`
-	Course         int    `db:"course"`
-	Degree         string `db:"degree"` // бакалавриат / магистратура
-	YearStart      int    `db:"year_start"`
-	Specialization string `db:"specialization"`
-	IsActive       bool   `db:"is_active"`
+	ID             int    `db:"id" json:"id"`
+	FacultyID      int    `db:"faculty_id" json:"faculty_id"`
+	Name           string `db:"name" json:"name"`
+	Course         int    `db:"course" json:"course"`
+	Degree         string `db:"degree" json:"degree"` // бакалавриат / магистратура
+	YearStart      int    `db:"year_start" json:"year_start"`
+	Specialization string `db:"specialization" json:"specialization"`
+	IsActive       bool   `db:"is_active" json:"is_active"`
 }
 
 // Lesson — конкретная пара в конкретную дату
