@@ -19,6 +19,7 @@ jobs:
       # App env (written to .env.prod on the server)
       PORT: ${{ secrets.PORT }}
       GIN_MODE: ${{ secrets.GIN_MODE }}
+      COOKIE_SECURE: ${{ secrets.COOKIE_SECURE }}
       APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
 
       DB_HOST: ${{ secrets.DB_HOST }}
@@ -57,7 +58,7 @@ jobs:
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_PORT }}
-          envs: PROD_APP_DIR,PROD_REPO_BRANCH,PROD_REPO_URL,PORT,GIN_MODE,APP_BASE_URL,DB_HOST,DB_PORT,DB_USER,DB_PASSWORD,DB_NAME,DB_SSLMODE,JWT_SECRET,JWT_ACCESS_TOKEN_TTL,JWT_REFRESH_TOKEN_TTL,PASSWORD_RESET_TTL_MINUTES,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM,SMTP_USE_TLS,SMTP_SKIP_VERIFY
+          envs: PROD_APP_DIR,PROD_REPO_BRANCH,PROD_REPO_URL,PORT,GIN_MODE,COOKIE_SECURE,APP_BASE_URL,DB_HOST,DB_PORT,DB_USER,DB_PASSWORD,DB_NAME,DB_SSLMODE,JWT_SECRET,JWT_ACCESS_TOKEN_TTL,JWT_REFRESH_TOKEN_TTL,PASSWORD_RESET_TTL_MINUTES,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM,SMTP_USE_TLS,SMTP_SKIP_VERIFY
           script_stop: true
           script: |
             set -e
@@ -90,6 +91,7 @@ jobs:
             cat > .env.prod <<EOF
             PORT=$PORT
             GIN_MODE=$GIN_MODE
+            COOKIE_SECURE=$COOKIE_SECURE
             APP_BASE_URL=$APP_BASE_URL
             DB_HOST=$DB_HOST
             DB_PORT=$DB_PORT
