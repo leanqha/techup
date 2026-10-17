@@ -11,10 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: prod
     env:
+      # Deploy target / repo (set in the "prod" environment secrets)
       PROD_APP_DIR: ${{ secrets.PROD_APP_DIR }}
       PROD_REPO_BRANCH: ${{ secrets.PROD_REPO_BRANCH }}
       PROD_REPO_URL: ${{ secrets.PROD_REPO_URL }}
 
+      # App env (written to .env.prod on the server)
       PORT: ${{ secrets.PORT }}
       GIN_MODE: ${{ secrets.GIN_MODE }}
       APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
@@ -61,13 +63,13 @@ jobs:
             set -e
 
             REPO_BRANCH="${PROD_REPO_BRANCH:-main}"
-
             APP_DIR="${PROD_APP_DIR:-$HOME/techup}"
-            echo "Using deploy directory: $APP_DIR"
+            echo "Using deploy directory: $APP_DIR (branch: $REPO_BRANCH)"
 
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
+            # Clone on first deploy, otherwise fast-forward to the target branch.
             if [ ! -d .git ]; then
               if [ -n "$(ls -A . 2>/dev/null)" ]; then
                 echo "Deploy dir exists and is not a git repo: $APP_DIR"
@@ -84,6 +86,7 @@ jobs:
             git checkout "$REPO_BRANCH"
             git reset --hard "origin/$REPO_BRANCH"
 
+            # Build the production env file from the secrets passed above.
             cat > .env.prod <<EOF
             PORT=$PORT
             GIN_MODE=$GIN_MODE
@@ -98,6 +101,8 @@ jobs:
             JWT_ACCESS_TOKEN_TTL=$JWT_ACCESS_TOKEN_TTL
             JWT_REFRESH_TOKEN_TTL=$JWT_REFRESH_TOKEN_TTL
             PASSWORD_RESET_TTL_MINUTES=$PASSWORD_RESET_TTL_MINUTES
+            GOOSE_DRIVER=postgres
+            GOOSE_MIGRATION_DIR=./migrations
             SMTP_HOST=$SMTP_HOST
             SMTP_PORT=$SMTP_PORT
             SMTP_USER=$SMTP_USER
@@ -107,4 +112,9 @@ jobs:
             SMTP_SKIP_VERIFY=$SMTP_SKIP_VERIFY
             EOF
 
-            ENV_FILE=.env.prod docker compose -f docker-compose.yml up -d --build
+            # Build images, run migrations (migrate service), then start db + app.
+            # DB_* are also in the shell env (passed via `envs`) so docker compose
+            # provisions the Postgres container with the same credentials.
+            make deploy ENV_FILE=.env.prod
+
+            docker image prune -f >/dev/null 2>&1 || true
