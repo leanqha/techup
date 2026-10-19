@@ -16,6 +16,8 @@ import (
 
 type RepositoryInterface interface {
 	CreateAccount(ctx context.Context, acc *Account) error
+	CreateTeacher(ctx context.Context, acc *Account) error
+	UpdateTeacherName(ctx context.Context, id int, firstName, middleName, lastName string) error
 	GetByEmail(ctx context.Context, email string) (*Account, error)
 	GetByID(ctx context.Context, id int) (*Account, error)
 	UpdateAccount(ctx context.Context, acc *Account) error

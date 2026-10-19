@@ -84,6 +84,30 @@ func (m *MockRepo) ListAccounts(_ context.Context, _ AdminAccountsFilter) ([]Acc
 	return result, nil
 }
 
+func (m *MockRepo) CreateTeacher(_ context.Context, acc *Account) error {
+	if m.createErr != nil {
+		return m.createErr
+	}
+	if _, exists := m.accounts[acc.Email]; exists {
+		return apperrors.Conflict("email already exists")
+	}
+	acc.ID = len(m.accounts) + 1
+	m.accounts[acc.Email] = acc
+	return nil
+}
+
+func (m *MockRepo) UpdateTeacherName(_ context.Context, id int, firstName, middleName, lastName string) error {
+	for _, acc := range m.accounts {
+		if acc.ID == id {
+			acc.FirstName = firstName
+			acc.MiddleName = middleName
+			acc.LastName = lastName
+			return nil
+		}
+	}
+	return apperrors.NotFound("account not found")
+}
+
 func (m *MockRepo) SaveRefreshToken(_ context.Context, token *RefreshToken) error {
 	if m.saveRefreshErr != nil {
 		return m.saveRefreshErr
