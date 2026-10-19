@@ -27,6 +27,7 @@ type ServiceInterface interface {
 	ListAccounts(ctx context.Context, f AdminAccountsFilter) ([]Account, error)
 	RequestPasswordReset(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
+	ImportTeachers(ctx context.Context) (*TeacherImportResult, error)
 }
 
 type HandlerInterface interface {
@@ -43,6 +44,7 @@ type HandlerInterface interface {
 	AdminUpdateAccount(c *gin.Context)
 	ForgotPassword(c *gin.Context)
 	ResetPassword(c *gin.Context)
+	ImportTeachers(c *gin.Context)
 }
 
 type Handler struct {
@@ -715,4 +717,26 @@ func (h *Handler) AdminUpdateAccount(c *gin.Context) {
 		GroupID:    acc.GroupID,
 		GroupName:  acc.GroupName,
 	})
+}
+
+// ImportTeachers godoc
+// @Summary      Import teachers from spbti.ru (admin only)
+// @Description  Fetch the teaching-staff roster from the SPbTI "Персональный состав" page and sync it into accounts: existing teachers are matched by name and keep their id, their name fields are updated when changed, and teachers not yet present are appended. Nothing is deleted.
+// @Tags         Account
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200 {object} TeacherImportResult "Import summary"
+// @Failure      401 {object} ErrorResponse "Unauthorized"
+// @Failure      403 {object} ErrorResponse "Forbidden"
+// @Failure      500 {object} ErrorResponse "Failed to import teachers"
+// @Router       /admin/teachers/import [post]
+func (h *Handler) ImportTeachers(c *gin.Context) {
+	result, err := h.service.ImportTeachers(c.Request.Context())
+	if err != nil {
+		logger.Log.Err(err).Msg("failed to import teachers")
+		c.JSON(apperrors.StatusCode(err), gin.H{"error": apperrors.Message(err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }

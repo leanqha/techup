@@ -154,6 +154,7 @@ func main() {
 		adminGroup.PUT("/account/:id", accountHandler.AdminUpdateAccount)
 		adminGroup.DELETE("/account/:id", accountHandler.DeleteAccount)
 		adminGroup.POST("/set-role", accountHandler.SetRole)
+		adminGroup.POST("/teachers/import", accountHandler.ImportTeachers)
 
 		adminGroup.POST("/faculty", scheduleHandler.AddFaculty)
 		adminGroup.PUT("/faculty/:id", scheduleHandler.UpdateFaculty)

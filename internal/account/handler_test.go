@@ -199,6 +199,10 @@ func (m *MockService) ResetPassword(_ context.Context, token, newPassword string
 	return nil
 }
 
+func (m *MockService) ImportTeachers(_ context.Context) (*TeacherImportResult, error) {
+	return &TeacherImportResult{}, nil
+}
+
 func setupRouter() (*gin.Engine, *Handler) {
 	gin.SetMode(gin.TestMode)
 	_ = gofakeit.Seed(0)

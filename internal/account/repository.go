@@ -39,6 +39,48 @@ func (r *Repository) CreateAccount(ctx context.Context, acc *Account) error {
 	return nil
 }
 
+// CreateTeacher appends a teacher account. It is used by the SPbTI roster
+// import, so it also persists the middle name (patronymic). New rows receive
+// the next serial id, which keeps existing ids stable.
+func (r *Repository) CreateTeacher(ctx context.Context, acc *Account) error {
+	query := `
+		INSERT INTO accounts (email, password_hash, first_name, middle_name, last_name, role)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
+	`
+	err := r.db.QueryRow(ctx, query,
+		acc.Email, acc.PasswordHash, acc.FirstName, acc.MiddleName, acc.LastName, acc.Role,
+	).Scan(&acc.ID)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			return apperrors.Conflict("email already exists")
+		}
+		logger.LogSQLError(err, query, acc.Email)
+		return err
+	}
+	return nil
+}
+
+// UpdateTeacherName updates only the name fields of an account, leaving the
+// password hash, email, role and group untouched. The roster import uses it so
+// a re-run never clobbers unrelated columns.
+func (r *Repository) UpdateTeacherName(ctx context.Context, id int, firstName, middleName, lastName string) error {
+	query := `
+		UPDATE accounts
+		SET first_name = $1, middle_name = $2, last_name = $3, updated_at = NOW()
+		WHERE id = $4
+	`
+	ct, err := r.db.Exec(ctx, query, firstName, middleName, lastName, id)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+		return err
+	}
+	if ct.RowsAffected() != 1 {
+		return apperrors.NotFound("account not found")
+	}
+	return nil
+}
+
 func (r *Repository) GetByEmail(ctx context.Context, email string) (*Account, error) {
 	acc := &Account{}
 	var middleName sql.NullString
