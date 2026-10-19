@@ -8,6 +8,7 @@ import (
 	"strings"
 	"techup/internal/apperrors"
 	"techup/internal/logger"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -166,6 +167,19 @@ func (r *Repository) GetRefreshToken(ctx context.Context, token string) (*Refres
 		return nil, err
 	}
 	return &t, nil
+}
+
+func (r *Repository) UpdateRefreshTokenExpiry(ctx context.Context, token string, expiresAt time.Time) error {
+	query := `UPDATE refresh_tokens SET expires_at = $2 WHERE token = $1`
+	ct, err := r.db.Exec(ctx, query, token, expiresAt)
+	if err != nil {
+		logger.LogSQLError(err, query, token)
+		return err
+	}
+	if ct.RowsAffected() != 1 {
+		return apperrors.NotFound("refresh token not found")
+	}
+	return nil
 }
 
 func (r *Repository) DeleteRefreshToken(ctx context.Context, oldToken string) error {
