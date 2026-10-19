@@ -102,6 +102,18 @@ func (m *MockRepo) GetRefreshToken(_ context.Context, token string) (*RefreshTok
 	return t, nil
 }
 
+func (m *MockRepo) UpdateRefreshTokenExpiry(_ context.Context, token string, expiresAt time.Time) error {
+	if m.saveError != nil {
+		return m.saveError
+	}
+	t, ok := m.refreshTokens[token]
+	if !ok {
+		return apperrors.NotFound("refresh token not found")
+	}
+	t.ExpiresAt = expiresAt
+	return nil
+}
+
 func (m *MockRepo) DeleteRefreshToken(_ context.Context, token string) error {
 	if m.deleteError != nil {
 		return m.deleteError
@@ -412,6 +424,41 @@ func TestPasswordHashing(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, "password", acc.PasswordHash)
 	assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(acc.PasswordHash), []byte("password")))
+}
+
+// TestRefreshTokensReusable guards the fix for the concurrent-refresh bug:
+// refreshing must not invalidate the refresh token, so two refreshes with the
+// same token (two tabs / parallel requests / a retry) both succeed instead of
+// the second one dropping the session.
+func TestRefreshTokensReusable(t *testing.T) {
+	_ = gofakeit.Seed(0)
+	repo := &MockRepo{accounts: make(map[string]*Account), refreshTokens: make(map[string]*RefreshToken)}
+	service := NewService(repo)
+
+	acc := &Account{ID: 1, Email: "user@example.com", Role: "student"}
+	repo.accounts[acc.Email] = acc
+
+	_, refresh, err := GenerateTokens(acc)
+	assert.NoError(t, err)
+	repo.refreshTokens[refresh] = &RefreshToken{
+		AccountID: acc.ID,
+		Token:     refresh,
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+
+	access1, refresh1, err := service.RefreshTokens(context.Background(), refresh)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, access1)
+	assert.Equal(t, refresh, refresh1, "refresh token should be kept, not rotated")
+
+	// Same token again — previously the first call deleted it and this failed.
+	access2, refresh2, err := service.RefreshTokens(context.Background(), refresh)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, access2)
+	assert.Equal(t, refresh, refresh2)
+
+	_, stillThere := repo.refreshTokens[refresh]
+	assert.True(t, stillThere, "refresh token must remain valid after refresh")
 }
 
 func TestRefreshTokenExpired(t *testing.T) {

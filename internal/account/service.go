@@ -23,6 +23,7 @@ type RepositoryInterface interface {
 
 	SaveRefreshToken(ctx context.Context, token *RefreshToken) error
 	GetRefreshToken(ctx context.Context, token string) (*RefreshToken, error)
+	UpdateRefreshTokenExpiry(ctx context.Context, token string, expiresAt time.Time) error
 	DeleteRefreshToken(ctx context.Context, token string) error
 	DeleteRefreshTokens(ctx context.Context, userID int) error
 	DeleteAccount(ctx context.Context, userID int) error
@@ -253,25 +254,26 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (strin
 		return "", "", err
 	}
 
-	newAccess, newRefresh, err := GenerateTokens(acc)
+	// Issue a fresh access token but keep the existing refresh token. Rotating
+	// the refresh token on every call (delete old + issue new) made concurrent
+	// refreshes race: when two authenticated requests refreshed at once (two
+	// tabs, parallel requests on load, or a retry), the first deleted the token
+	// and the rest got "invalid refresh token" and were logged out. Keeping the
+	// token makes refresh idempotent; we slide its expiry so active sessions
+	// stay alive, and logout/password-reset still revoke it from the database.
+	newAccess, _, err := GenerateTokens(acc)
 	if err != nil {
 		return "", "", err
 	}
 
-	_ = s.repo.DeleteRefreshToken(ctx, refreshToken)
-
-	err = s.repo.SaveRefreshToken(ctx, &RefreshToken{
-		AccountID: acc.ID,
-		Token:     newRefresh,
-		ExpiresAt: time.Now().Add(
-			time.Duration(config.GetRefreshTokenTTLSeconds()) * time.Second,
-		),
-	})
-	if err != nil {
+	newExpiry := time.Now().Add(
+		time.Duration(config.GetRefreshTokenTTLSeconds()) * time.Second,
+	)
+	if err := s.repo.UpdateRefreshTokenExpiry(ctx, refreshToken, newExpiry); err != nil {
 		return "", "", err
 	}
 
-	return newAccess, newRefresh, nil
+	return newAccess, refreshToken, nil
 }
 
 // Logout clears all sessions

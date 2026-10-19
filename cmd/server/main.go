@@ -69,7 +69,13 @@ func main() {
 		AllowOriginFunc: func(origin string) bool {
 			return origin == "https://mytechup.ru"
 		},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+		// Auth is cookie-based, so cross-origin browser clients send
+		// credentials: 'include'. Without Access-Control-Allow-Credentials the
+		// browser drops the Set-Cookie on login/refresh and never sends the
+		// cookie back — so logins silently fail cross-origin.
+		AllowCredentials: true,
 	}))
 
 	r.Use(func(c *gin.Context) {
