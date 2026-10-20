@@ -125,6 +125,8 @@ func main() {
 		scheduleGroup.GET("/subjects/:id", scheduleHandler.GetSubject)
 		scheduleGroup.GET("/lesson-types", scheduleHandler.ListLessonTypes)
 		scheduleGroup.GET("/lesson-types/:id", scheduleHandler.GetLessonType)
+		scheduleGroup.GET("/group-subjects", scheduleHandler.ListGroupSubjects)
+		scheduleGroup.GET("/group-subjects/:id", scheduleHandler.GetGroupSubject)
 		scheduleGroup.GET("/search", scheduleHandler.SearchLessons)
 		scheduleGroup.GET("/teachers", scheduleHandler.GetTeachers)
 		scheduleGroup.GET("/classrooms", scheduleHandler.GetClassrooms)
@@ -175,6 +177,10 @@ func main() {
 		adminGroup.POST("/lesson-type", scheduleHandler.AddLessonType)
 		adminGroup.PUT("/lesson-type/:id", scheduleHandler.UpdateLessonType)
 		adminGroup.DELETE("/lesson-type/:id", scheduleHandler.DeleteLessonType)
+
+		adminGroup.POST("/group-subject", scheduleHandler.AddGroupSubject)
+		adminGroup.PUT("/group-subject/:id", scheduleHandler.UpdateGroupSubject)
+		adminGroup.DELETE("/group-subject/:id", scheduleHandler.DeleteGroupSubject)
 
 		adminGroup.POST("/building", mapsHandler.AddBuilding)
 		adminGroup.PUT("/building/:id", mapsHandler.UpdateBuilding)

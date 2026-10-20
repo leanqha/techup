@@ -9,3 +9,10 @@ type SearchLessonsFilter struct {
 	Classroom *string
 	Subject   *string
 }
+
+// GroupSubjectFilter narrows a group's semester plan listing by group and/or
+// semester. Both are optional.
+type GroupSubjectFilter struct {
+	GroupID  *int
+	Semester *int
+}

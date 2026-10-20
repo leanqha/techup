@@ -37,6 +37,17 @@ type LessonType struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
+// GroupSubject — предмет из учебного плана группы на конкретный семестр
+type GroupSubject struct {
+	ID        int       `db:"id" json:"id"`
+	GroupID   int       `db:"group_id" json:"group_id"`
+	SubjectID int       `db:"subject_id" json:"subject_id"`
+	Semester  int       `db:"semester" json:"semester"`
+	TeacherID *int      `db:"teacher_id" json:"teacher_id"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
 // Lesson — конкретная пара в конкретную дату
 type Lesson struct {
 	ID        int       `json:"id"`

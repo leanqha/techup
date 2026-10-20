@@ -80,3 +80,25 @@ type LessonTypeRequest struct {
 	Name  string `json:"name" binding:"required"`
 	Color string `json:"color"`
 }
+
+// GroupSubjectRequest describes payload for adding/updating a subject in a
+// group's semester plan. TeacherID is optional.
+type GroupSubjectRequest struct {
+	GroupID   int  `json:"group_id" binding:"required"`
+	SubjectID int  `json:"subject_id" binding:"required"`
+	Semester  int  `json:"semester" binding:"required"`
+	TeacherID *int `json:"teacher_id"`
+}
+
+// GroupSubjectResponse represents an entry of a group's semester plan with the
+// related group, subject and teacher names resolved for display.
+type GroupSubjectResponse struct {
+	ID          int    `json:"id"`
+	GroupID     int    `json:"group_id"`
+	GroupName   string `json:"group_name"`
+	SubjectID   int    `json:"subject_id"`
+	SubjectName string `json:"subject_name"`
+	Semester    int    `json:"semester"`
+	TeacherID   *int   `json:"teacher_id"`
+	TeacherName string `json:"teacher_name"`
+}

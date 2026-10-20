@@ -133,6 +133,26 @@ func (m *mockService) DeleteGroup(_ context.Context, _ int) error {
 	return nil
 }
 
+func (m *mockService) ListGroupSubjects(_ context.Context, _ GroupSubjectFilter) ([]GroupSubjectResponse, error) {
+	return nil, nil
+}
+
+func (m *mockService) GetGroupSubject(_ context.Context, _ int) (*GroupSubjectResponse, error) {
+	return nil, nil
+}
+
+func (m *mockService) AddGroupSubject(_ context.Context, _ *GroupSubject) error {
+	return nil
+}
+
+func (m *mockService) UpdateGroupSubject(_ context.Context, _ GroupSubject) error {
+	return nil
+}
+
+func (m *mockService) DeleteGroupSubject(_ context.Context, _ int) error {
+	return nil
+}
+
 func (m *mockService) ListSubjects(ctx context.Context) ([]Subject, error) {
 	if m.listSubjectsFn != nil {
 		return m.listSubjectsFn(ctx)
