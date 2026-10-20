@@ -39,6 +39,12 @@ type mockRepo struct {
 	listLessonTypesFn  func(ctx context.Context) ([]LessonType, error)
 	updateLessonTypeFn func(ctx context.Context, lt LessonType) error
 	deleteLessonTypeFn func(ctx context.Context, id int) error
+
+	addGroupSubjectFn    func(ctx context.Context, gs *GroupSubject) error
+	getGroupSubjectFn    func(ctx context.Context, id int) (*GroupSubjectResponse, error)
+	listGroupSubjectsFn  func(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error)
+	updateGroupSubjectFn func(ctx context.Context, gs GroupSubject) error
+	deleteGroupSubjectFn func(ctx context.Context, id int) error
 }
 
 func (m *mockRepo) AddFaculty(_ context.Context, _ Faculty) error {
@@ -139,6 +145,41 @@ func (m *mockRepo) UpdateLessonType(ctx context.Context, lt LessonType) error {
 func (m *mockRepo) DeleteLessonType(ctx context.Context, id int) error {
 	if m.deleteLessonTypeFn != nil {
 		return m.deleteLessonTypeFn(ctx, id)
+	}
+	return nil
+}
+
+func (m *mockRepo) AddGroupSubject(ctx context.Context, gs *GroupSubject) error {
+	if m.addGroupSubjectFn != nil {
+		return m.addGroupSubjectFn(ctx, gs)
+	}
+	return nil
+}
+
+func (m *mockRepo) GetGroupSubject(ctx context.Context, id int) (*GroupSubjectResponse, error) {
+	if m.getGroupSubjectFn != nil {
+		return m.getGroupSubjectFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) ListGroupSubjects(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error) {
+	if m.listGroupSubjectsFn != nil {
+		return m.listGroupSubjectsFn(ctx, f)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) UpdateGroupSubject(ctx context.Context, gs GroupSubject) error {
+	if m.updateGroupSubjectFn != nil {
+		return m.updateGroupSubjectFn(ctx, gs)
+	}
+	return nil
+}
+
+func (m *mockRepo) DeleteGroupSubject(ctx context.Context, id int) error {
+	if m.deleteGroupSubjectFn != nil {
+		return m.deleteGroupSubjectFn(ctx, id)
 	}
 	return nil
 }
@@ -293,6 +334,38 @@ func TestServiceUpdateLessonValidation(t *testing.T) {
 	err = service.UpdateLesson(context.Background(), Lesson{StartTime: start, EndTime: end})
 	assert.NoError(t, err)
 	assert.True(t, called)
+}
+
+func TestServiceAddGroupSubjectValidation(t *testing.T) {
+	called := false
+	repo := &mockRepo{
+		addGroupSubjectFn: func(_ context.Context, _ *GroupSubject) error {
+			called = true
+			return nil
+		},
+	}
+	service := NewService(repo)
+
+	// Missing group / subject / non-positive semester are rejected before the repo.
+	err := service.AddGroupSubject(context.Background(), &GroupSubject{SubjectID: 2, Semester: 1})
+	assert.Error(t, err)
+	assert.False(t, called)
+
+	err = service.AddGroupSubject(context.Background(), &GroupSubject{GroupID: 1, Semester: 1})
+	assert.Error(t, err)
+	assert.False(t, called)
+
+	err = service.AddGroupSubject(context.Background(), &GroupSubject{GroupID: 1, SubjectID: 2, Semester: 0})
+	assert.Error(t, err)
+	assert.False(t, called)
+
+	// A valid entry reaches the repo; a zero teacher id is normalized to nil.
+	zeroTeacher := 0
+	gs := &GroupSubject{GroupID: 1, SubjectID: 2, Semester: 3, TeacherID: &zeroTeacher}
+	err = service.AddGroupSubject(context.Background(), gs)
+	assert.NoError(t, err)
+	assert.True(t, called)
+	assert.Nil(t, gs.TeacherID)
 }
 
 func TestServiceGetLessonsDateValidation(t *testing.T) {
