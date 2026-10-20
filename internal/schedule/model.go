@@ -20,6 +20,14 @@ type Group struct {
 	IsActive       bool   `db:"is_active" json:"is_active"`
 }
 
+// Subject — предмет из справочника предметов
+type Subject struct {
+	ID        int       `db:"id" json:"id"`
+	Name      string    `db:"name" json:"name"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
 // Lesson — конкретная пара в конкретную дату
 type Lesson struct {
 	ID        int       `json:"id"`

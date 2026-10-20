@@ -33,6 +33,11 @@ type mockService struct {
 	searchLessonsFn  func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	getTeachersFn    func(ctx context.Context) ([]account.ProfileResponse, error)
 	getClassroomsFn  func(ctx context.Context) ([]string, error)
+	listSubjectsFn   func(ctx context.Context) ([]Subject, error)
+	getSubjectFn     func(ctx context.Context, id int) (*Subject, error)
+	addSubjectFn     func(ctx context.Context, subject *Subject) error
+	updateSubjectFn  func(ctx context.Context, subject Subject) error
+	deleteSubjectFn  func(ctx context.Context, id int) error
 }
 
 func (m *mockService) GetLessons(ctx context.Context, groupID int, fromStr, toStr string) ([]LessonResponse, error) {
@@ -119,6 +124,41 @@ func (m *mockService) UpdateGroup(_ context.Context, _ Group) error {
 }
 
 func (m *mockService) DeleteGroup(_ context.Context, _ int) error {
+	return nil
+}
+
+func (m *mockService) ListSubjects(ctx context.Context) ([]Subject, error) {
+	if m.listSubjectsFn != nil {
+		return m.listSubjectsFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockService) GetSubject(ctx context.Context, id int) (*Subject, error) {
+	if m.getSubjectFn != nil {
+		return m.getSubjectFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockService) AddSubject(ctx context.Context, subject *Subject) error {
+	if m.addSubjectFn != nil {
+		return m.addSubjectFn(ctx, subject)
+	}
+	return nil
+}
+
+func (m *mockService) UpdateSubject(ctx context.Context, subject Subject) error {
+	if m.updateSubjectFn != nil {
+		return m.updateSubjectFn(ctx, subject)
+	}
+	return nil
+}
+
+func (m *mockService) DeleteSubject(ctx context.Context, id int) error {
+	if m.deleteSubjectFn != nil {
+		return m.deleteSubjectFn(ctx, id)
+	}
 	return nil
 }
 

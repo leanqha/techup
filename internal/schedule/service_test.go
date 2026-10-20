@@ -29,6 +29,11 @@ type mockRepo struct {
 	searchLessonsFn    func(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	getTeachersFn      func(ctx context.Context) ([]account.Account, error)
 	getClassroomsFn    func(ctx context.Context) ([]string, error)
+	addSubjectFn       func(ctx context.Context, subject *Subject) error
+	getSubjectFn       func(ctx context.Context, id int) (*Subject, error)
+	listSubjectsFn     func(ctx context.Context) ([]Subject, error)
+	updateSubjectFn    func(ctx context.Context, subject Subject) error
+	deleteSubjectFn    func(ctx context.Context, id int) error
 }
 
 func (m *mockRepo) AddFaculty(_ context.Context, _ Faculty) error {
@@ -60,6 +65,41 @@ func (m *mockRepo) UpdateGroup(_ context.Context, _ Group) error {
 }
 
 func (m *mockRepo) DeleteGroup(_ context.Context, _ int) error {
+	return nil
+}
+
+func (m *mockRepo) AddSubject(ctx context.Context, subject *Subject) error {
+	if m.addSubjectFn != nil {
+		return m.addSubjectFn(ctx, subject)
+	}
+	return nil
+}
+
+func (m *mockRepo) GetSubject(ctx context.Context, id int) (*Subject, error) {
+	if m.getSubjectFn != nil {
+		return m.getSubjectFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) ListSubjects(ctx context.Context) ([]Subject, error) {
+	if m.listSubjectsFn != nil {
+		return m.listSubjectsFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) UpdateSubject(ctx context.Context, subject Subject) error {
+	if m.updateSubjectFn != nil {
+		return m.updateSubjectFn(ctx, subject)
+	}
+	return nil
+}
+
+func (m *mockRepo) DeleteSubject(ctx context.Context, id int) error {
+	if m.deleteSubjectFn != nil {
+		return m.deleteSubjectFn(ctx, id)
+	}
 	return nil
 }
 
@@ -411,4 +451,45 @@ func TestServiceGetByIDDelegates(t *testing.T) {
 	lesson, err := svc.GetLesson(context.Background(), 3)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, lesson.ID)
+}
+
+func TestServiceAddSubjectValidation(t *testing.T) {
+	var saved string
+	repo := &mockRepo{
+		addSubjectFn: func(_ context.Context, subject *Subject) error {
+			saved = subject.Name
+			return nil
+		},
+	}
+	svc := NewService(repo)
+
+	// Blank / whitespace-only names are rejected before hitting the repo.
+	err := svc.AddSubject(context.Background(), &Subject{Name: "   "})
+	assert.Error(t, err)
+	assert.Empty(t, saved)
+
+	// Valid names are trimmed and forwarded to the repo.
+	err = svc.AddSubject(context.Background(), &Subject{Name: "  Математика  "})
+	assert.NoError(t, err)
+	assert.Equal(t, "Математика", saved)
+}
+
+func TestServiceUpdateSubjectValidation(t *testing.T) {
+	var saved Subject
+	repo := &mockRepo{
+		updateSubjectFn: func(_ context.Context, subject Subject) error {
+			saved = subject
+			return nil
+		},
+	}
+	svc := NewService(repo)
+
+	err := svc.UpdateSubject(context.Background(), Subject{ID: 5, Name: ""})
+	assert.Error(t, err)
+	assert.Equal(t, Subject{}, saved)
+
+	err = svc.UpdateSubject(context.Background(), Subject{ID: 5, Name: "  Физика  "})
+	assert.NoError(t, err)
+	assert.Equal(t, 5, saved.ID)
+	assert.Equal(t, "Физика", saved.Name)
 }

@@ -190,6 +190,83 @@ func (r *Repository) DeleteGroup(ctx context.Context, id int) error {
 	return nil
 }
 
+func (r *Repository) AddSubject(ctx context.Context, subject *Subject) error {
+	query := `INSERT INTO subjects (name) VALUES ($1) RETURNING id, created_at, updated_at`
+	err := r.db.QueryRow(ctx, query, subject.Name).
+		Scan(&subject.ID, &subject.CreatedAt, &subject.UpdatedAt)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			return apperrors.Conflict("subject already exists")
+		}
+		logger.LogSQLError(err, query, subject.Name)
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) GetSubject(ctx context.Context, id int) (*Subject, error) {
+	var s Subject
+	query := `SELECT id, name, created_at, updated_at FROM subjects WHERE id=$1`
+	err := r.db.QueryRow(ctx, query, id).Scan(&s.ID, &s.Name, &s.CreatedAt, &s.UpdatedAt)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperrors.NotFound("subject not found")
+		}
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (r *Repository) ListSubjects(ctx context.Context) ([]Subject, error) {
+	query := `SELECT id, name, created_at, updated_at FROM subjects ORDER BY name`
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		logger.LogSQLError(err, query, "ListSubjects")
+		return nil, err
+	}
+	defer rows.Close()
+
+	var subjects []Subject
+	for rows.Next() {
+		var s Subject
+		if err := rows.Scan(&s.ID, &s.Name, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			return nil, err
+		}
+		subjects = append(subjects, s)
+	}
+	return subjects, rows.Err()
+}
+
+func (r *Repository) UpdateSubject(ctx context.Context, subject Subject) error {
+	query := `UPDATE subjects SET name=$1, updated_at=now() WHERE id=$2`
+	ct, err := r.db.Exec(ctx, query, subject.Name, subject.ID)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			return apperrors.Conflict("subject already exists")
+		}
+		logger.LogSQLError(err, query, subject.Name, subject.ID)
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("subject not found")
+	}
+	return nil
+}
+
+func (r *Repository) DeleteSubject(ctx context.Context, id int) error {
+	query := `DELETE FROM subjects WHERE id=$1`
+	ct, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("subject not found")
+	}
+	return nil
+}
+
 func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {

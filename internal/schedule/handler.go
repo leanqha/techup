@@ -27,6 +27,11 @@ type ServiceInterface interface {
 	AddGroup(ctx context.Context, g Group) error
 	UpdateGroup(ctx context.Context, g Group) error
 	DeleteGroup(ctx context.Context, id int) error
+	ListSubjects(ctx context.Context) ([]Subject, error)
+	GetSubject(ctx context.Context, id int) (*Subject, error)
+	AddSubject(ctx context.Context, subject *Subject) error
+	UpdateSubject(ctx context.Context, subject Subject) error
+	DeleteSubject(ctx context.Context, id int) error
 	GetNote(ctx context.Context, note Note) (*Note, error)
 	AddNote(ctx context.Context, note Note) error
 	UpdateNote(ctx context.Context, note Note) error
@@ -480,6 +485,138 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 		return
 	}
 	if err := h.service.DeleteGroup(c.Request.Context(), id); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ListSubjects godoc
+// @Summary      List subjects
+// @Description  Return all subjects from the catalog, ordered by name.
+// @Tags         Schedule
+// @Produce      json
+// @Success      200 {array} Subject "Subjects list"
+// @Failure      500 {object} map[string]string "Failed to load subjects"
+// @Router       /schedule/subjects [get]
+func (h *Handler) ListSubjects(c *gin.Context) {
+	subjects, err := h.service.ListSubjects(c.Request.Context())
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, subjects)
+}
+
+// GetSubject godoc
+// @Summary      Get subject by ID
+// @Description  Return a subject by ID.
+// @Tags         Schedule
+// @Produce      json
+// @Param        id path int true "Subject ID"
+// @Success      200 {object} Subject "Subject"
+// @Failure      400 {object} map[string]string "Invalid ID"
+// @Failure      404 {object} map[string]string "Subject not found"
+// @Failure      500 {object} map[string]string "Failed to load subject"
+// @Router       /schedule/subjects/{id} [get]
+func (h *Handler) GetSubject(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	subject, err := h.service.GetSubject(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, subject)
+}
+
+// AddSubject godoc
+// @Summary      Create a subject (admin only)
+// @Description  Add a new subject to the catalog.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        subject body SubjectRequest true "Subject payload"
+// @Success      201 {object} Subject "Created subject"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      409 {object} map[string]string "Subject already exists"
+// @Failure      500 {object} map[string]string "Failed to create subject"
+// @Router       /admin/subject [post]
+func (h *Handler) AddSubject(c *gin.Context) {
+	var req SubjectRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	subject := Subject{Name: req.Name}
+	if err := h.service.AddSubject(c.Request.Context(), &subject); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, subject)
+}
+
+// UpdateSubject godoc
+// @Summary      Update a subject (admin only)
+// @Description  Update a subject's name by ID.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id      path int true "Subject ID"
+// @Param        subject body SubjectRequest true "Updated subject payload"
+// @Success      200 {object} Subject "Updated subject"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      404 {object} map[string]string "Subject not found"
+// @Failure      409 {object} map[string]string "Subject already exists"
+// @Failure      500 {object} map[string]string "Failed to update subject"
+// @Router       /admin/subject/{id} [put]
+func (h *Handler) UpdateSubject(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req SubjectRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	subject := Subject{ID: id, Name: req.Name}
+	if err := h.service.UpdateSubject(c.Request.Context(), subject); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, subject)
+}
+
+// DeleteSubject godoc
+// @Summary      Delete a subject (admin only)
+// @Description  Delete a subject from the catalog by ID.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path int true "Subject ID"
+// @Success      204 {string} string "No Content"
+// @Failure      400 {object} map[string]string "Invalid ID"
+// @Failure      404 {object} map[string]string "Subject not found"
+// @Failure      500 {object} map[string]string "Failed to delete subject"
+// @Router       /admin/subject/{id} [delete]
+func (h *Handler) DeleteSubject(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	if err := h.service.DeleteSubject(c.Request.Context(), id); err != nil {
 		respondError(c, err)
 		return
 	}

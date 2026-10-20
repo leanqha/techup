@@ -69,3 +69,8 @@ type LessonImportRequest struct {
 type NoteTextRequest struct {
 	Text string `json:"text" binding:"required"`
 }
+
+// SubjectRequest describes payload for creating or updating a subject.
+type SubjectRequest struct {
+	Name string `json:"name" binding:"required"`
+}
