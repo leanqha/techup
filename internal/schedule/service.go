@@ -26,6 +26,11 @@ type RepositoryInterface interface {
 	ListGroups(ctx context.Context) ([]Group, error)
 	UpdateGroup(ctx context.Context, g Group) error
 	DeleteGroup(ctx context.Context, id int) error
+	AddSubject(ctx context.Context, subject *Subject) error
+	GetSubject(ctx context.Context, id int) (*Subject, error)
+	ListSubjects(ctx context.Context) ([]Subject, error)
+	UpdateSubject(ctx context.Context, subject Subject) error
+	DeleteSubject(ctx context.Context, id int) error
 	AddLesson(ctx context.Context, lesson Lesson) error
 	GetLesson(ctx context.Context, id int) (*LessonResponse, error)
 	UpdateLesson(ctx context.Context, lesson Lesson) error
@@ -80,6 +85,34 @@ func (s *Service) UpdateGroup(ctx context.Context, g Group) error {
 
 func (s *Service) DeleteGroup(ctx context.Context, id int) error {
 	return s.repo.DeleteGroup(ctx, id)
+}
+
+func (s *Service) ListSubjects(ctx context.Context) ([]Subject, error) {
+	return s.repo.ListSubjects(ctx)
+}
+
+func (s *Service) GetSubject(ctx context.Context, id int) (*Subject, error) {
+	return s.repo.GetSubject(ctx, id)
+}
+
+func (s *Service) AddSubject(ctx context.Context, subject *Subject) error {
+	subject.Name = strings.TrimSpace(subject.Name)
+	if subject.Name == "" {
+		return apperrors.InvalidArgument("subject name is required")
+	}
+	return s.repo.AddSubject(ctx, subject)
+}
+
+func (s *Service) UpdateSubject(ctx context.Context, subject Subject) error {
+	subject.Name = strings.TrimSpace(subject.Name)
+	if subject.Name == "" {
+		return apperrors.InvalidArgument("subject name is required")
+	}
+	return s.repo.UpdateSubject(ctx, subject)
+}
+
+func (s *Service) DeleteSubject(ctx context.Context, id int) error {
+	return s.repo.DeleteSubject(ctx, id)
 }
 
 func (s *Service) AddLesson(ctx context.Context, lesson Lesson) error {
