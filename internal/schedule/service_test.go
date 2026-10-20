@@ -39,6 +39,9 @@ type mockRepo struct {
 	listLessonTypesFn  func(ctx context.Context) ([]LessonType, error)
 	updateLessonTypeFn func(ctx context.Context, lt LessonType) error
 	deleteLessonTypeFn func(ctx context.Context, id int) error
+
+	listSlotsForGenerationFn     func(ctx context.Context, groupID, semester int) ([]ScheduleSlot, error)
+	replaceGroupLessonsInRangeFn func(ctx context.Context, groupID int, from, to time.Time, lessons []Lesson) error
 }
 
 func (m *mockRepo) AddFaculty(_ context.Context, _ Faculty) error {
@@ -247,6 +250,52 @@ func (m *mockRepo) GetLesson(ctx context.Context, id int) (*LessonResponse, erro
 		return m.getLessonFn(ctx, id)
 	}
 	return nil, nil
+}
+
+func (m *mockRepo) ListGroupSubjects(_ context.Context, _ GroupSubjectFilter) ([]GroupSubjectResponse, error) {
+	return nil, nil
+}
+
+func (m *mockRepo) AddGroupSubject(_ context.Context, _ *GroupSubject) error {
+	return nil
+}
+
+func (m *mockRepo) UpdateGroupSubject(_ context.Context, _ GroupSubject) error {
+	return nil
+}
+
+func (m *mockRepo) DeleteGroupSubject(_ context.Context, _ int) error {
+	return nil
+}
+
+func (m *mockRepo) ListSlots(_ context.Context, _ SlotFilter) ([]SlotResponse, error) {
+	return nil, nil
+}
+
+func (m *mockRepo) AddSlot(_ context.Context, _ *ScheduleSlot) error {
+	return nil
+}
+
+func (m *mockRepo) UpdateSlot(_ context.Context, _ ScheduleSlot) error {
+	return nil
+}
+
+func (m *mockRepo) DeleteSlot(_ context.Context, _ int) error {
+	return nil
+}
+
+func (m *mockRepo) ListSlotsForGeneration(ctx context.Context, groupID, semester int) ([]ScheduleSlot, error) {
+	if m.listSlotsForGenerationFn != nil {
+		return m.listSlotsForGenerationFn(ctx, groupID, semester)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) ReplaceGroupLessonsInRange(ctx context.Context, groupID int, from, to time.Time, lessons []Lesson) error {
+	if m.replaceGroupLessonsInRangeFn != nil {
+		return m.replaceGroupLessonsInRangeFn(ctx, groupID, from, to, lessons)
+	}
+	return nil
 }
 
 func TestServiceAddLessonValidation(t *testing.T) {

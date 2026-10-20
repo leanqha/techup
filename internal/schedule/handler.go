@@ -45,6 +45,15 @@ type ServiceInterface interface {
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	GetTeachers(ctx context.Context) ([]account.ProfileResponse, error)
 	GetClassrooms(ctx context.Context) ([]string, error)
+	ListGroupSubjects(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error)
+	AddGroupSubject(ctx context.Context, gs *GroupSubject) error
+	UpdateGroupSubject(ctx context.Context, gs GroupSubject) error
+	DeleteGroupSubject(ctx context.Context, id int) error
+	ListSlots(ctx context.Context, f SlotFilter) ([]SlotResponse, error)
+	AddSlot(ctx context.Context, s *ScheduleSlot) error
+	UpdateSlot(ctx context.Context, s ScheduleSlot) error
+	DeleteSlot(ctx context.Context, id int) error
+	GenerateSchedule(ctx context.Context, groupID, semester int, start, end time.Time, firstParity string) (GenerateScheduleResponse, error)
 }
 
 type Handler struct {

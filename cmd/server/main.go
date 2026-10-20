@@ -128,6 +128,8 @@ func main() {
 		scheduleGroup.GET("/search", scheduleHandler.SearchLessons)
 		scheduleGroup.GET("/teachers", scheduleHandler.GetTeachers)
 		scheduleGroup.GET("/classrooms", scheduleHandler.GetClassrooms)
+		scheduleGroup.GET("/group-subjects", scheduleHandler.ListGroupSubjects)
+		scheduleGroup.GET("/slots", scheduleHandler.ListSlots)
 	}
 
 	lessonNotes := scheduleGroup.Group("/lessons/:id")
@@ -192,7 +194,16 @@ func main() {
 		adminGroup.PUT("/lesson/:id", scheduleHandler.UpdateLesson)
 		adminGroup.DELETE("/lesson/:id", scheduleHandler.DeleteLesson)
 
+		adminGroup.POST("/group-subject", scheduleHandler.AddGroupSubject)
+		adminGroup.PUT("/group-subject/:id", scheduleHandler.UpdateGroupSubject)
+		adminGroup.DELETE("/group-subject/:id", scheduleHandler.DeleteGroupSubject)
+
+		adminGroup.POST("/slot", scheduleHandler.AddSlot)
+		adminGroup.PUT("/slot/:id", scheduleHandler.UpdateSlot)
+		adminGroup.DELETE("/slot/:id", scheduleHandler.DeleteSlot)
+
 		adminGroup.POST("/schedule/import", scheduleHandler.ImportSchedule)
+		adminGroup.POST("/schedule/generate", scheduleHandler.GenerateSchedule)
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
