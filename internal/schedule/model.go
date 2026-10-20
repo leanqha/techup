@@ -28,6 +28,15 @@ type Subject struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
+// LessonType — тип занятия из справочника (с цветом для отображения)
+type LessonType struct {
+	ID        int       `db:"id" json:"id"`
+	Name      string    `db:"name" json:"name"`
+	Color     string    `db:"color" json:"color"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
 // Lesson — конкретная пара в конкретную дату
 type Lesson struct {
 	ID        int       `json:"id"`

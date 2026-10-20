@@ -74,3 +74,9 @@ type NoteTextRequest struct {
 type SubjectRequest struct {
 	Name string `json:"name" binding:"required"`
 }
+
+// LessonTypeRequest describes payload for creating or updating a lesson type.
+type LessonTypeRequest struct {
+	Name  string `json:"name" binding:"required"`
+	Color string `json:"color"`
+}

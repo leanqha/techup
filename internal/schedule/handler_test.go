@@ -38,6 +38,12 @@ type mockService struct {
 	addSubjectFn     func(ctx context.Context, subject *Subject) error
 	updateSubjectFn  func(ctx context.Context, subject Subject) error
 	deleteSubjectFn  func(ctx context.Context, id int) error
+
+	listLessonTypesFn  func(ctx context.Context) ([]LessonType, error)
+	getLessonTypeFn    func(ctx context.Context, id int) (*LessonType, error)
+	addLessonTypeFn    func(ctx context.Context, lt *LessonType) error
+	updateLessonTypeFn func(ctx context.Context, lt LessonType) error
+	deleteLessonTypeFn func(ctx context.Context, id int) error
 }
 
 func (m *mockService) GetLessons(ctx context.Context, groupID int, fromStr, toStr string) ([]LessonResponse, error) {
@@ -158,6 +164,41 @@ func (m *mockService) UpdateSubject(ctx context.Context, subject Subject) error 
 func (m *mockService) DeleteSubject(ctx context.Context, id int) error {
 	if m.deleteSubjectFn != nil {
 		return m.deleteSubjectFn(ctx, id)
+	}
+	return nil
+}
+
+func (m *mockService) ListLessonTypes(ctx context.Context) ([]LessonType, error) {
+	if m.listLessonTypesFn != nil {
+		return m.listLessonTypesFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockService) GetLessonType(ctx context.Context, id int) (*LessonType, error) {
+	if m.getLessonTypeFn != nil {
+		return m.getLessonTypeFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockService) AddLessonType(ctx context.Context, lt *LessonType) error {
+	if m.addLessonTypeFn != nil {
+		return m.addLessonTypeFn(ctx, lt)
+	}
+	return nil
+}
+
+func (m *mockService) UpdateLessonType(ctx context.Context, lt LessonType) error {
+	if m.updateLessonTypeFn != nil {
+		return m.updateLessonTypeFn(ctx, lt)
+	}
+	return nil
+}
+
+func (m *mockService) DeleteLessonType(ctx context.Context, id int) error {
+	if m.deleteLessonTypeFn != nil {
+		return m.deleteLessonTypeFn(ctx, id)
 	}
 	return nil
 }

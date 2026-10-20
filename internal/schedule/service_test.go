@@ -34,6 +34,11 @@ type mockRepo struct {
 	listSubjectsFn     func(ctx context.Context) ([]Subject, error)
 	updateSubjectFn    func(ctx context.Context, subject Subject) error
 	deleteSubjectFn    func(ctx context.Context, id int) error
+	addLessonTypeFn    func(ctx context.Context, lt *LessonType) error
+	getLessonTypeFn    func(ctx context.Context, id int) (*LessonType, error)
+	listLessonTypesFn  func(ctx context.Context) ([]LessonType, error)
+	updateLessonTypeFn func(ctx context.Context, lt LessonType) error
+	deleteLessonTypeFn func(ctx context.Context, id int) error
 }
 
 func (m *mockRepo) AddFaculty(_ context.Context, _ Faculty) error {
@@ -99,6 +104,41 @@ func (m *mockRepo) UpdateSubject(ctx context.Context, subject Subject) error {
 func (m *mockRepo) DeleteSubject(ctx context.Context, id int) error {
 	if m.deleteSubjectFn != nil {
 		return m.deleteSubjectFn(ctx, id)
+	}
+	return nil
+}
+
+func (m *mockRepo) AddLessonType(ctx context.Context, lt *LessonType) error {
+	if m.addLessonTypeFn != nil {
+		return m.addLessonTypeFn(ctx, lt)
+	}
+	return nil
+}
+
+func (m *mockRepo) GetLessonType(ctx context.Context, id int) (*LessonType, error) {
+	if m.getLessonTypeFn != nil {
+		return m.getLessonTypeFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) ListLessonTypes(ctx context.Context) ([]LessonType, error) {
+	if m.listLessonTypesFn != nil {
+		return m.listLessonTypesFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) UpdateLessonType(ctx context.Context, lt LessonType) error {
+	if m.updateLessonTypeFn != nil {
+		return m.updateLessonTypeFn(ctx, lt)
+	}
+	return nil
+}
+
+func (m *mockRepo) DeleteLessonType(ctx context.Context, id int) error {
+	if m.deleteLessonTypeFn != nil {
+		return m.deleteLessonTypeFn(ctx, id)
 	}
 	return nil
 }
@@ -492,4 +532,35 @@ func TestServiceUpdateSubjectValidation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 5, saved.ID)
 	assert.Equal(t, "Физика", saved.Name)
+}
+
+func TestServiceAddLessonTypeValidation(t *testing.T) {
+	var saved LessonType
+	repo := &mockRepo{
+		addLessonTypeFn: func(_ context.Context, lt *LessonType) error {
+			saved = *lt
+			return nil
+		},
+	}
+	svc := NewService(repo)
+
+	// Blank name is rejected before the repo is touched.
+	err := svc.AddLessonType(context.Background(), &LessonType{Name: "  "})
+	assert.Error(t, err)
+	assert.Equal(t, LessonType{}, saved)
+
+	// Missing color falls back to the default accent.
+	err = svc.AddLessonType(context.Background(), &LessonType{Name: "  Экзамен  "})
+	assert.NoError(t, err)
+	assert.Equal(t, "Экзамен", saved.Name)
+	assert.Equal(t, defaultLessonTypeColor, saved.Color)
+
+	// An invalid color is rejected.
+	err = svc.AddLessonType(context.Background(), &LessonType{Name: "Зачет", Color: "green"})
+	assert.Error(t, err)
+
+	// A valid hex color is kept.
+	err = svc.AddLessonType(context.Background(), &LessonType{Name: "Зачет", Color: "#059669"})
+	assert.NoError(t, err)
+	assert.Equal(t, "#059669", saved.Color)
 }

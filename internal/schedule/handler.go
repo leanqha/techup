@@ -32,6 +32,11 @@ type ServiceInterface interface {
 	AddSubject(ctx context.Context, subject *Subject) error
 	UpdateSubject(ctx context.Context, subject Subject) error
 	DeleteSubject(ctx context.Context, id int) error
+	ListLessonTypes(ctx context.Context) ([]LessonType, error)
+	GetLessonType(ctx context.Context, id int) (*LessonType, error)
+	AddLessonType(ctx context.Context, lt *LessonType) error
+	UpdateLessonType(ctx context.Context, lt LessonType) error
+	DeleteLessonType(ctx context.Context, id int) error
 	GetNote(ctx context.Context, note Note) (*Note, error)
 	AddNote(ctx context.Context, note Note) error
 	UpdateNote(ctx context.Context, note Note) error
@@ -617,6 +622,138 @@ func (h *Handler) DeleteSubject(c *gin.Context) {
 		return
 	}
 	if err := h.service.DeleteSubject(c.Request.Context(), id); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ListLessonTypes godoc
+// @Summary      List lesson types
+// @Description  Return all lesson types from the catalog (with their accent color).
+// @Tags         Schedule
+// @Produce      json
+// @Success      200 {array} LessonType "Lesson types list"
+// @Failure      500 {object} map[string]string "Failed to load lesson types"
+// @Router       /schedule/lesson-types [get]
+func (h *Handler) ListLessonTypes(c *gin.Context) {
+	types, err := h.service.ListLessonTypes(c.Request.Context())
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, types)
+}
+
+// GetLessonType godoc
+// @Summary      Get lesson type by ID
+// @Description  Return a lesson type by ID.
+// @Tags         Schedule
+// @Produce      json
+// @Param        id path int true "Lesson type ID"
+// @Success      200 {object} LessonType "Lesson type"
+// @Failure      400 {object} map[string]string "Invalid ID"
+// @Failure      404 {object} map[string]string "Lesson type not found"
+// @Failure      500 {object} map[string]string "Failed to load lesson type"
+// @Router       /schedule/lesson-types/{id} [get]
+func (h *Handler) GetLessonType(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	lt, err := h.service.GetLessonType(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, lt)
+}
+
+// AddLessonType godoc
+// @Summary      Create a lesson type (admin only)
+// @Description  Add a new lesson type to the catalog.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        lessonType body LessonTypeRequest true "Lesson type payload"
+// @Success      201 {object} LessonType "Created lesson type"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      409 {object} map[string]string "Lesson type already exists"
+// @Failure      500 {object} map[string]string "Failed to create lesson type"
+// @Router       /admin/lesson-type [post]
+func (h *Handler) AddLessonType(c *gin.Context) {
+	var req LessonTypeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	lt := LessonType{Name: req.Name, Color: req.Color}
+	if err := h.service.AddLessonType(c.Request.Context(), &lt); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, lt)
+}
+
+// UpdateLessonType godoc
+// @Summary      Update a lesson type (admin only)
+// @Description  Update a lesson type's name and color by ID.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id         path int true "Lesson type ID"
+// @Param        lessonType body LessonTypeRequest true "Updated lesson type payload"
+// @Success      200 {object} LessonType "Updated lesson type"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      404 {object} map[string]string "Lesson type not found"
+// @Failure      409 {object} map[string]string "Lesson type already exists"
+// @Failure      500 {object} map[string]string "Failed to update lesson type"
+// @Router       /admin/lesson-type/{id} [put]
+func (h *Handler) UpdateLessonType(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req LessonTypeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	lt := LessonType{ID: id, Name: req.Name, Color: req.Color}
+	if err := h.service.UpdateLessonType(c.Request.Context(), lt); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, lt)
+}
+
+// DeleteLessonType godoc
+// @Summary      Delete a lesson type (admin only)
+// @Description  Delete a lesson type from the catalog by ID.
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path int true "Lesson type ID"
+// @Success      204 {string} string "No Content"
+// @Failure      400 {object} map[string]string "Invalid ID"
+// @Failure      404 {object} map[string]string "Lesson type not found"
+// @Failure      500 {object} map[string]string "Failed to delete lesson type"
+// @Router       /admin/lesson-type/{id} [delete]
+func (h *Handler) DeleteLessonType(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	if err := h.service.DeleteLessonType(c.Request.Context(), id); err != nil {
 		respondError(c, err)
 		return
 	}
