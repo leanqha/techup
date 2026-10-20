@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 	"techup/internal/account"
@@ -31,6 +32,11 @@ type RepositoryInterface interface {
 	ListSubjects(ctx context.Context) ([]Subject, error)
 	UpdateSubject(ctx context.Context, subject Subject) error
 	DeleteSubject(ctx context.Context, id int) error
+	AddLessonType(ctx context.Context, lt *LessonType) error
+	GetLessonType(ctx context.Context, id int) (*LessonType, error)
+	ListLessonTypes(ctx context.Context) ([]LessonType, error)
+	UpdateLessonType(ctx context.Context, lt LessonType) error
+	DeleteLessonType(ctx context.Context, id int) error
 	AddLesson(ctx context.Context, lesson Lesson) error
 	GetLesson(ctx context.Context, id int) (*LessonResponse, error)
 	UpdateLesson(ctx context.Context, lesson Lesson) error
@@ -113,6 +119,56 @@ func (s *Service) UpdateSubject(ctx context.Context, subject Subject) error {
 
 func (s *Service) DeleteSubject(ctx context.Context, id int) error {
 	return s.repo.DeleteSubject(ctx, id)
+}
+
+const defaultLessonTypeColor = "#64748b"
+
+// hexColorPattern matches #rgb and #rrggbb colors used for lesson type accents.
+var hexColorPattern = regexp.MustCompile(`^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`)
+
+// normalizeLessonType trims the name, enforces it is present, and validates the
+// color, falling back to the default accent when none is provided.
+func normalizeLessonType(lt *LessonType) error {
+	lt.Name = strings.TrimSpace(lt.Name)
+	if lt.Name == "" {
+		return apperrors.InvalidArgument("lesson type name is required")
+	}
+
+	lt.Color = strings.TrimSpace(lt.Color)
+	if lt.Color == "" {
+		lt.Color = defaultLessonTypeColor
+		return nil
+	}
+	if !hexColorPattern.MatchString(lt.Color) {
+		return apperrors.InvalidArgument("color must be a hex value like #2563eb")
+	}
+	return nil
+}
+
+func (s *Service) ListLessonTypes(ctx context.Context) ([]LessonType, error) {
+	return s.repo.ListLessonTypes(ctx)
+}
+
+func (s *Service) GetLessonType(ctx context.Context, id int) (*LessonType, error) {
+	return s.repo.GetLessonType(ctx, id)
+}
+
+func (s *Service) AddLessonType(ctx context.Context, lt *LessonType) error {
+	if err := normalizeLessonType(lt); err != nil {
+		return err
+	}
+	return s.repo.AddLessonType(ctx, lt)
+}
+
+func (s *Service) UpdateLessonType(ctx context.Context, lt LessonType) error {
+	if err := normalizeLessonType(&lt); err != nil {
+		return err
+	}
+	return s.repo.UpdateLessonType(ctx, lt)
+}
+
+func (s *Service) DeleteLessonType(ctx context.Context, id int) error {
+	return s.repo.DeleteLessonType(ctx, id)
 }
 
 func (s *Service) AddLesson(ctx context.Context, lesson Lesson) error {

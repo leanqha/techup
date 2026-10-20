@@ -267,6 +267,83 @@ func (r *Repository) DeleteSubject(ctx context.Context, id int) error {
 	return nil
 }
 
+func (r *Repository) AddLessonType(ctx context.Context, lt *LessonType) error {
+	query := `INSERT INTO lesson_types (name, color) VALUES ($1, $2) RETURNING id, created_at, updated_at`
+	err := r.db.QueryRow(ctx, query, lt.Name, lt.Color).
+		Scan(&lt.ID, &lt.CreatedAt, &lt.UpdatedAt)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			return apperrors.Conflict("lesson type already exists")
+		}
+		logger.LogSQLError(err, query, lt.Name, lt.Color)
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) GetLessonType(ctx context.Context, id int) (*LessonType, error) {
+	var lt LessonType
+	query := `SELECT id, name, color, created_at, updated_at FROM lesson_types WHERE id=$1`
+	err := r.db.QueryRow(ctx, query, id).Scan(&lt.ID, &lt.Name, &lt.Color, &lt.CreatedAt, &lt.UpdatedAt)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperrors.NotFound("lesson type not found")
+		}
+		return nil, err
+	}
+	return &lt, nil
+}
+
+func (r *Repository) ListLessonTypes(ctx context.Context) ([]LessonType, error) {
+	query := `SELECT id, name, color, created_at, updated_at FROM lesson_types ORDER BY id`
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		logger.LogSQLError(err, query, "ListLessonTypes")
+		return nil, err
+	}
+	defer rows.Close()
+
+	var types []LessonType
+	for rows.Next() {
+		var lt LessonType
+		if err := rows.Scan(&lt.ID, &lt.Name, &lt.Color, &lt.CreatedAt, &lt.UpdatedAt); err != nil {
+			return nil, err
+		}
+		types = append(types, lt)
+	}
+	return types, rows.Err()
+}
+
+func (r *Repository) UpdateLessonType(ctx context.Context, lt LessonType) error {
+	query := `UPDATE lesson_types SET name=$1, color=$2, updated_at=now() WHERE id=$3`
+	ct, err := r.db.Exec(ctx, query, lt.Name, lt.Color, lt.ID)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			return apperrors.Conflict("lesson type already exists")
+		}
+		logger.LogSQLError(err, query, lt.Name, lt.Color, lt.ID)
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("lesson type not found")
+	}
+	return nil
+}
+
+func (r *Repository) DeleteLessonType(ctx context.Context, id int) error {
+	query := `DELETE FROM lesson_types WHERE id=$1`
+	ct, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("lesson type not found")
+	}
+	return nil
+}
+
 func (r *Repository) AddLesson(ctx context.Context, lesson Lesson) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
