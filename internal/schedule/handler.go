@@ -49,6 +49,10 @@ type ServiceInterface interface {
 	AddGroupSubject(ctx context.Context, gs *GroupSubject) error
 	UpdateGroupSubject(ctx context.Context, gs GroupSubject) error
 	DeleteGroupSubject(ctx context.Context, id int) error
+	ListFacultySessions(ctx context.Context, f FacultySessionFilter) ([]FacultySessionResponse, error)
+	AddFacultySession(ctx context.Context, fs *FacultySession) error
+	UpdateFacultySession(ctx context.Context, fs FacultySession) error
+	DeleteFacultySession(ctx context.Context, id int) error
 	ListSlots(ctx context.Context, f SlotFilter) ([]SlotResponse, error)
 	AddSlot(ctx context.Context, s *ScheduleSlot) error
 	UpdateSlot(ctx context.Context, s ScheduleSlot) error

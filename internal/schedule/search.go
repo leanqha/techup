@@ -16,6 +16,11 @@ type GroupSubjectFilter struct {
 	Semester *int
 }
 
+// FacultySessionFilter narrows an exam-session listing to a single faculty.
+type FacultySessionFilter struct {
+	FacultyID *int
+}
+
 // SlotFilter narrows a schedule-slot listing. TeacherID is used to find a
 // teacher's slots across all groups for cross-group conflict detection.
 type SlotFilter struct {

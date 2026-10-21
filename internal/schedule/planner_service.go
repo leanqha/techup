@@ -31,6 +31,40 @@ func (s *Service) DeleteGroupSubject(ctx context.Context, id int) error {
 	return s.repo.DeleteGroupSubject(ctx, id)
 }
 
+// ---- Faculty exam sessions (faculty_sessions) ----
+
+// normalizeFacultySession trims and validates an exam session before it is
+// persisted.
+func normalizeFacultySession(fs *FacultySession) error {
+	if fs.EndDate.Before(fs.StartDate) {
+		return apperrors.InvalidArgument("end_date must not be before start_date")
+	}
+	fs.Name = strings.TrimSpace(fs.Name)
+	return nil
+}
+
+func (s *Service) ListFacultySessions(ctx context.Context, f FacultySessionFilter) ([]FacultySessionResponse, error) {
+	return s.repo.ListFacultySessions(ctx, f)
+}
+
+func (s *Service) AddFacultySession(ctx context.Context, fs *FacultySession) error {
+	if err := normalizeFacultySession(fs); err != nil {
+		return err
+	}
+	return s.repo.AddFacultySession(ctx, fs)
+}
+
+func (s *Service) UpdateFacultySession(ctx context.Context, fs FacultySession) error {
+	if err := normalizeFacultySession(&fs); err != nil {
+		return err
+	}
+	return s.repo.UpdateFacultySession(ctx, fs)
+}
+
+func (s *Service) DeleteFacultySession(ctx context.Context, id int) error {
+	return s.repo.DeleteFacultySession(ctx, id)
+}
+
 // ---- Schedule slots (schedule_slots) ----
 
 // normalizeSlot trims, validates and defaults a slot before it is persisted.

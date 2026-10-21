@@ -101,6 +101,25 @@ type GroupSubjectResponse struct {
 	TeacherName string `json:"teacher_name"`
 }
 
+// FacultySessionRequest describes payload for creating or updating a faculty
+// exam session.
+type FacultySessionRequest struct {
+	FacultyID int    `json:"faculty_id"`
+	Name      string `json:"name"`
+	StartDate string `json:"start_date" binding:"required"` // format: YYYY-MM-DD
+	EndDate   string `json:"end_date" binding:"required"`   // format: YYYY-MM-DD
+}
+
+// FacultySessionResponse represents a faculty exam session with the faculty name.
+type FacultySessionResponse struct {
+	ID          int    `json:"id"`
+	FacultyID   int    `json:"faculty_id"`
+	FacultyName string `json:"faculty_name"`
+	Name        string `json:"name"`
+	StartDate   string `json:"start_date"`
+	EndDate     string `json:"end_date"`
+}
+
 // SlotRequest describes payload for creating or updating a schedule slot.
 type SlotRequest struct {
 	GroupID    int    `json:"group_id" binding:"required"`

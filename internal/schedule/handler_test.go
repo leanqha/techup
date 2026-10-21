@@ -298,6 +298,22 @@ func (m *mockService) DeleteGroupSubject(ctx context.Context, id int) error {
 	return nil
 }
 
+func (m *mockService) ListFacultySessions(_ context.Context, _ FacultySessionFilter) ([]FacultySessionResponse, error) {
+	return nil, nil
+}
+
+func (m *mockService) AddFacultySession(_ context.Context, _ *FacultySession) error {
+	return nil
+}
+
+func (m *mockService) UpdateFacultySession(_ context.Context, _ FacultySession) error {
+	return nil
+}
+
+func (m *mockService) DeleteFacultySession(_ context.Context, _ int) error {
+	return nil
+}
+
 func (m *mockService) ListSlots(ctx context.Context, f SlotFilter) ([]SlotResponse, error) {
 	if m.listSlotsFn != nil {
 		return m.listSlotsFn(ctx, f)

@@ -94,6 +94,18 @@ type ScheduleSlot struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+// FacultySession — экзаменационная сессия факультета: период с датами начала и
+// конца. У одного факультета может быть несколько сессий (зимняя, летняя и т.д.).
+type FacultySession struct {
+	ID        int       `json:"id"`
+	FacultyID int       `json:"faculty_id"`
+	Name      string    `json:"name"`
+	StartDate time.Time `json:"start_date"`
+	EndDate   time.Time `json:"end_date"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // Note — персональная заметка пользователя к паре
 type Note struct {
 	ID        int       `json:"id"`
