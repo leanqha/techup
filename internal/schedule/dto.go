@@ -83,22 +83,26 @@ type LessonTypeRequest struct {
 
 // GroupSubjectRequest describes payload for adding or updating a curriculum entry.
 type GroupSubjectRequest struct {
-	GroupID   int  `json:"group_id" binding:"required"`
-	SubjectID int  `json:"subject_id" binding:"required"`
-	Semester  int  `json:"semester" binding:"required"`
-	TeacherID *int `json:"teacher_id"`
+	GroupID      int  `json:"group_id" binding:"required"`
+	SubjectID    int  `json:"subject_id" binding:"required"`
+	Semester     int  `json:"semester" binding:"required"`
+	TeacherID    *int `json:"teacher_id"`
+	LessonTypeID *int `json:"lesson_type_id"`
 }
 
 // GroupSubjectResponse represents a curriculum entry with related display names.
 type GroupSubjectResponse struct {
-	ID          int    `json:"id"`
-	GroupID     int    `json:"group_id"`
-	GroupName   string `json:"group_name"`
-	SubjectID   int    `json:"subject_id"`
-	SubjectName string `json:"subject_name"`
-	Semester    int    `json:"semester"`
-	TeacherID   *int   `json:"teacher_id"`
-	TeacherName string `json:"teacher_name"`
+	ID              int    `json:"id"`
+	GroupID         int    `json:"group_id"`
+	GroupName       string `json:"group_name"`
+	SubjectID       int    `json:"subject_id"`
+	SubjectName     string `json:"subject_name"`
+	Semester        int    `json:"semester"`
+	TeacherID       *int   `json:"teacher_id"`
+	TeacherName     string `json:"teacher_name"`
+	LessonTypeID    *int   `json:"lesson_type_id"`
+	LessonTypeName  string `json:"lesson_type_name"`
+	LessonTypeColor string `json:"lesson_type_color"`
 }
 
 // FacultySessionRequest describes payload for creating or updating a faculty
