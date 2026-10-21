@@ -268,6 +268,22 @@ func (m *mockRepo) DeleteGroupSubject(_ context.Context, _ int) error {
 	return nil
 }
 
+func (m *mockRepo) ListFacultySessions(_ context.Context, _ FacultySessionFilter) ([]FacultySessionResponse, error) {
+	return nil, nil
+}
+
+func (m *mockRepo) AddFacultySession(_ context.Context, _ *FacultySession) error {
+	return nil
+}
+
+func (m *mockRepo) UpdateFacultySession(_ context.Context, _ FacultySession) error {
+	return nil
+}
+
+func (m *mockRepo) DeleteFacultySession(_ context.Context, _ int) error {
+	return nil
+}
+
 func (m *mockRepo) ListSlots(_ context.Context, _ SlotFilter) ([]SlotResponse, error) {
 	return nil, nil
 }

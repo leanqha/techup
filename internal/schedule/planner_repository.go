@@ -137,6 +137,101 @@ func (r *Repository) ListGroupSubjects(ctx context.Context, f GroupSubjectFilter
 	return items, rows.Err()
 }
 
+// ---- Faculty exam sessions (faculty_sessions) ----
+
+func (r *Repository) AddFacultySession(ctx context.Context, fs *FacultySession) error {
+	query := `
+	INSERT INTO faculty_sessions (faculty_id, name, start_date, end_date)
+	VALUES ($1, $2, $3, $4)
+	RETURNING id, created_at, updated_at`
+
+	err := r.db.QueryRow(ctx, query, fs.FacultyID, fs.Name, fs.StartDate, fs.EndDate).
+		Scan(&fs.ID, &fs.CreatedAt, &fs.UpdatedAt)
+	if err != nil {
+		if strings.Contains(err.Error(), "foreign key") {
+			return apperrors.InvalidArgument("faculty not found")
+		}
+		logger.LogSQLError(err, query, fs.FacultyID, fs.Name, fs.StartDate, fs.EndDate)
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) UpdateFacultySession(ctx context.Context, fs FacultySession) error {
+	query := `
+	UPDATE faculty_sessions
+	SET faculty_id=$1, name=$2, start_date=$3, end_date=$4, updated_at=now()
+	WHERE id=$5`
+
+	ct, err := r.db.Exec(ctx, query, fs.FacultyID, fs.Name, fs.StartDate, fs.EndDate, fs.ID)
+	if err != nil {
+		if strings.Contains(err.Error(), "foreign key") {
+			return apperrors.InvalidArgument("faculty not found")
+		}
+		logger.LogSQLError(err, query, fs.FacultyID, fs.Name, fs.StartDate, fs.EndDate, fs.ID)
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("faculty session not found")
+	}
+	return nil
+}
+
+func (r *Repository) DeleteFacultySession(ctx context.Context, id int) error {
+	query := `DELETE FROM faculty_sessions WHERE id=$1`
+	ct, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		logger.LogSQLError(err, query, id)
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return apperrors.NotFound("faculty session not found")
+	}
+	return nil
+}
+
+func (r *Repository) ListFacultySessions(ctx context.Context, f FacultySessionFilter) ([]FacultySessionResponse, error) {
+	query := `
+	SELECT fs.id, fs.faculty_id, fc.name, fs.name, fs.start_date, fs.end_date
+	FROM faculty_sessions fs
+	LEFT JOIN faculties fc ON fs.faculty_id = fc.id`
+
+	var args []any
+	if f.FacultyID != nil {
+		query += " WHERE fs.faculty_id = $1"
+		args = append(args, *f.FacultyID)
+	}
+	query += " ORDER BY fs.start_date, fs.id"
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		logger.LogSQLError(err, query, args...)
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]FacultySessionResponse, 0)
+	for rows.Next() {
+		var (
+			dto         FacultySessionResponse
+			facultyName *string
+			start, end  time.Time
+		)
+		if err := rows.Scan(
+			&dto.ID, &dto.FacultyID, &facultyName, &dto.Name, &start, &end,
+		); err != nil {
+			return nil, err
+		}
+		if facultyName != nil {
+			dto.FacultyName = *facultyName
+		}
+		dto.StartDate = start.Format("2006-01-02")
+		dto.EndDate = end.Format("2006-01-02")
+		items = append(items, dto)
+	}
+	return items, rows.Err()
+}
+
 // ---- Schedule slots (schedule_slots) ----
 
 func (r *Repository) AddSlot(ctx context.Context, s *ScheduleSlot) error {

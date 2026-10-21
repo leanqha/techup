@@ -172,6 +172,163 @@ func (h *Handler) DeleteGroupSubject(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// ---- Faculty exam sessions (faculty_sessions) ----
+
+// facultySessionToResponse formats a stored session for the API. The faculty
+// name is left empty here; the list endpoint fills it via a join.
+func facultySessionToResponse(fs FacultySession) FacultySessionResponse {
+	return FacultySessionResponse{
+		ID:        fs.ID,
+		FacultyID: fs.FacultyID,
+		Name:      fs.Name,
+		StartDate: fs.StartDate.Format("2006-01-02"),
+		EndDate:   fs.EndDate.Format("2006-01-02"),
+	}
+}
+
+// facultySessionFromRequest parses the YYYY-MM-DD dates of a request into a model.
+func facultySessionFromRequest(req FacultySessionRequest) (FacultySession, error) {
+	start, err := time.Parse("2006-01-02", req.StartDate)
+	if err != nil {
+		return FacultySession{}, fmt.Errorf("invalid start_date format (expected YYYY-MM-DD)")
+	}
+	end, err := time.Parse("2006-01-02", req.EndDate)
+	if err != nil {
+		return FacultySession{}, fmt.Errorf("invalid end_date format (expected YYYY-MM-DD)")
+	}
+	return FacultySession{
+		FacultyID: req.FacultyID,
+		Name:      req.Name,
+		StartDate: start,
+		EndDate:   end,
+	}, nil
+}
+
+// ListFacultySessions godoc
+// @Summary      List faculty exam sessions
+// @Description  Return faculty exam sessions (start/end dates), optionally filtered by faculty.
+// @Tags         Schedule
+// @Produce      json
+// @Param        faculty_id query int false "Faculty ID"
+// @Success      200 {array} FacultySessionResponse "Exam sessions"
+// @Failure      400 {object} map[string]string "Invalid filter value"
+// @Failure      500 {object} map[string]string "Failed to load sessions"
+// @Router       /schedule/faculty-sessions [get]
+func (h *Handler) ListFacultySessions(c *gin.Context) {
+	var f FacultySessionFilter
+
+	if v := c.Query("faculty_id"); v != "" {
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid faculty_id"})
+			return
+		}
+		f.FacultyID = &id
+	}
+
+	items, err := h.service.ListFacultySessions(c.Request.Context(), f)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, items)
+}
+
+// AddFacultySession godoc
+// @Summary      Create a faculty exam session (admin only)
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        session body FacultySessionRequest true "Exam session payload"
+// @Success      201 {object} FacultySessionResponse "Created session"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      500 {object} map[string]string "Failed to create session"
+// @Router       /admin/faculty-session [post]
+func (h *Handler) AddFacultySession(c *gin.Context) {
+	var req FacultySessionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	fs, err := facultySessionFromRequest(req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.AddFacultySession(c.Request.Context(), &fs); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, facultySessionToResponse(fs))
+}
+
+// UpdateFacultySession godoc
+// @Summary      Update a faculty exam session (admin only)
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id      path int true "Exam session ID"
+// @Param        session body FacultySessionRequest true "Updated payload"
+// @Success      200 {object} FacultySessionResponse "Updated session"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      404 {object} map[string]string "Not found"
+// @Failure      500 {object} map[string]string "Failed to update session"
+// @Router       /admin/faculty-session/{id} [put]
+func (h *Handler) UpdateFacultySession(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req FacultySessionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	fs, err := facultySessionFromRequest(req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	fs.ID = id
+
+	if err := h.service.UpdateFacultySession(c.Request.Context(), fs); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, facultySessionToResponse(fs))
+}
+
+// DeleteFacultySession godoc
+// @Summary      Delete a faculty exam session (admin only)
+// @Tags         Schedule
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path int true "Exam session ID"
+// @Success      204 {string} string "No Content"
+// @Failure      400 {object} map[string]string "Invalid ID"
+// @Failure      404 {object} map[string]string "Not found"
+// @Failure      500 {object} map[string]string "Failed to delete session"
+// @Router       /admin/faculty-session/{id} [delete]
+func (h *Handler) DeleteFacultySession(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	if err := h.service.DeleteFacultySession(c.Request.Context(), id); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 // ---- Schedule slots (schedule_slots) ----
 
 // ListSlots godoc
