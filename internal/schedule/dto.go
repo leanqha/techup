@@ -170,3 +170,21 @@ type GenerateScheduleResponse struct {
 	Generated int `json:"generated"`
 	Skipped   int `json:"skipped"` // slots skipped because no teacher was assigned
 }
+
+// SPbTIImportRequest describes payload for loading a group's schedule from the
+// public spbti.ru site into the lessons table.
+type SPbTIImportRequest struct {
+	Group string `json:"group" binding:"required"` // group name, e.g. "1030"
+	Weeks int    `json:"weeks"`                    // number of weeks from the current one; defaults to 2
+}
+
+// SPbTIImportResponse summarizes what a spbti.ru schedule import changed.
+type SPbTIImportResponse struct {
+	Group            string `json:"group"`              // group name the lessons were imported for
+	Weeks            int    `json:"weeks"`              // number of weeks fetched
+	Parsed           int    `json:"parsed"`             // lessons parsed from the site
+	Imported         int    `json:"imported"`           // lessons written to the database
+	SkippedNoTeacher int    `json:"skipped_no_teacher"` // lessons dropped because no teacher account matched
+	FromDate         string `json:"from_date"`          // first date replaced (YYYY-MM-DD)
+	ToDate           string `json:"to_date"`            // last date replaced (YYYY-MM-DD)
+}
