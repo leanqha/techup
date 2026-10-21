@@ -66,13 +66,14 @@ type LessonCSV struct {
 // GroupSubject — запись учебного плана: предмет, который группа изучает в
 // конкретном семестре, с опциональным закреплённым преподавателем.
 type GroupSubject struct {
-	ID        int       `json:"id"`
-	GroupID   int       `json:"group_id"`
-	SubjectID int       `json:"subject_id"`
-	Semester  int       `json:"semester"`
-	TeacherID *int      `json:"teacher_id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID           int       `json:"id"`
+	GroupID      int       `json:"group_id"`
+	SubjectID    int       `json:"subject_id"`
+	Semester     int       `json:"semester"`
+	TeacherID    *int      `json:"teacher_id"`
+	LessonTypeID *int      `json:"lesson_type_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // ScheduleSlot — ячейка конструктора расписания: повторяющееся занятие на

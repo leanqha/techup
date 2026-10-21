@@ -95,10 +95,11 @@ func (h *Handler) AddGroupSubject(c *gin.Context) {
 	}
 
 	gs := GroupSubject{
-		GroupID:   req.GroupID,
-		SubjectID: req.SubjectID,
-		Semester:  req.Semester,
-		TeacherID: req.TeacherID,
+		GroupID:      req.GroupID,
+		SubjectID:    req.SubjectID,
+		Semester:     req.Semester,
+		TeacherID:    req.TeacherID,
+		LessonTypeID: req.LessonTypeID,
 	}
 	if err := h.service.AddGroupSubject(c.Request.Context(), &gs); err != nil {
 		respondError(c, err)
@@ -135,11 +136,12 @@ func (h *Handler) UpdateGroupSubject(c *gin.Context) {
 	}
 
 	gs := GroupSubject{
-		ID:        id,
-		GroupID:   req.GroupID,
-		SubjectID: req.SubjectID,
-		Semester:  req.Semester,
-		TeacherID: req.TeacherID,
+		ID:           id,
+		GroupID:      req.GroupID,
+		SubjectID:    req.SubjectID,
+		Semester:     req.Semester,
+		TeacherID:    req.TeacherID,
+		LessonTypeID: req.LessonTypeID,
 	}
 	if err := h.service.UpdateGroupSubject(c.Request.Context(), gs); err != nil {
 		respondError(c, err)

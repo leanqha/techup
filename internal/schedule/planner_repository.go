@@ -29,17 +29,17 @@ func joinTeacherName(last, first, middle *string) string {
 
 func (r *Repository) AddGroupSubject(ctx context.Context, gs *GroupSubject) error {
 	query := `
-	INSERT INTO group_subjects (group_id, subject_id, semester, teacher_id)
-	VALUES ($1, $2, $3, $4)
+	INSERT INTO group_subjects (group_id, subject_id, semester, teacher_id, lesson_type_id)
+	VALUES ($1, $2, $3, $4, $5)
 	RETURNING id, created_at, updated_at`
 
-	err := r.db.QueryRow(ctx, query, gs.GroupID, gs.SubjectID, gs.Semester, gs.TeacherID).
+	err := r.db.QueryRow(ctx, query, gs.GroupID, gs.SubjectID, gs.Semester, gs.TeacherID, gs.LessonTypeID).
 		Scan(&gs.ID, &gs.CreatedAt, &gs.UpdatedAt)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") {
 			return apperrors.Conflict("subject already in this group's semester plan")
 		}
-		logger.LogSQLError(err, query, gs.GroupID, gs.SubjectID, gs.Semester, gs.TeacherID)
+		logger.LogSQLError(err, query, gs.GroupID, gs.SubjectID, gs.Semester, gs.TeacherID, gs.LessonTypeID)
 		return err
 	}
 	return nil
@@ -48,15 +48,15 @@ func (r *Repository) AddGroupSubject(ctx context.Context, gs *GroupSubject) erro
 func (r *Repository) UpdateGroupSubject(ctx context.Context, gs GroupSubject) error {
 	query := `
 	UPDATE group_subjects
-	SET group_id=$1, subject_id=$2, semester=$3, teacher_id=$4, updated_at=now()
-	WHERE id=$5`
+	SET group_id=$1, subject_id=$2, semester=$3, teacher_id=$4, lesson_type_id=$5, updated_at=now()
+	WHERE id=$6`
 
-	ct, err := r.db.Exec(ctx, query, gs.GroupID, gs.SubjectID, gs.Semester, gs.TeacherID, gs.ID)
+	ct, err := r.db.Exec(ctx, query, gs.GroupID, gs.SubjectID, gs.Semester, gs.TeacherID, gs.LessonTypeID, gs.ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") {
 			return apperrors.Conflict("subject already in this group's semester plan")
 		}
-		logger.LogSQLError(err, query, gs.GroupID, gs.SubjectID, gs.Semester, gs.TeacherID, gs.ID)
+		logger.LogSQLError(err, query, gs.GroupID, gs.SubjectID, gs.Semester, gs.TeacherID, gs.LessonTypeID, gs.ID)
 		return err
 	}
 	if ct.RowsAffected() == 0 {
@@ -81,11 +81,13 @@ func (r *Repository) DeleteGroupSubject(ctx context.Context, id int) error {
 func (r *Repository) ListGroupSubjects(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error) {
 	query := `
 	SELECT gs.id, gs.group_id, g.name, gs.subject_id, s.name, gs.semester,
-	       gs.teacher_id, a.first_name, a.middle_name, a.last_name
+	       gs.teacher_id, a.first_name, a.middle_name, a.last_name,
+	       gs.lesson_type_id, lt.name, lt.color
 	FROM group_subjects gs
 	LEFT JOIN groups g ON gs.group_id = g.id
 	LEFT JOIN subjects s ON gs.subject_id = s.id
-	LEFT JOIN accounts a ON gs.teacher_id = a.id`
+	LEFT JOIN accounts a ON gs.teacher_id = a.id
+	LEFT JOIN lesson_types lt ON gs.lesson_type_id = lt.id`
 
 	var conditions []string
 	var args []any
@@ -115,13 +117,15 @@ func (r *Repository) ListGroupSubjects(ctx context.Context, f GroupSubjectFilter
 	items := make([]GroupSubjectResponse, 0)
 	for rows.Next() {
 		var (
-			dto                    GroupSubjectResponse
-			groupName, subjectName *string
-			first, middle, last    *string
+			dto                       GroupSubjectResponse
+			groupName, subjectName    *string
+			first, middle, last       *string
+			lessonTypeName, typeColor *string
 		)
 		if err := rows.Scan(
 			&dto.ID, &dto.GroupID, &groupName, &dto.SubjectID, &subjectName, &dto.Semester,
 			&dto.TeacherID, &first, &middle, &last,
+			&dto.LessonTypeID, &lessonTypeName, &typeColor,
 		); err != nil {
 			return nil, err
 		}
@@ -132,6 +136,12 @@ func (r *Repository) ListGroupSubjects(ctx context.Context, f GroupSubjectFilter
 			dto.SubjectName = *subjectName
 		}
 		dto.TeacherName = joinTeacherName(last, first, middle)
+		if lessonTypeName != nil {
+			dto.LessonTypeName = *lessonTypeName
+		}
+		if typeColor != nil {
+			dto.LessonTypeColor = *typeColor
+		}
 		items = append(items, dto)
 	}
 	return items, rows.Err()
