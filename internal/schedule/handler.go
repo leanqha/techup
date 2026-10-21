@@ -58,6 +58,7 @@ type ServiceInterface interface {
 	UpdateSlot(ctx context.Context, s ScheduleSlot) error
 	DeleteSlot(ctx context.Context, id int) error
 	GenerateSchedule(ctx context.Context, groupID, semester int, start, end time.Time, firstParity string) (GenerateScheduleResponse, error)
+	LoadSPbTISchedule(ctx context.Context, groupName string, weeks int) (*SPbTIImportResponse, error)
 }
 
 type Handler struct {
@@ -986,6 +987,37 @@ func (h *Handler) ImportSchedule(c *gin.Context) {
 	}
 
 	c.Status(http.StatusCreated)
+}
+
+// ImportSPbTISchedule godoc
+// @Summary      Load a group's schedule from spbti.ru
+// @Description  Fetch a group's schedule from the public spbti.ru site and
+// @Description  replace that group's lessons across the fetched weeks. Teachers
+// @Description  are matched against existing teacher accounts by surname and
+// @Description  initials; unmatched lessons are skipped.
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Param        payload body SPbTIImportRequest true "Import payload"
+// @Success      200 {object} SPbTIImportResponse "Import summary"
+// @Failure      400 {object} map[string]string "Invalid payload"
+// @Failure      404 {object} map[string]string "Group not found"
+// @Failure      500 {object} map[string]string "Failed to import schedule"
+// @Router       /admin/schedule/import-spbti [post]
+func (h *Handler) ImportSPbTISchedule(c *gin.Context) {
+	var req SPbTIImportRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json: " + err.Error()})
+		return
+	}
+
+	res, err := h.service.LoadSPbTISchedule(c.Request.Context(), req.Group, req.Weeks)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
 }
 
 // SearchLessons godoc

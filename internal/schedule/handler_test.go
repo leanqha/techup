@@ -55,6 +55,7 @@ type mockService struct {
 	updateSlotFn         func(ctx context.Context, s ScheduleSlot) error
 	deleteSlotFn         func(ctx context.Context, id int) error
 	generateScheduleFn   func(ctx context.Context, groupID, semester int, start, end time.Time, firstParity string) (GenerateScheduleResponse, error)
+	loadSPbTIScheduleFn  func(ctx context.Context, groupName string, weeks int) (*SPbTIImportResponse, error)
 }
 
 func (m *mockService) GetLessons(ctx context.Context, groupID int, fromStr, toStr string) ([]LessonResponse, error) {
@@ -347,6 +348,13 @@ func (m *mockService) GenerateSchedule(ctx context.Context, groupID, semester in
 		return m.generateScheduleFn(ctx, groupID, semester, start, end, firstParity)
 	}
 	return GenerateScheduleResponse{}, nil
+}
+
+func (m *mockService) LoadSPbTISchedule(ctx context.Context, groupName string, weeks int) (*SPbTIImportResponse, error) {
+	if m.loadSPbTIScheduleFn != nil {
+		return m.loadSPbTIScheduleFn(ctx, groupName, weeks)
+	}
+	return &SPbTIImportResponse{}, nil
 }
 
 func setupRouterWithService(svc ServiceInterface, withUser bool) *gin.Engine {

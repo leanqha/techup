@@ -208,6 +208,7 @@ func main() {
 		adminGroup.DELETE("/slot/:id", scheduleHandler.DeleteSlot)
 
 		adminGroup.POST("/schedule/import", scheduleHandler.ImportSchedule)
+		adminGroup.POST("/schedule/import-spbti", scheduleHandler.ImportSPbTISchedule)
 		adminGroup.POST("/schedule/generate", scheduleHandler.GenerateSchedule)
 	}
 
