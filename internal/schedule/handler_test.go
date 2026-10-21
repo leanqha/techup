@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"techup/internal/account"
 
@@ -44,6 +45,16 @@ type mockService struct {
 	addLessonTypeFn    func(ctx context.Context, lt *LessonType) error
 	updateLessonTypeFn func(ctx context.Context, lt LessonType) error
 	deleteLessonTypeFn func(ctx context.Context, id int) error
+
+	listGroupSubjectsFn  func(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error)
+	addGroupSubjectFn    func(ctx context.Context, gs *GroupSubject) error
+	updateGroupSubjectFn func(ctx context.Context, gs GroupSubject) error
+	deleteGroupSubjectFn func(ctx context.Context, id int) error
+	listSlotsFn          func(ctx context.Context, f SlotFilter) ([]SlotResponse, error)
+	addSlotFn            func(ctx context.Context, s *ScheduleSlot) error
+	updateSlotFn         func(ctx context.Context, s ScheduleSlot) error
+	deleteSlotFn         func(ctx context.Context, id int) error
+	generateScheduleFn   func(ctx context.Context, groupID, semester int, start, end time.Time, firstParity string) (GenerateScheduleResponse, error)
 }
 
 func (m *mockService) GetLessons(ctx context.Context, groupID int, fromStr, toStr string) ([]LessonResponse, error) {
@@ -130,26 +141,6 @@ func (m *mockService) UpdateGroup(_ context.Context, _ Group) error {
 }
 
 func (m *mockService) DeleteGroup(_ context.Context, _ int) error {
-	return nil
-}
-
-func (m *mockService) ListGroupSubjects(_ context.Context, _ GroupSubjectFilter) ([]GroupSubjectResponse, error) {
-	return nil, nil
-}
-
-func (m *mockService) GetGroupSubject(_ context.Context, _ int) (*GroupSubjectResponse, error) {
-	return nil, nil
-}
-
-func (m *mockService) AddGroupSubject(_ context.Context, _ *GroupSubject) error {
-	return nil
-}
-
-func (m *mockService) UpdateGroupSubject(_ context.Context, _ GroupSubject) error {
-	return nil
-}
-
-func (m *mockService) DeleteGroupSubject(_ context.Context, _ int) error {
 	return nil
 }
 
@@ -277,6 +268,69 @@ func (m *mockService) GetClassrooms(ctx context.Context) ([]string, error) {
 		return m.getClassroomsFn(ctx)
 	}
 	return nil, nil
+}
+
+func (m *mockService) ListGroupSubjects(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error) {
+	if m.listGroupSubjectsFn != nil {
+		return m.listGroupSubjectsFn(ctx, f)
+	}
+	return nil, nil
+}
+
+func (m *mockService) AddGroupSubject(ctx context.Context, gs *GroupSubject) error {
+	if m.addGroupSubjectFn != nil {
+		return m.addGroupSubjectFn(ctx, gs)
+	}
+	return nil
+}
+
+func (m *mockService) UpdateGroupSubject(ctx context.Context, gs GroupSubject) error {
+	if m.updateGroupSubjectFn != nil {
+		return m.updateGroupSubjectFn(ctx, gs)
+	}
+	return nil
+}
+
+func (m *mockService) DeleteGroupSubject(ctx context.Context, id int) error {
+	if m.deleteGroupSubjectFn != nil {
+		return m.deleteGroupSubjectFn(ctx, id)
+	}
+	return nil
+}
+
+func (m *mockService) ListSlots(ctx context.Context, f SlotFilter) ([]SlotResponse, error) {
+	if m.listSlotsFn != nil {
+		return m.listSlotsFn(ctx, f)
+	}
+	return nil, nil
+}
+
+func (m *mockService) AddSlot(ctx context.Context, s *ScheduleSlot) error {
+	if m.addSlotFn != nil {
+		return m.addSlotFn(ctx, s)
+	}
+	return nil
+}
+
+func (m *mockService) UpdateSlot(ctx context.Context, s ScheduleSlot) error {
+	if m.updateSlotFn != nil {
+		return m.updateSlotFn(ctx, s)
+	}
+	return nil
+}
+
+func (m *mockService) DeleteSlot(ctx context.Context, id int) error {
+	if m.deleteSlotFn != nil {
+		return m.deleteSlotFn(ctx, id)
+	}
+	return nil
+}
+
+func (m *mockService) GenerateSchedule(ctx context.Context, groupID, semester int, start, end time.Time, firstParity string) (GenerateScheduleResponse, error) {
+	if m.generateScheduleFn != nil {
+		return m.generateScheduleFn(ctx, groupID, semester, start, end, firstParity)
+	}
+	return GenerateScheduleResponse{}, nil
 }
 
 func setupRouterWithService(svc ServiceInterface, withUser bool) *gin.Engine {

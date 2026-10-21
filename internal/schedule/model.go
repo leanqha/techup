@@ -37,17 +37,6 @@ type LessonType struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
-// GroupSubject — предмет из учебного плана группы на конкретный семестр
-type GroupSubject struct {
-	ID        int       `db:"id" json:"id"`
-	GroupID   int       `db:"group_id" json:"group_id"`
-	SubjectID int       `db:"subject_id" json:"subject_id"`
-	Semester  int       `db:"semester" json:"semester"`
-	TeacherID *int      `db:"teacher_id" json:"teacher_id"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
-}
-
 // Lesson — конкретная пара в конкретную дату
 type Lesson struct {
 	ID        int       `json:"id"`
@@ -72,6 +61,37 @@ type LessonCSV struct {
 	Type      string
 	TeacherID int
 	Classroom string
+}
+
+// GroupSubject — запись учебного плана: предмет, который группа изучает в
+// конкретном семестре, с опциональным закреплённым преподавателем.
+type GroupSubject struct {
+	ID        int       `json:"id"`
+	GroupID   int       `json:"group_id"`
+	SubjectID int       `json:"subject_id"`
+	Semester  int       `json:"semester"`
+	TeacherID *int      `json:"teacher_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ScheduleSlot — ячейка конструктора расписания: повторяющееся занятие на
+// чётной/нечётной неделе в конкретный день недели и время. Шаблон, из которого
+// генерируются конкретные пары (Lesson).
+type ScheduleSlot struct {
+	ID         int       `json:"id"`
+	GroupID    int       `json:"group_id"`
+	Semester   int       `json:"semester"`
+	WeekParity string    `json:"week_parity"` // "odd" | "even"
+	Weekday    int       `json:"weekday"`     // 1=Пн .. 7=Вс
+	StartTime  time.Time `json:"start_time"`
+	EndTime    time.Time `json:"end_time"`
+	Subject    string    `json:"subject"`
+	Type       string    `json:"type"`
+	TeacherID  *int      `json:"teacher_id"`
+	Classroom  string    `json:"classroom"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // Note — персональная заметка пользователя к паре

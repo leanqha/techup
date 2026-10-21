@@ -37,11 +37,6 @@ type ServiceInterface interface {
 	AddLessonType(ctx context.Context, lt *LessonType) error
 	UpdateLessonType(ctx context.Context, lt LessonType) error
 	DeleteLessonType(ctx context.Context, id int) error
-	ListGroupSubjects(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error)
-	GetGroupSubject(ctx context.Context, id int) (*GroupSubjectResponse, error)
-	AddGroupSubject(ctx context.Context, gs *GroupSubject) error
-	UpdateGroupSubject(ctx context.Context, gs GroupSubject) error
-	DeleteGroupSubject(ctx context.Context, id int) error
 	GetNote(ctx context.Context, note Note) (*Note, error)
 	AddNote(ctx context.Context, note Note) error
 	UpdateNote(ctx context.Context, note Note) error
@@ -50,6 +45,15 @@ type ServiceInterface interface {
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	GetTeachers(ctx context.Context) ([]account.ProfileResponse, error)
 	GetClassrooms(ctx context.Context) ([]string, error)
+	ListGroupSubjects(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error)
+	AddGroupSubject(ctx context.Context, gs *GroupSubject) error
+	UpdateGroupSubject(ctx context.Context, gs GroupSubject) error
+	DeleteGroupSubject(ctx context.Context, id int) error
+	ListSlots(ctx context.Context, f SlotFilter) ([]SlotResponse, error)
+	AddSlot(ctx context.Context, s *ScheduleSlot) error
+	UpdateSlot(ctx context.Context, s ScheduleSlot) error
+	DeleteSlot(ctx context.Context, id int) error
+	GenerateSchedule(ctx context.Context, groupID, semester int, start, end time.Time, firstParity string) (GenerateScheduleResponse, error)
 }
 
 type Handler struct {
@@ -759,172 +763,6 @@ func (h *Handler) DeleteLessonType(c *gin.Context) {
 		return
 	}
 	if err := h.service.DeleteLessonType(c.Request.Context(), id); err != nil {
-		respondError(c, err)
-		return
-	}
-	c.Status(http.StatusNoContent)
-}
-
-// ListGroupSubjects godoc
-// @Summary      List group semester-plan subjects
-// @Description  Return subjects of groups' semester plans, optionally filtered by group and/or semester.
-// @Tags         Schedule
-// @Produce      json
-// @Param        group_id query int false "Group ID"
-// @Param        semester query int false "Semester number"
-// @Success      200 {array} GroupSubjectResponse "Group subjects list"
-// @Failure      400 {object} map[string]string "Invalid query parameters"
-// @Failure      500 {object} map[string]string "Failed to load group subjects"
-// @Router       /schedule/group-subjects [get]
-func (h *Handler) ListGroupSubjects(c *gin.Context) {
-	var f GroupSubjectFilter
-
-	if v := c.Query("group_id"); v != "" {
-		id, err := strconv.Atoi(v)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group_id"})
-			return
-		}
-		f.GroupID = &id
-	}
-
-	if v := c.Query("semester"); v != "" {
-		semester, err := strconv.Atoi(v)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid semester"})
-			return
-		}
-		f.Semester = &semester
-	}
-
-	items, err := h.service.ListGroupSubjects(c.Request.Context(), f)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, items)
-}
-
-// GetGroupSubject godoc
-// @Summary      Get group semester-plan subject by ID
-// @Description  Return a single group semester-plan entry by ID.
-// @Tags         Schedule
-// @Produce      json
-// @Param        id path int true "Group subject ID"
-// @Success      200 {object} GroupSubjectResponse "Group subject"
-// @Failure      400 {object} map[string]string "Invalid ID"
-// @Failure      404 {object} map[string]string "Group subject not found"
-// @Failure      500 {object} map[string]string "Failed to load group subject"
-// @Router       /schedule/group-subjects/{id} [get]
-func (h *Handler) GetGroupSubject(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-
-	item, err := h.service.GetGroupSubject(c.Request.Context(), id)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, item)
-}
-
-// AddGroupSubject godoc
-// @Summary      Add a subject to a group's semester plan (admin only)
-// @Description  Add a subject to a group for a given semester.
-// @Tags         Schedule
-// @Security     ApiKeyAuth
-// @Accept       json
-// @Produce      json
-// @Param        groupSubject body GroupSubjectRequest true "Group subject payload"
-// @Success      201 {object} GroupSubject "Created group subject"
-// @Failure      400 {object} map[string]string "Invalid input"
-// @Failure      409 {object} map[string]string "Subject already in this group's semester plan"
-// @Failure      500 {object} map[string]string "Failed to create group subject"
-// @Router       /admin/group-subject [post]
-func (h *Handler) AddGroupSubject(c *gin.Context) {
-	var req GroupSubjectRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	gs := GroupSubject{
-		GroupID:   req.GroupID,
-		SubjectID: req.SubjectID,
-		Semester:  req.Semester,
-		TeacherID: req.TeacherID,
-	}
-	if err := h.service.AddGroupSubject(c.Request.Context(), &gs); err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusCreated, gs)
-}
-
-// UpdateGroupSubject godoc
-// @Summary      Update a group's semester-plan subject (admin only)
-// @Description  Update a group semester-plan entry by ID.
-// @Tags         Schedule
-// @Security     ApiKeyAuth
-// @Accept       json
-// @Produce      json
-// @Param        id           path int true "Group subject ID"
-// @Param        groupSubject body GroupSubjectRequest true "Updated group subject payload"
-// @Success      200 {object} GroupSubject "Updated group subject"
-// @Failure      400 {object} map[string]string "Invalid input"
-// @Failure      404 {object} map[string]string "Group subject not found"
-// @Failure      409 {object} map[string]string "Subject already in this group's semester plan"
-// @Failure      500 {object} map[string]string "Failed to update group subject"
-// @Router       /admin/group-subject/{id} [put]
-func (h *Handler) UpdateGroupSubject(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-
-	var req GroupSubjectRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	gs := GroupSubject{
-		ID:        id,
-		GroupID:   req.GroupID,
-		SubjectID: req.SubjectID,
-		Semester:  req.Semester,
-		TeacherID: req.TeacherID,
-	}
-	if err := h.service.UpdateGroupSubject(c.Request.Context(), gs); err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gs)
-}
-
-// DeleteGroupSubject godoc
-// @Summary      Delete a group's semester-plan subject (admin only)
-// @Description  Remove a subject from a group's semester plan by ID.
-// @Tags         Schedule
-// @Security     ApiKeyAuth
-// @Produce      json
-// @Param        id path int true "Group subject ID"
-// @Success      204 {string} string "No Content"
-// @Failure      400 {object} map[string]string "Invalid ID"
-// @Failure      404 {object} map[string]string "Group subject not found"
-// @Failure      500 {object} map[string]string "Failed to delete group subject"
-// @Router       /admin/group-subject/{id} [delete]
-func (h *Handler) DeleteGroupSubject(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-	if err := h.service.DeleteGroupSubject(c.Request.Context(), id); err != nil {
 		respondError(c, err)
 		return
 	}

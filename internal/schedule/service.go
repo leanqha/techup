@@ -37,11 +37,6 @@ type RepositoryInterface interface {
 	ListLessonTypes(ctx context.Context) ([]LessonType, error)
 	UpdateLessonType(ctx context.Context, lt LessonType) error
 	DeleteLessonType(ctx context.Context, id int) error
-	AddGroupSubject(ctx context.Context, gs *GroupSubject) error
-	GetGroupSubject(ctx context.Context, id int) (*GroupSubjectResponse, error)
-	ListGroupSubjects(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error)
-	UpdateGroupSubject(ctx context.Context, gs GroupSubject) error
-	DeleteGroupSubject(ctx context.Context, id int) error
 	AddLesson(ctx context.Context, lesson Lesson) error
 	GetLesson(ctx context.Context, id int) (*LessonResponse, error)
 	UpdateLesson(ctx context.Context, lesson Lesson) error
@@ -56,6 +51,16 @@ type RepositoryInterface interface {
 	SearchLessons(ctx context.Context, f SearchLessonsFilter) ([]LessonResponse, error)
 	GetTeachers(ctx context.Context) ([]account.Account, error)
 	GetClassrooms(ctx context.Context) ([]string, error)
+	ListGroupSubjects(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error)
+	AddGroupSubject(ctx context.Context, gs *GroupSubject) error
+	UpdateGroupSubject(ctx context.Context, gs GroupSubject) error
+	DeleteGroupSubject(ctx context.Context, id int) error
+	ListSlots(ctx context.Context, f SlotFilter) ([]SlotResponse, error)
+	AddSlot(ctx context.Context, s *ScheduleSlot) error
+	UpdateSlot(ctx context.Context, s ScheduleSlot) error
+	DeleteSlot(ctx context.Context, id int) error
+	ListSlotsForGeneration(ctx context.Context, groupID, semester int) ([]ScheduleSlot, error)
+	ReplaceGroupLessonsInRange(ctx context.Context, groupID int, from, to time.Time, lessons []Lesson) error
 }
 
 type Service struct {
@@ -174,50 +179,6 @@ func (s *Service) UpdateLessonType(ctx context.Context, lt LessonType) error {
 
 func (s *Service) DeleteLessonType(ctx context.Context, id int) error {
 	return s.repo.DeleteLessonType(ctx, id)
-}
-
-// validateGroupSubject enforces that a semester-plan entry references a group
-// and a subject and carries a positive semester number.
-func validateGroupSubject(gs *GroupSubject) error {
-	if gs.GroupID <= 0 {
-		return apperrors.InvalidArgument("group is required")
-	}
-	if gs.SubjectID <= 0 {
-		return apperrors.InvalidArgument("subject is required")
-	}
-	if gs.Semester <= 0 {
-		return apperrors.InvalidArgument("semester must be a positive number")
-	}
-	if gs.TeacherID != nil && *gs.TeacherID <= 0 {
-		gs.TeacherID = nil
-	}
-	return nil
-}
-
-func (s *Service) ListGroupSubjects(ctx context.Context, f GroupSubjectFilter) ([]GroupSubjectResponse, error) {
-	return s.repo.ListGroupSubjects(ctx, f)
-}
-
-func (s *Service) GetGroupSubject(ctx context.Context, id int) (*GroupSubjectResponse, error) {
-	return s.repo.GetGroupSubject(ctx, id)
-}
-
-func (s *Service) AddGroupSubject(ctx context.Context, gs *GroupSubject) error {
-	if err := validateGroupSubject(gs); err != nil {
-		return err
-	}
-	return s.repo.AddGroupSubject(ctx, gs)
-}
-
-func (s *Service) UpdateGroupSubject(ctx context.Context, gs GroupSubject) error {
-	if err := validateGroupSubject(&gs); err != nil {
-		return err
-	}
-	return s.repo.UpdateGroupSubject(ctx, gs)
-}
-
-func (s *Service) DeleteGroupSubject(ctx context.Context, id int) error {
-	return s.repo.DeleteGroupSubject(ctx, id)
 }
 
 func (s *Service) AddLesson(ctx context.Context, lesson Lesson) error {
