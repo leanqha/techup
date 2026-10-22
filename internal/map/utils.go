@@ -5,6 +5,17 @@ import (
 	"techup/internal/apperrors"
 )
 
+// edge and adjacency are type aliases (not defined types) for the navigation
+// graph. Being aliases, they are identical to the anonymous struct/map types
+// used elsewhere, so callers can keep passing plain map literals while the code
+// gets readable names and a single type to cache.
+type edge = struct {
+	to       string
+	distance float64
+}
+
+type adjacency = map[string][]edge
+
 type priorityNode struct {
 	node     string
 	priority float64
@@ -44,10 +55,7 @@ func (pq *priorityQueue) Pop() any {
 
 // AStarAlgorithm находит кратчайший путь между двумя вершинами графа.
 // При нулевой эвристике работает как алгоритм Дейкстры.
-func AStarAlgorithm(graph map[string][]struct {
-	to       string
-	distance float64
-}, start, end string, heuristic func(from, to string) float64) ([]string, float64, error) {
+func AStarAlgorithm(graph adjacency, start, end string, heuristic func(from, to string) float64) ([]string, float64, error) {
 	if heuristic == nil {
 		heuristic = func(_, _ string) float64 { return 0 }
 	}
@@ -96,9 +104,6 @@ func reconstructPath(cameFrom map[string]string, current string) []string {
 }
 
 // DijkstraAlgorithm сохранен для совместимости и делегирует вызов A* с нулевой эвристикой.
-func DijkstraAlgorithm(graph map[string][]struct {
-	to       string
-	distance float64
-}, start, end string) ([]string, float64, error) {
+func DijkstraAlgorithm(graph adjacency, start, end string) ([]string, float64, error) {
 	return AStarAlgorithm(graph, start, end, nil)
 }

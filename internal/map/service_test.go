@@ -304,3 +304,63 @@ func TestServiceBuildingCRUD_PassesValuesToRepo(t *testing.T) {
 	err = svc.DeleteBuilding(context.Background(), 10)
 	assert.NoError(t, err)
 }
+
+func TestServiceFindPathGraphCachedUntilConnectionWrite(t *testing.T) {
+	calls := 0
+	repo := &mockMapRepo{
+		getConnectionsFn: func(context.Context) ([]Connection, error) {
+			calls++
+			return []Connection{
+				{FromID: 1, ToID: 2, Distance: 1},
+				{FromID: 2, ToID: 3, Distance: 2},
+			}, nil
+		},
+	}
+	svc := NewService(repo)
+	ctx := context.Background()
+
+	// Repeated pathfinding reuses the pre-built graph: one connections read.
+	for i := 0; i < 3; i++ {
+		path, _, err := svc.FindPath(ctx, "1", "3")
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"1", "2", "3"}, path)
+	}
+	// GetConnections endpoint shares the same cached list, so still no reload.
+	_, err := svc.GetConnections(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, calls, "graph and connections should load once")
+
+	// Changing a connection invalidates both the list and the graph.
+	err = svc.AddConnection(ctx, Connection{FromID: 3, ToID: 4, Distance: 1})
+	assert.NoError(t, err)
+
+	_, _, err = svc.FindPath(ctx, "1", "3")
+	assert.NoError(t, err)
+	assert.Equal(t, 2, calls, "connection write should rebuild the graph")
+}
+
+func TestServiceGetRoomsCachedUntilRoomWrite(t *testing.T) {
+	calls := 0
+	repo := &mockMapRepo{
+		getRoomsFn: func(context.Context) ([]Room, error) {
+			calls++
+			return []Room{{ID: 1, Name: "101"}}, nil
+		},
+	}
+	svc := NewService(repo)
+	ctx := context.Background()
+
+	for i := 0; i < 3; i++ {
+		rooms, err := svc.GetRooms(ctx)
+		assert.NoError(t, err)
+		assert.Len(t, rooms, 1)
+	}
+	assert.Equal(t, 1, calls, "repeated reads should hit the repo once")
+
+	err := svc.AddRoom(ctx, "202", "Lab", 1, 2, nil)
+	assert.NoError(t, err)
+
+	_, err = svc.GetRooms(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, calls, "room write should invalidate the rooms cache")
+}

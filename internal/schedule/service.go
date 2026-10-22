@@ -9,8 +9,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"techup/config"
 	"techup/internal/account"
 	"techup/internal/apperrors"
+	"techup/internal/cache"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -69,46 +71,92 @@ type RepositoryInterface interface {
 
 type Service struct {
 	repo RepositoryInterface
+
+	// Reference lists read on nearly every schedule view but written only
+	// through admin CRUD (imports and generation never touch these tables), so
+	// each cache below is invalidated by its own writes. Nil when caching is
+	// disabled.
+	facultiesCache   *cache.Value[[]Faculty]
+	groupsCache      *cache.Value[[]Group]
+	subjectsCache    *cache.Value[[]Subject]
+	lessonTypesCache *cache.Value[[]LessonType]
 }
 
 func NewService(repo RepositoryInterface) *Service {
-	return &Service{repo: repo}
+	s := &Service{repo: repo}
+	if ttl := config.GetReferenceCacheTTL(); ttl > 0 {
+		s.facultiesCache = cache.New[[]Faculty](ttl)
+		s.groupsCache = cache.New[[]Group](ttl)
+		s.subjectsCache = cache.New[[]Subject](ttl)
+		s.lessonTypesCache = cache.New[[]LessonType](ttl)
+	}
+	return s
 }
 
 func (s *Service) AddFaculty(ctx context.Context, faculty Faculty) error {
-	return s.repo.AddFaculty(ctx, faculty)
+	if err := s.repo.AddFaculty(ctx, faculty); err != nil {
+		return err
+	}
+	s.facultiesCache.Invalidate()
+	return nil
 }
 
 func (s *Service) ListFaculties(ctx context.Context) ([]Faculty, error) {
-	return s.repo.ListFaculties(ctx)
+	return s.facultiesCache.Get(func() ([]Faculty, error) {
+		return s.repo.ListFaculties(ctx)
+	})
 }
 
 func (s *Service) UpdateFaculty(ctx context.Context, faculty Faculty) error {
-	return s.repo.UpdateFaculty(ctx, faculty)
+	if err := s.repo.UpdateFaculty(ctx, faculty); err != nil {
+		return err
+	}
+	s.facultiesCache.Invalidate()
+	return nil
 }
 
 func (s *Service) DeleteFaculty(ctx context.Context, id int) error {
-	return s.repo.DeleteFaculty(ctx, id)
+	if err := s.repo.DeleteFaculty(ctx, id); err != nil {
+		return err
+	}
+	s.facultiesCache.Invalidate()
+	return nil
 }
 
 func (s *Service) AddGroup(ctx context.Context, g Group) error {
-	return s.repo.AddGroup(ctx, g)
+	if err := s.repo.AddGroup(ctx, g); err != nil {
+		return err
+	}
+	s.groupsCache.Invalidate()
+	return nil
 }
 
 func (s *Service) ListGroups(ctx context.Context) ([]Group, error) {
-	return s.repo.ListGroups(ctx)
+	return s.groupsCache.Get(func() ([]Group, error) {
+		return s.repo.ListGroups(ctx)
+	})
 }
 
 func (s *Service) UpdateGroup(ctx context.Context, g Group) error {
-	return s.repo.UpdateGroup(ctx, g)
+	if err := s.repo.UpdateGroup(ctx, g); err != nil {
+		return err
+	}
+	s.groupsCache.Invalidate()
+	return nil
 }
 
 func (s *Service) DeleteGroup(ctx context.Context, id int) error {
-	return s.repo.DeleteGroup(ctx, id)
+	if err := s.repo.DeleteGroup(ctx, id); err != nil {
+		return err
+	}
+	s.groupsCache.Invalidate()
+	return nil
 }
 
 func (s *Service) ListSubjects(ctx context.Context) ([]Subject, error) {
-	return s.repo.ListSubjects(ctx)
+	return s.subjectsCache.Get(func() ([]Subject, error) {
+		return s.repo.ListSubjects(ctx)
+	})
 }
 
 func (s *Service) GetSubject(ctx context.Context, id int) (*Subject, error) {
@@ -120,7 +168,11 @@ func (s *Service) AddSubject(ctx context.Context, subject *Subject) error {
 	if subject.Name == "" {
 		return apperrors.InvalidArgument("subject name is required")
 	}
-	return s.repo.AddSubject(ctx, subject)
+	if err := s.repo.AddSubject(ctx, subject); err != nil {
+		return err
+	}
+	s.subjectsCache.Invalidate()
+	return nil
 }
 
 func (s *Service) UpdateSubject(ctx context.Context, subject Subject) error {
@@ -128,11 +180,19 @@ func (s *Service) UpdateSubject(ctx context.Context, subject Subject) error {
 	if subject.Name == "" {
 		return apperrors.InvalidArgument("subject name is required")
 	}
-	return s.repo.UpdateSubject(ctx, subject)
+	if err := s.repo.UpdateSubject(ctx, subject); err != nil {
+		return err
+	}
+	s.subjectsCache.Invalidate()
+	return nil
 }
 
 func (s *Service) DeleteSubject(ctx context.Context, id int) error {
-	return s.repo.DeleteSubject(ctx, id)
+	if err := s.repo.DeleteSubject(ctx, id); err != nil {
+		return err
+	}
+	s.subjectsCache.Invalidate()
+	return nil
 }
 
 const defaultLessonTypeColor = "#64748b"
@@ -160,7 +220,9 @@ func normalizeLessonType(lt *LessonType) error {
 }
 
 func (s *Service) ListLessonTypes(ctx context.Context) ([]LessonType, error) {
-	return s.repo.ListLessonTypes(ctx)
+	return s.lessonTypesCache.Get(func() ([]LessonType, error) {
+		return s.repo.ListLessonTypes(ctx)
+	})
 }
 
 func (s *Service) GetLessonType(ctx context.Context, id int) (*LessonType, error) {
@@ -171,18 +233,30 @@ func (s *Service) AddLessonType(ctx context.Context, lt *LessonType) error {
 	if err := normalizeLessonType(lt); err != nil {
 		return err
 	}
-	return s.repo.AddLessonType(ctx, lt)
+	if err := s.repo.AddLessonType(ctx, lt); err != nil {
+		return err
+	}
+	s.lessonTypesCache.Invalidate()
+	return nil
 }
 
 func (s *Service) UpdateLessonType(ctx context.Context, lt LessonType) error {
 	if err := normalizeLessonType(&lt); err != nil {
 		return err
 	}
-	return s.repo.UpdateLessonType(ctx, lt)
+	if err := s.repo.UpdateLessonType(ctx, lt); err != nil {
+		return err
+	}
+	s.lessonTypesCache.Invalidate()
+	return nil
 }
 
 func (s *Service) DeleteLessonType(ctx context.Context, id int) error {
-	return s.repo.DeleteLessonType(ctx, id)
+	if err := s.repo.DeleteLessonType(ctx, id); err != nil {
+		return err
+	}
+	s.lessonTypesCache.Invalidate()
+	return nil
 }
 
 func (s *Service) AddLesson(ctx context.Context, lesson Lesson) error {
