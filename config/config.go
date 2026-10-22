@@ -104,6 +104,27 @@ func GetAppBaseURL() string {
 	return os.Getenv("APP_BASE_URL")
 }
 
+// GetReferenceCacheTTL returns how long cached reference data (the navigation
+// graph, buildings, rooms, connections, faculties, groups, subjects and lesson
+// types) stays valid before it is reloaded from the database. It backstops the
+// explicit cache invalidation performed on writes, so a stray change made
+// outside the API still propagates within one TTL. CACHE_TTL_SECONDS overrides
+// the 5-minute default; a value <= 0 disables in-memory caching entirely.
+func GetReferenceCacheTTL() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("CACHE_TTL_SECONDS"))
+	if raw == "" {
+		return 5 * time.Minute
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil {
+		return 5 * time.Minute
+	}
+	if seconds <= 0 {
+		return 0
+	}
+	return time.Duration(seconds) * time.Second
+}
+
 func GetPasswordResetTokenTTLSeconds() int {
 	minutes, _ := strconv.Atoi(os.Getenv("PASSWORD_RESET_TTL_MINUTES"))
 	if minutes == 0 {

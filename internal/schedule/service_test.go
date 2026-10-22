@@ -629,3 +629,56 @@ func TestServiceAddLessonTypeValidation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "#059669", saved.Color)
 }
+
+func TestServiceListSubjectsCachedUntilWrite(t *testing.T) {
+	calls := 0
+	repo := &mockRepo{
+		listSubjectsFn: func(context.Context) ([]Subject, error) {
+			calls++
+			return []Subject{{ID: 1, Name: "Math"}}, nil
+		},
+	}
+	svc := NewService(repo)
+	ctx := context.Background()
+
+	for i := 0; i < 3; i++ {
+		subjects, err := svc.ListSubjects(ctx)
+		assert.NoError(t, err)
+		assert.Len(t, subjects, 1)
+	}
+	assert.Equal(t, 1, calls, "repeated reads should hit the repo once")
+
+	// A successful write invalidates the cache so the next read reloads.
+	err := svc.AddSubject(ctx, &Subject{Name: "Physics"})
+	assert.NoError(t, err)
+
+	_, err = svc.ListSubjects(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, calls, "write should invalidate the subjects cache")
+}
+
+func TestServiceListSubjectsNotInvalidatedOnWriteError(t *testing.T) {
+	calls := 0
+	repo := &mockRepo{
+		listSubjectsFn: func(context.Context) ([]Subject, error) {
+			calls++
+			return nil, nil
+		},
+		addSubjectFn: func(context.Context, *Subject) error {
+			return errors.New("db down")
+		},
+	}
+	svc := NewService(repo)
+	ctx := context.Background()
+
+	_, err := svc.ListSubjects(ctx)
+	assert.NoError(t, err)
+
+	// A failed write must not drop the cache.
+	err = svc.AddSubject(ctx, &Subject{Name: "Physics"})
+	assert.Error(t, err)
+
+	_, err = svc.ListSubjects(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, calls, "failed write should leave the cache intact")
+}
