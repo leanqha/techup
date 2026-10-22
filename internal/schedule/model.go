@@ -46,7 +46,7 @@ type Lesson struct {
 	EndTime   time.Time `json:"end_time"`
 	Subject   string    `json:"subject"`
 	Type      string    `json:"type"`
-	TeacherID int       `json:"teacher_id"`
+	TeacherID *int      `json:"teacher_id"` // nil when no teacher is assigned
 	Classroom string    `json:"classroom"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -126,4 +126,14 @@ type LessonImport struct {
 	Type      string
 	TeacherID int
 	Classroom string
+}
+
+// optionalTeacherID converts a plain teacher id into the nullable form a Lesson
+// stores: a missing teacher (id <= 0) becomes nil so the lesson is written with
+// teacher_id NULL rather than a zero id that would violate the foreign key.
+func optionalTeacherID(id int) *int {
+	if id <= 0 {
+		return nil
+	}
+	return &id
 }

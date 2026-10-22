@@ -147,7 +147,7 @@ func (h *Handler) AddLesson(c *gin.Context) {
 
 	lesson := Lesson{
 		GroupID:   req.Group,
-		TeacherID: req.TeacherID,
+		TeacherID: optionalTeacherID(req.TeacherID),
 		Date:      date,
 		StartTime: startTime,
 		EndTime:   endTime,
@@ -216,7 +216,7 @@ func (h *Handler) UpdateLesson(c *gin.Context) {
 		EndTime:   endTime,
 		Subject:   req.Subject,
 		Type:      req.Type,
-		TeacherID: req.TeacherID,
+		TeacherID: optionalTeacherID(req.TeacherID),
 		Classroom: req.Classroom,
 		CreatedAt: time.Time{},
 	}

@@ -370,7 +370,7 @@ func (s *Service) ImportSchedule(ctx context.Context, lessons []LessonImport) er
 			EndTime:   lesson.EndTime,
 			Subject:   lesson.Subject,
 			Type:      lesson.Type,
-			TeacherID: lesson.TeacherID,
+			TeacherID: optionalTeacherID(lesson.TeacherID),
 			Classroom: lesson.Classroom,
 		}
 

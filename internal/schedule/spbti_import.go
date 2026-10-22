@@ -530,7 +530,7 @@ func (s *Service) LoadSPbTISchedule(ctx context.Context, groupName string, weeks
 			EndTime:   end,
 			Subject:   p.Subject,
 			Type:      p.Type,
-			TeacherID: teacherID,
+			TeacherID: optionalTeacherID(teacherID),
 			Classroom: p.Classroom,
 		})
 	}

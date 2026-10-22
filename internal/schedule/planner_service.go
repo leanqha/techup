@@ -136,7 +136,8 @@ func otherParity(p string) string {
 // expandSlots turns a two-week template into concrete lessons across
 // [start, end] (inclusive). Week containing `start` is week 0 and has parity
 // firstParity; parity then alternates every calendar week. Slots without a
-// teacher are skipped (lessons.teacher_id is NOT NULL). Pure and deterministic.
+// teacher are kept too — the resulting lesson simply has teacher_id NULL. Pure
+// and deterministic.
 func expandSlots(slots []ScheduleSlot, start, end time.Time, firstParity string) []Lesson {
 	if firstParity != "even" {
 		firstParity = "odd"
@@ -156,7 +157,7 @@ func expandSlots(slots []ScheduleSlot, start, end time.Time, firstParity string)
 			parity = otherParity(firstParity)
 		}
 		for _, slot := range slots {
-			if slot.WeekParity != parity || slot.TeacherID == nil {
+			if slot.WeekParity != parity {
 				continue
 			}
 			date := weekMonday.AddDate(0, 0, slot.Weekday-1)
@@ -170,7 +171,7 @@ func expandSlots(slots []ScheduleSlot, start, end time.Time, firstParity string)
 				EndTime:   slot.EndTime,
 				Subject:   slot.Subject,
 				Type:      slot.Type,
-				TeacherID: *slot.TeacherID,
+				TeacherID: slot.TeacherID,
 				Classroom: slot.Classroom,
 			})
 		}
@@ -179,8 +180,9 @@ func expandSlots(slots []ScheduleSlot, start, end time.Time, firstParity string)
 }
 
 // GenerateSchedule expands a group's semester slots into concrete lessons for
-// [start, end] and replaces that group's lessons in the same range. Returns how
-// many lessons were created and how many slots were skipped (no teacher).
+// [start, end] and replaces that group's lessons in the same range. Slots
+// without a teacher are expanded too (the lessons keep teacher_id NULL), so
+// Skipped stays 0. Returns how many lessons were created.
 func (s *Service) GenerateSchedule(ctx context.Context, groupID, semester int, start, end time.Time, firstParity string) (GenerateScheduleResponse, error) {
 	var res GenerateScheduleResponse
 
@@ -194,12 +196,6 @@ func (s *Service) GenerateSchedule(ctx context.Context, groupID, semester int, s
 	slots, err := s.repo.ListSlotsForGeneration(ctx, groupID, semester)
 	if err != nil {
 		return res, err
-	}
-
-	for _, slot := range slots {
-		if slot.TeacherID == nil {
-			res.Skipped++
-		}
 	}
 
 	lessons := expandSlots(slots, start, end, firstParity)
