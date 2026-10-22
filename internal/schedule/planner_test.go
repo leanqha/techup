@@ -47,20 +47,22 @@ func TestExpandSlotsParityAndWeekday(t *testing.T) {
 	assert.ElementsMatch(t, []string{"2026-02-02", "2026-02-16", "2026-02-11", "2026-02-25"}, dates)
 }
 
-func TestExpandSlotsSkipsTeacherlessAndClampsRange(t *testing.T) {
+func TestExpandSlotsKeepsTeacherlessAndClampsRange(t *testing.T) {
 	start := day(t, "2026-02-02")
 	end := day(t, "2026-02-08") // only week 0 (odd)
 
 	slots := []ScheduleSlot{
 		{GroupID: 1, WeekParity: "odd", Weekday: 1, StartTime: tm(t, "09:00"), EndTime: tm(t, "10:30"), Subject: "A", TeacherID: intPtr(11)},
-		{GroupID: 1, WeekParity: "odd", Weekday: 2, StartTime: tm(t, "09:00"), EndTime: tm(t, "10:30"), Subject: "NoTeacher"},                 // skipped: no teacher
+		{GroupID: 1, WeekParity: "odd", Weekday: 2, StartTime: tm(t, "09:00"), EndTime: tm(t, "10:30"), Subject: "NoTeacher"},                 // kept, teacher_id stays nil
 		{GroupID: 1, WeekParity: "even", Weekday: 1, StartTime: tm(t, "09:00"), EndTime: tm(t, "10:30"), Subject: "C", TeacherID: intPtr(11)}, // even week not in range
 	}
 
 	lessons := expandSlots(slots, start, end, "odd")
-	assert.Len(t, lessons, 1)
+	assert.Len(t, lessons, 2)
 	assert.Equal(t, "A", lessons[0].Subject)
-	assert.Equal(t, 11, lessons[0].TeacherID)
+	assert.Equal(t, intPtr(11), lessons[0].TeacherID)
+	assert.Equal(t, "NoTeacher", lessons[1].Subject)
+	assert.Nil(t, lessons[1].TeacherID)
 }
 
 func TestExpandSlotsFirstWeekEven(t *testing.T) {
@@ -98,12 +100,13 @@ func TestGenerateScheduleReplacesAndCounts(t *testing.T) {
 
 	res, err := service.GenerateSchedule(context.Background(), 7, 3, day(t, "2026-02-02"), day(t, "2026-02-08"), "odd")
 	assert.NoError(t, err)
-	assert.Equal(t, 1, res.Generated) // one teacher-backed slot on an odd Monday in range
-	assert.Equal(t, 1, res.Skipped)   // one slot without a teacher
+	assert.Equal(t, 2, res.Generated) // both odd-week slots fall in range, teacher-less one included
+	assert.Equal(t, 0, res.Skipped)   // teacher-less slots are no longer skipped
 	assert.Equal(t, 7, replacedGroup)
 	assert.Equal(t, "2026-02-02", replacedFrom.Format("2006-01-02"))
 	assert.Equal(t, "2026-02-08", replacedTo.Format("2006-01-02"))
-	assert.Len(t, inserted, 1)
+	assert.Len(t, inserted, 2)
+	assert.Nil(t, inserted[1].TeacherID) // NoTeacher slot kept with nil teacher
 }
 
 func TestGenerateScheduleRejectsBadRange(t *testing.T) {

@@ -168,7 +168,7 @@ type GenerateScheduleRequest struct {
 // GenerateScheduleResponse summarizes how many lessons a generation produced.
 type GenerateScheduleResponse struct {
 	Generated int `json:"generated"`
-	Skipped   int `json:"skipped"` // slots skipped because no teacher was assigned
+	Skipped   int `json:"skipped"` // retained for API compatibility; always 0 now that teacher-less slots are generated
 }
 
 // SPbTIImportRequest describes payload for loading a group's schedule from the

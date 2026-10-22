@@ -480,6 +480,7 @@ func (r *Repository) GetLessons(
 			date       time.Time
 			startTime  time.Time
 			endTime    time.Time
+			teacherID  *int
 			firstName  *string
 			middleName *string
 			lastName   *string
@@ -494,7 +495,7 @@ func (r *Repository) GetLessons(
 			&endTime,
 			&dto.Subject,
 			&dto.Type,
-			&dto.Teacher.ID,
+			&teacherID,
 			&firstName,
 			&middleName,
 			&lastName,
@@ -506,6 +507,10 @@ func (r *Repository) GetLessons(
 		dto.Date = date.Format("2006-01-02")
 		dto.StartTime = startTime.Format("15:04")
 		dto.EndTime = endTime.Format("15:04")
+
+		if teacherID != nil {
+			dto.Teacher.ID = *teacherID
+		}
 
 		var fullNameParts []string
 		if lastName != nil && *lastName != "" {
@@ -715,6 +720,7 @@ func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) (
 			date       time.Time
 			startTime  time.Time
 			endTime    time.Time
+			teacherID  *int
 			firstName  *string
 			middleName *string
 			lastName   *string
@@ -729,7 +735,7 @@ func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) (
 			&endTime,
 			&dto.Subject,
 			&dto.Type,
-			&dto.Teacher.ID,
+			&teacherID,
 			&firstName,
 			&middleName,
 			&lastName,
@@ -741,6 +747,10 @@ func (r *Repository) SearchLessons(ctx context.Context, f SearchLessonsFilter) (
 		dto.Date = date.Format("2006-01-02")
 		dto.StartTime = startTime.Format("15:04")
 		dto.EndTime = endTime.Format("15:04")
+
+		if teacherID != nil {
+			dto.Teacher.ID = *teacherID
+		}
 
 		var parts []string
 		if lastName != nil && *lastName != "" {
@@ -829,6 +839,7 @@ func (r *Repository) GetLesson(ctx context.Context, id int) (*LessonResponse, er
 		date       time.Time
 		startTime  time.Time
 		endTime    time.Time
+		teacherID  *int
 		firstName  *string
 		middleName *string
 		lastName   *string
@@ -843,7 +854,7 @@ func (r *Repository) GetLesson(ctx context.Context, id int) (*LessonResponse, er
 		&endTime,
 		&lesson.Subject,
 		&lesson.Type,
-		&lesson.Teacher.ID,
+		&teacherID,
 		&firstName,
 		&middleName,
 		&lastName,
@@ -860,6 +871,10 @@ func (r *Repository) GetLesson(ctx context.Context, id int) (*LessonResponse, er
 	lesson.Date = date.Format("2006-01-02")
 	lesson.StartTime = startTime.Format("15:04")
 	lesson.EndTime = endTime.Format("15:04")
+
+	if teacherID != nil {
+		lesson.Teacher.ID = *teacherID
+	}
 
 	var parts []string
 	if lastName != nil && *lastName != "" {
